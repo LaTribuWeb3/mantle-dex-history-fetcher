@@ -11,11 +11,12 @@ const { truncateUnifiedFiles } = require('../data.interface/unified.truncator');
 async function generateUnifiedFileUniv2(endBlock) {
     const available = getAvailableUniswapV2(DATA_DIR);
 
-    if(!fs.existsSync(path.join(DATA_DIR, 'precomputed'))) {
-        fs.mkdirSync(path.join(DATA_DIR, 'precomputed'));
-    }
     if(!fs.existsSync(path.join(DATA_DIR, 'precomputed', 'uniswapv2'))) {
-        fs.mkdirSync(path.join(DATA_DIR, 'precomputed', 'uniswapv2'));
+        fs.mkdirSync(path.join(DATA_DIR, 'precomputed', 'uniswapv2'), {recursive: true});
+    }
+
+    if(!fs.existsSync(path.join(DATA_DIR, 'precomputed', 'price', 'uniswapv2'))) {
+        fs.mkdirSync(path.join(DATA_DIR, 'precomputed', 'price', 'uniswapv2'), {recursive: true});
     }
 
     for(const base of Object.keys(available)) {
@@ -79,7 +80,7 @@ async function createUnifiedFileForPair(endBlock, fromSymbol, toSymbol) {
     } else {
         fs.appendFileSync(unifiedFullFilename, toWrite.join(''));
     }
-    
+
     if(toWritePrice.length == 0) {
         console.log(`${fnName()}: nothing to add to price file`);
     } else {

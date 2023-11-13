@@ -11,11 +11,12 @@ const { truncateUnifiedFiles } = require('../data.interface/unified.truncator');
 async function generateUnifiedFileSushiswapV2(endBlock) {
     const available = getAvailableSushiswapV2(DATA_DIR);
 
-    if(!fs.existsSync(path.join(DATA_DIR, 'precomputed'))) {
-        fs.mkdirSync(path.join(DATA_DIR, 'precomputed'));
+    if(!fs.existsSync(path.join(DATA_DIR, 'precomputed', 'sushiswapv2'))) {
+        fs.mkdirSync(path.join(DATA_DIR, 'precomputed', 'sushiswapv2'), {recursive: true});
     }
-    if(!fs.existsSync(path.join(DATA_DIR, 'precomputed', 'uniswapv2'))) {
-        fs.mkdirSync(path.join(DATA_DIR, 'precomputed', 'uniswapv2'));
+
+    if(!fs.existsSync(path.join(DATA_DIR, 'precomputed', 'price', 'sushiswapv2'))) {
+        fs.mkdirSync(path.join(DATA_DIR, 'precomputed', 'price', 'sushiswapv2'), {recursive: true});
     }
     
     for(const base of Object.keys(available)) {
@@ -31,9 +32,6 @@ async function generateUnifiedFileSushiswapV2(endBlock) {
 async function createUnifiedFileForPair(endBlock, fromSymbol, toSymbol) {
     console.log(`${fnName()}: create/append for ${fromSymbol} ${toSymbol}`);
     const unifiedFilename = `${fromSymbol}-${toSymbol}-unified-data.csv`;
-    if(!fs.existsSync(path.join(DATA_DIR, 'precomputed', 'sushiswapv2'))) {
-        fs.mkdirSync(path.join(DATA_DIR, 'precomputed', 'sushiswapv2'));
-    }
     
     const unifiedFullFilename = path.join(DATA_DIR, 'precomputed', 'sushiswapv2', unifiedFilename);
     const unifiedFullFilenamePrice = path.join(DATA_DIR, 'precomputed', 'price', 'sushiswapv2', unifiedFilename);
