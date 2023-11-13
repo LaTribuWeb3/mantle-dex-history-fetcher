@@ -49,13 +49,11 @@ async function SushiswapV2HistoryFetcher() {
             console.log(`${fnName()}: starting`);
             const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
             const currentBlock = await web3Provider.getBlockNumber() - 10;
-            const minStartDate = Math.round(Date.now()/1000) - 380 * 24 * 60 * 60; // min start block is 380 days ago
-            const minStartBlock = await getBlocknumberForTimestamp(minStartDate);
             const stalePools = [];
             const poolsData = [];
             for(const pairToFetch of sushiv2Config.pairsToFetch) {
                 console.log(`${fnName()}: Start fetching pair `, pairToFetch);
-                const poolIsStale = await FetchHistoryForPair(web3Provider, pairToFetch, currentBlock, minStartBlock);
+                const poolIsStale = await FetchHistoryForPair(web3Provider, pairToFetch, currentBlock, 0);
                 console.log(`${fnName()}: End fetching pair `, pairToFetch);
                 if(poolIsStale) {
                     stalePools.push(`${pairToFetch.base}-${pairToFetch.quote}`);
