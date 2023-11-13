@@ -43,13 +43,11 @@ async function UniswapV2HistoryFetcher() {
             console.log(`${fnName()}: starting`);
             const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
             const currentBlock = await web3Provider.getBlockNumber() - 10;
-            const minStartDate = Math.round(Date.now()/1000) - 380 * 24 * 60 * 60; // min start block is 380 days ago
-            const minStartBlock = await getBlocknumberForTimestamp(minStartDate);
             const stalePools = [];
             const poolsData = [];
             for(const pairKey of univ2Config.uniswapV2Pairs) {
                 console.log(`${fnName()}: Start fetching pair ` + pairKey);
-                const fetchResult = await FetchHistoryForPair(web3Provider, pairKey, `${DATA_DIR}/uniswapv2/${pairKey}_uniswapv2.csv`, currentBlock, minStartBlock);
+                const fetchResult = await FetchHistoryForPair(web3Provider, pairKey, `${DATA_DIR}/uniswapv2/${pairKey}_uniswapv2.csv`, currentBlock, 0);
                 console.log(`${fnName()}: End fetching pair ` + pairKey);
                 if(fetchResult.isStale) {
                     stalePools.push(pairKey);

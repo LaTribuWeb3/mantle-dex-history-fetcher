@@ -32,8 +32,10 @@ async function createUnifiedFileForPair(endBlock, fromSymbol, toSymbol) {
     console.log(`${fnName()}: create/append for ${fromSymbol} ${toSymbol}`);
     const unifiedFilename = `${fromSymbol}-${toSymbol}-unified-data.csv`;
     const unifiedFullFilename = path.join(DATA_DIR, 'precomputed', 'uniswapv2', unifiedFilename);
+    const unifiedFullFilenamePrice = path.join(DATA_DIR, 'precomputed', 'price', 'uniswapv2', unifiedFilename);
     let sinceBlock = 0;
     let toWrite = [];
+    let toWritePrice = [];
     if(!fs.existsSync(unifiedFullFilename)) {
         fs.writeFileSync(unifiedFullFilename, 'blocknumber,price,slippagemap\n');
     } else {
@@ -42,6 +44,10 @@ async function createUnifiedFileForPair(endBlock, fromSymbol, toSymbol) {
         if(isNaN(sinceBlock)) {
             sinceBlock = 0;
         }
+    }
+
+    if(!fs.existsSync(unifiedFullFilenamePrice)) {
+        fs.writeFileSync(unifiedFullFilenamePrice, 'blocknumber,price\n');
     }
 
     console.log(`${fnName()}: getting data since ${sinceBlock} to ${endBlock}`);
@@ -65,12 +71,19 @@ async function createUnifiedFileForPair(endBlock, fromSymbol, toSymbol) {
 
         lastSavedBlock = Number(blockNumber);
         toWrite.push(`${blockNumber},${price},${JSON.stringify(slippageMap)}\n`);
+        toWritePrice.push(`${blockNumber},${price}\n`);
     }
 
     if(toWrite.length == 0) {
         console.log(`${fnName()}: nothing to add to file`);
     } else {
         fs.appendFileSync(unifiedFullFilename, toWrite.join(''));
+    }
+    
+    if(toWritePrice.length == 0) {
+        console.log(`${fnName()}: nothing to add to price file`);
+    } else {
+        fs.appendFileSync(unifiedFullFilenamePrice, toWritePrice.join(''));
     }
 }
 
