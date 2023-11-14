@@ -773,6 +773,33 @@ function computePriceAndSlippageMapForReserveValue(fromSymbol, toSymbol, poolTok
     return {price, slippageMap};
 }
 
+/**
+ * 
+ * @param {string} fromSymbol 
+ * @param {string} toSymbol 
+ * @param {string[]} poolTokens 
+ * @param {number} ampFactor
+ * @param {string[]} reserves 
+ */
+function computePriceForReserveValue(fromSymbol, toSymbol, poolTokens, ampFactor, reserves) {
+    if(poolTokens.length != reserves.length) {
+        throw new Error('Tokens array must be same length as reserves array');
+    }
+
+    const tokenConfs = [];
+    for(const poolToken of poolTokens) {
+        tokenConfs.push(getConfTokenBySymbol(poolToken));
+    }
+
+    const reservesNorm18Dec = getReservesNormalizedTo18Decimals(tokenConfs, reserves);
+    
+    const indexFrom = poolTokens.indexOf(fromSymbol);
+    const indexTo = poolTokens.indexOf(toSymbol);
+    const returnVal = get_return(indexFrom, indexTo, BIGINT_1e18, reservesNorm18Dec, ampFactor);
+    const price = normalize(returnVal.toString(), 18);
+    return price;
+}
+
 const baseAmountMap = {
     'DAI': 1000n * 10n**18n, // 1000 DAI ~= 1000$
     'USDT': 1000n * 10n**6n, // 1000 USDT ~= 1000$
@@ -831,6 +858,41 @@ function computePriceAndSlippageMapForReserveValueCryptoV2(fromSymbol, toSymbol,
     }
 
     return {price, slippageMap};
+}
+
+
+/**
+ * 
+ * @param {string} fromSymbol 
+ * @param {string} toSymbol 
+ * @param {string[]} poolTokens 
+ * @param {number} ampFactor
+ * @param {string[]} reserves 
+ */
+function computePriceForReserveValueCryptoV2(fromSymbol, toSymbol, poolTokens, ampFactor, reserves, precisions, gamma, D, priceScale) {
+    if(poolTokens.length != reserves.length) {
+        throw new Error('Tokens array must be same length as reserves array');
+    }
+
+    reserves = reserves.map(_ => BigInt(_));
+    priceScale = priceScale.map(_ => BigInt(_));
+    ampFactor = BigInt(ampFactor);
+    gamma = BigInt(gamma);
+    D = BigInt(D);
+    
+    const indexFrom = poolTokens.indexOf(fromSymbol);
+    const indexTo = poolTokens.indexOf(toSymbol);
+    const fromConf = getConfTokenBySymbol(fromSymbol);
+    const toConf = getConfTokenBySymbol(toSymbol);
+    let baseAmount = baseAmountMap[fromSymbol];
+    if(!baseAmount) {
+        console.warn(`No base amount for ${fromSymbol}`);
+        baseAmount = 10n**BigInt(fromConf.decimals);
+    }
+
+    const returnVal = get_dy_v2(indexFrom, indexTo, baseAmount, reserves, BigInt(poolTokens.length), BigInt(ampFactor), BigInt(gamma), BigInt(D), priceScale, precisions);
+    const price = normalize(returnVal.toString(), toConf.decimals) / normalize(baseAmount, fromConf.decimals);
+    return price;
 }
 
 /**
@@ -914,4 +976,4 @@ async function test_new_dy() {
 
 // test_new_dy();
 
-module.exports = { getAvailableCurve, getCurveDataforBlockInterval, computePriceAndSlippageMapForReserveValue, computePriceAndSlippageMapForReserveValueCryptoV2 };
+module.exports = { getAvailableCurve, getCurveDataforBlockInterval, computePriceAndSlippageMapForReserveValue, computePriceAndSlippageMapForReserveValueCryptoV2, computePriceForReserveValueCryptoV2, computePriceForReserveValue };
