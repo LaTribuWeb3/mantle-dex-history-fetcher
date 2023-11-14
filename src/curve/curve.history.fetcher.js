@@ -1,10 +1,10 @@
 const { ethers, Contract } = require('ethers');
 const dotenv = require('dotenv');
-const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
+const { GetContractCreationBlockNumber } = require('../utils/web3.utils');
 const curveConfig = require('./curve.config');
 const fs = require('fs');
 const path = require('path');
-const { sleep, fnName, readLastLine, roundTo } = require('../utils/utils');
+const { sleep, fnName, readLastLine, roundTo, retry } = require('../utils/utils');
 
 const { RecordMonitoring } = require('../utils/monitoring');
 // const { generateUnifiedFileCurve } = require('./curve.unified.generator');
@@ -46,10 +46,10 @@ async function CurveHistoryFetcher() {
 
             const currentBlock = await web3Provider.getBlockNumber() - 10;
             const poolsData = [];
-            const fetchPromises = [];
+            let fetchPromises = [];
             for(const fetchConfig of curveConfig.curvePairs) {
                 fetchPromises.push(FetchHistory(fetchConfig, currentBlock, web3Provider));
-                await sleep(1000);
+                await sleep(10000);
             }
 
             const lastDataResults = await Promise.all(fetchPromises);
@@ -84,11 +84,11 @@ async function CurveHistoryFetcher() {
 
             fs.writeFileSync(path.join(DATA_DIR, 'curve', 'curve-fetcher-result.json'), JSON.stringify(fetcherResult, null, 2));
             
-            if(multiThread) {
-                await runCurveUnifiedMultiThread();
-            } else {
-                await generateUnifiedFileCurve(currentBlock);
-            }
+            // if(multiThread) {
+            //     await runCurveUnifiedMultiThread();
+            // } else {
+            //     await generateUnifiedFileCurve(currentBlock);
+            // }
 
             const runEndDate = Math.round(Date.now()/1000);
             await RecordMonitoring({
@@ -248,17 +248,17 @@ function getCurveTopics(curveContract, fetchConfig) {
 async function FetchHistory(fetchConfig, currentBlock, web3Provider) {
     console.log(`[${fetchConfig.poolName}]: Start fetching history`);
     const historyFileName = path.join(DATA_DIR, 'curve', `${fetchConfig.poolName}_curve.csv`);
-    // by default, fetch for the last 380 days (a bit more than 1 year)
-
-    const startDate = Math.round(Date.now()/1000) - 380 * 24 * 60 * 60;
 
     let startBlock = 0; 
 
     if (fs.existsSync(historyFileName)) {
         const lastLine = await readLastLine(historyFileName);
         startBlock = Number(lastLine.split(',')[0]) + 1;
-    } else {
-        startBlock = await getBlocknumberForTimestamp(startDate);
+    }
+    
+    if(!startBlock) {
+        const deployBlockNumber = await retry(GetContractCreationBlockNumber, [web3Provider, fetchConfig.poolAddress]);
+        startBlock = deployBlockNumber;
     }
 
     // this is done for the tricryptoUSDC pool because the first liquidity values are too low for 
@@ -328,17 +328,7 @@ async function fetchReservesData(fetchConfig, historyFileName, lastBlock, web3Pr
             continue;
         }
 
-        console.log(`fetchReservesData[${fetchConfig.poolName}]: Working on block ${blockNum}`);
-
-        const promises = [];
-        promises.push(poolContract.A({blockTag: blockNum}));
-        promises.push(lpTokenContract.totalSupply({blockTag: blockNum}));
-        for(let i = 0; i < fetchConfig.tokens.length; i++) {
-            promises.push(poolContract.balances(i, {blockTag: blockNum}));
-        }
-
-        const promiseResults = await Promise.all(promises);
-        const lineToWrite = promiseResults.map( _ => _.toString()).join(',');
+        const lineToWrite = await retry(fetchCurveData, [fetchConfig, blockNum, poolContract, lpTokenContract]);
         fs.appendFileSync(historyFileName, `${blockNum},${lineToWrite}\n`);
             
         // const A = await poolContract.A({blockTag: blockNum});
@@ -352,6 +342,21 @@ async function fetchReservesData(fetchConfig, historyFileName, lastBlock, web3Pr
         // }
         lastBlockCurrent = blockNum;
     }
+}
+
+async function fetchCurveData(fetchConfig, blockNum, poolContract, lpTokenContract) {
+    console.log(`fetchReservesData[${fetchConfig.poolName}]: Working on block ${blockNum}`);
+
+    const promises = [];
+    promises.push(poolContract.A({ blockTag: blockNum }));
+    promises.push(lpTokenContract.totalSupply({ blockTag: blockNum }));
+    for (let i = 0; i < fetchConfig.tokens.length; i++) {
+        promises.push(poolContract.balances(i, { blockTag: blockNum }));
+    }
+
+    const promiseResults = await Promise.all(promises);
+    const lineToWrite = promiseResults.map(_ => _.toString()).join(',');
+    return lineToWrite;
 }
 
 async function fetchReservesDataCryptoV2(fetchConfig, historyFileName, lastBlock, web3Provider, allBlocksWithEvents) {
@@ -380,32 +385,38 @@ async function fetchReservesDataCryptoV2(fetchConfig, historyFileName, lastBlock
             continue;
         }
 
-        console.log(`fetchReservesData[${fetchConfig.poolName}]: Working on block ${blockNum}`);
-
-        const promises = [];
-        promises.push(poolContract.A({blockTag: blockNum}));
-        promises.push(poolContract.gamma({blockTag: blockNum}));
-        promises.push(poolContract.D({blockTag: blockNum}));
-        promises.push(lpTokenContract.totalSupply({blockTag: blockNum}));
-        for(let i = 0; i < fetchConfig.tokens.length; i++) {
-            promises.push(poolContract.balances(i, {blockTag: blockNum}));
-        }
-
-        // when only two crypto, price_scale is not an array, it's a normal field...
-        if(fetchConfig.tokens.length == 2) {
-            promises.push(poolContract.price_scale({blockTag: blockNum}));
-        } else {
-            for(let i = 0; i < fetchConfig.tokens.length - 1; i++) {
-                promises.push(poolContract.price_scale(i, {blockTag: blockNum}));
-            }
-        }
-
-        const promiseResults = await Promise.all(promises);
-
-        const lineToWrite = promiseResults.map( _ => _.toString()).join(',');
+        const lineToWrite = await retry(fetchCurveDataCryptoV2, [fetchConfig, blockNum, poolContract, lpTokenContract]);
         fs.appendFileSync(historyFileName, `${blockNum},${lineToWrite}\n`);
         lastBlockCurrent = blockNum;
     }
+}
+
+
+async function fetchCurveDataCryptoV2(fetchConfig, blockNum, poolContract, lpTokenContract) {
+    console.log(`fetchReservesData[${fetchConfig.poolName}]: Working on block ${blockNum}`);
+
+    const promises = [];
+    promises.push(poolContract.A({ blockTag: blockNum }));
+    promises.push(poolContract.gamma({ blockTag: blockNum }));
+    promises.push(poolContract.D({ blockTag: blockNum }));
+    promises.push(lpTokenContract.totalSupply({ blockTag: blockNum }));
+    for (let i = 0; i < fetchConfig.tokens.length; i++) {
+        promises.push(poolContract.balances(i, { blockTag: blockNum }));
+    }
+
+    // when only two crypto, price_scale is not an array, it's a normal field...
+    if (fetchConfig.tokens.length == 2) {
+        promises.push(poolContract.price_scale({ blockTag: blockNum }));
+    } else {
+        for (let i = 0; i < fetchConfig.tokens.length - 1; i++) {
+            promises.push(poolContract.price_scale(i, { blockTag: blockNum }));
+        }
+    }
+
+    const promiseResults = await Promise.all(promises);
+
+    const lineToWrite = promiseResults.map(_ => _.toString()).join(',');
+    return lineToWrite;
 }
 
 async function getAllBlocksWithEventsForContractAndTopics(fetchConfig, startBlock, endBlock, curveContract, topics) {
