@@ -1,6 +1,6 @@
 const { ethers, Contract } = require('ethers');
 const dotenv = require('dotenv');
-const { GetContractCreationBlockNumber } = require('../utils/web3.utils');
+const { GetContractCreationBlockNumber, getBlocknumberForTimestamp } = require('../utils/web3.utils');
 const curveConfig = require('./curve.config');
 const fs = require('fs');
 const path = require('path');
@@ -248,17 +248,15 @@ function getCurveTopics(curveContract, fetchConfig) {
 async function FetchHistory(fetchConfig, currentBlock, web3Provider) {
     console.log(`[${fetchConfig.poolName}]: Start fetching history`);
     const historyFileName = path.join(DATA_DIR, 'curve', `${fetchConfig.poolName}_curve.csv`);
-
     let startBlock = 0; 
 
     if (fs.existsSync(historyFileName)) {
         const lastLine = await readLastLine(historyFileName);
         startBlock = Number(lastLine.split(',')[0]) + 1;
-    }
-    
-    if(!startBlock) {
-        const deployBlockNumber = await retry(GetContractCreationBlockNumber, [web3Provider, fetchConfig.poolAddress]);
-        startBlock = deployBlockNumber;
+    } else {
+        // by default, fetch for the last 380 days (a bit more than 1 year)
+        const startDate = Math.round(Date.now()/1000) - 380 * 24 * 60 * 60;
+        startBlock = await getBlocknumberForTimestamp(startDate);
     }
 
     // this is done for the tricryptoUSDC pool because the first liquidity values are too low for 
