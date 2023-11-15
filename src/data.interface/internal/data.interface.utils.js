@@ -5,6 +5,28 @@ const { DATA_DIR, DEFAULT_STEP_BLOCK } = require('../../utils/constants');
 const { fnName, logFnDurationWithLabel } = require('../../utils/utils');
 
 function getPricesAtBlockForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
+    const start = Date.now();
+
+    let pricesAtBlock = {};
+
+    // specific case for univ3 and stETH/WETH pair
+    // because it does not really exists
+    if(platform == 'uniswapv3' 
+        && ((fromSymbol == 'stETH' && toSymbol == 'WETH') 
+            || (fromSymbol == 'WETH' && toSymbol == 'stETH'))) {
+        pricesAtBlock = generateFakePriceForStETHWETHUniswapV3(fromBlock, toBlock);
+    }
+    else {
+        const filename = `${fromSymbol}-${toSymbol}-unified-data.csv`;
+        const fullFilename = path.join(DATA_DIR, 'precomputed', 'price', platform, filename);
+        pricesAtBlock = readAllPricesFromFilename(fullFilename, fromBlock, toBlock);
+    }
+
+    logFnDurationWithLabel(start, `[${fromSymbol}->${toSymbol}] [${fromBlock}-${toBlock}] [${platform}]`);
+    return pricesAtBlock;
+}
+
+function getPricesAtBlockForIntervalOld(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
     let pricesAtBlock = {};
     if(platform == 'curve') {
         pricesAtBlock = getPricesAtBlockForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBlock);
@@ -96,7 +118,7 @@ function getPricesAtBlockForIntervalViaPivot(platform, fromSymbol, toSymbol, fro
         for(const [blockNumber, priceSegment1] of Object.entries(dataSegment1)) {
             const nearestBlockDataBefore =  findNearestBlockBefore(Number(blockNumber), keysSegment2, currentBlockOtherSegmentIndex);
             if(!nearestBlockDataBefore) {
-                console.log(`ignoring block ${blockNumber}`);
+                // console.log(`ignoring block ${blockNumber}`);
                 continue;
             }
 
@@ -111,7 +133,7 @@ function getPricesAtBlockForIntervalViaPivot(platform, fromSymbol, toSymbol, fro
         for(const [blockNumber, priceSegment2] of Object.entries(dataSegment2)) {
             const nearestBlockDataBefore = findNearestBlockBefore(Number(blockNumber), keysSegment1, currentBlockOtherSegmentIndex);
             if(!nearestBlockDataBefore) {
-                console.log(`ignoring block ${blockNumber}`);
+                // console.log(`ignoring block ${blockNumber}`);
                 continue;
             }
 

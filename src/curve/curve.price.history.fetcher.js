@@ -88,6 +88,11 @@ async function FetchPriceHistory(fetchConfig, currentBlock, web3Provider) {
     } else {
         // by default, fetch since contract creation
         startBlock = await GetContractCreationBlockNumber(web3Provider, fetchConfig.poolAddress);
+        // clear the CSV if any
+        for(const pair of fetchConfig.pairs) {
+            fs.rmSync(path.join(DATA_DIR, 'precomputed', 'price', 'curve', `${pair.token0}-${pair.token1}-unified-data.csv`), {force: true});
+            fs.rmSync(path.join(DATA_DIR, 'precomputed', 'price', 'curve', `${pair.token1}-${pair.token0}-unified-data.csv`), {force: true});
+        }
     }
 
     // fetch all blocks where an event occured since startBlock
@@ -104,7 +109,7 @@ async function FetchPriceHistory(fetchConfig, currentBlock, web3Provider) {
         try {
             const events = await curveContract.queryFilter('TokenExchange', fromBlock, toBlock);
 
-            console.log(`${fnName()}[${fetchConfig.poolName}-${fetchConfig.lpTokenName}]: [${fromBlock} - ${toBlock}] found ${events.length} events (fetched ${toBlock-fromBlock+1} blocks)`);
+            console.log(`${fnName()}[${fetchConfig.poolName}]: [${fromBlock} - ${toBlock}] found ${events.length} events (fetched ${toBlock-fromBlock+1} blocks)`);
 
             if(events.length != 0) {
                 for(const e of events) {
@@ -123,6 +128,11 @@ async function FetchPriceHistory(fetchConfig, currentBlock, web3Provider) {
                         const tokenSold = normalize(e.args.tokens_sold, baseToken.decimals);
                         const tokenBought = normalize(e.args.tokens_bought, quoteToken.decimals);
 
+                        // ignore trades too low
+                        if(tokenSold < baseToken.dustAmount || tokenBought < quoteToken.dustAmount) {
+                            continue;
+                        }
+
                         // Example for WETH/USDC
                         // if I sell 1.3 WETH and get 1800 USDC
                         // then WETH/USDC price is 1800/1.3 = 1384,6
@@ -133,7 +143,6 @@ async function FetchPriceHistory(fetchConfig, currentBlock, web3Provider) {
                         priceData[`${baseToken.symbol}-${quoteToken.symbol}`][e.blockNumber] = baseQuotePrice;
                         priceData[`${quoteToken.symbol}-${baseToken.symbol}`][e.blockNumber] = quoteBasePrice;
                     }
-
                 }
                 
                 const newBlockStep = Math.min(1_000_000, Math.round(blockStep * 8000 / events.length));

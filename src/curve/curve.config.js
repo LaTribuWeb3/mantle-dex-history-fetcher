@@ -404,6 +404,35 @@ const curvePricePairs = [
                 token1: 'CVX'
             },
         ]
+    },
+    {
+        poolAddress: "0x7f86bf177dd4f3494b841a37e810a34dd56c829b",
+        poolName: 'tricryptoUSDCPool',
+        abi: tricryptoFactoryAbi,
+        tokens: [
+            {
+                symbol: 'USDC',
+                address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+            },
+            {
+                symbol: 'WBTC',
+                address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599',
+            },
+            {
+                symbol: 'WETH',
+                address: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+            }
+        ],
+        pairs: [
+            {
+                token0: 'WETH',
+                token1: 'USDC'
+            },
+            {
+                token0: 'WBTC',
+                token1: 'USDC'
+            },
+        ]
     }
 ]
 
