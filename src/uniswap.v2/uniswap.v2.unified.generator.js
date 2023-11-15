@@ -59,13 +59,16 @@ async function createUnifiedFileForPair(endBlock, fromSymbol, toSymbol) {
     let lastSavedBlock = sinceBlock-1;
     for(const [blockNumber, data] of Object.entries(univ2Data)) {
         // only save every 50 blocks
-        if(lastSavedBlock + 50 > blockNumber) {
-            continue;
-        }
         const slippageMap = {};
         const normalizedFrom = normalize(data.fromReserve, fromConf.decimals);
         const normalizedTo = normalize(data.toReserve, toConf.decimals);
         const price = computeUniswapV2Price(normalizedFrom, normalizedTo);
+        if(lastSavedBlock + 50 > blockNumber) {
+            // just save the price
+            toWritePrice.push(`${blockNumber},${price}\n`);
+            continue;
+        }
+        
         for(let slippageBps = 50; slippageBps <= 2000; slippageBps += 50) {
             slippageMap[slippageBps] = computeLiquidityUniV2Pool(normalizedFrom, normalizedTo, slippageBps/10000);
         }
