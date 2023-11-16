@@ -52,6 +52,19 @@ function getSlippages(currentTick, tickSpacing, sqrtPriceX96, liquidity, token0D
     return {token0Slippage, token1Slippage};
 }
 
+function getPriceFromSqrt(sqrtPriceX96, token0Decimals, token1Decimals) {
+    const _96bits = new BigNumber(2).pow(new BigNumber(96));
+    const sqrtP = new BigNumber(sqrtPriceX96.toString()).div(_96bits);
+    let P = sqrtP.times(sqrtP).toNumber();
+    if(token0Decimals != token1Decimals) {
+        const token0DecimalFactor = 10 ** token0Decimals;
+        const token1DecimalFactor = 10 ** token1Decimals;
+        P = P * token0DecimalFactor / token1DecimalFactor;
+    }
+
+    return P;
+}
+
 // function test() {
 //     const latestData = JSON.parse(fs.readFileSync('data/uniswapv3/wstETH-WETH-100-latestdata.json', 'utf-8'));
 //     const slippages = getSlippages(latestData.currentTick, latestData.tickSpacing, latestData.currentSqrtPriceX96, latestData.ticks, 18, 18);
@@ -438,4 +451,4 @@ function getUniV3DataContents(selectedFiles, dataDir, minBlock=0) {
     return dataContents;
 }
 
-module.exports = { getPriceNormalized, getSlippages, getAvailableUniswapV3, getUniV3DataforBlockInterval };
+module.exports = { getPriceNormalized, getSlippages, getAvailableUniswapV3, getUniV3DataforBlockInterval, getPriceFromSqrt };

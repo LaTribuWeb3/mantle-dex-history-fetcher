@@ -34,7 +34,7 @@ async function CurveHistoryFetcher() {
                 'name': runnerName,
                 'status': 'running',
                 'lastStart': Math.round(start/1000),
-                'runEvery': 10 * 60
+                'runEvery': 30 * 60
             });
 
             if(!fs.existsSync(path.join(DATA_DIR, 'curve'))) {
@@ -84,11 +84,11 @@ async function CurveHistoryFetcher() {
 
             fs.writeFileSync(path.join(DATA_DIR, 'curve', 'curve-fetcher-result.json'), JSON.stringify(fetcherResult, null, 2));
             
-            // if(multiThread) {
-            //     await runCurveUnifiedMultiThread();
-            // } else {
-            //     await generateUnifiedFileCurve(currentBlock);
-            // }
+            if(multiThread) {
+                await runCurveUnifiedMultiThread();
+            } else {
+                await generateUnifiedFileCurve(currentBlock);
+            }
 
             const runEndDate = Math.round(Date.now()/1000);
             await RecordMonitoring({
