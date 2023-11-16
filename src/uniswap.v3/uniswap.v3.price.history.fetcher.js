@@ -5,20 +5,16 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const univ3Config = require('./uniswap.v3.config');
-const { GetContractCreationBlockNumber, getBlocknumberForTimestamp } = require('../utils/web3.utils');
-const { fnName, logFnDuration, sleep, roundTo, readLastLine } = require('../utils/utils');
+const { GetContractCreationBlockNumber } = require('../utils/web3.utils');
+const { fnName, sleep, roundTo, readLastLine } = require('../utils/utils');
 const { getConfTokenBySymbol } = require('../utils/token.utils');
-const { getPriceNormalized, getSlippages, getPriceFromSqrt } = require('./uniswap.v3.utils');
-const { default: BigNumber } = require('bignumber.js');
+const { getPriceFromSqrt } = require('./uniswap.v3.utils');
 const { RecordMonitoring } = require('../utils/monitoring');
-const { generateUnifiedFileUniv3 } = require('./uniswap.v3.unified.generator');
 const { DATA_DIR } = require('../utils/constants');
 const path = require('path');
 const { providers } = require('@0xsequence/multicall');
 
-const CONSTANT_1e18 = new BigNumber(10).pow(18);
 // save liquidity data every 'CONSTANT_BLOCK_INTERVAL' blocks
-const CONSTANT_BLOCK_INTERVAL = 50;
 
 const RPC_URL = process.env.RPC_URL;
 
