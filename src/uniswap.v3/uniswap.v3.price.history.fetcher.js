@@ -64,8 +64,6 @@ async function UniswapV3PriceHistoryFetcher() {
             const poolsToFetch = await getAllPoolsToFetch(univ3Factory);
             console.log(`${fnName()}: found ${poolsToFetch.length} pools to fetch from ${univ3Config.pairsToFetch.length} pairs in config`);
 
-            const poolsData = [];
-            
             const poolsToFetchGroupedByPair = {};
             for(const fetchConfig of poolsToFetch) {
                 const pairKey = `${fetchConfig.pairToFetch.token0}-${fetchConfig.pairToFetch.token1}`;
@@ -78,8 +76,16 @@ async function UniswapV3PriceHistoryFetcher() {
                 poolsToFetchGroupedByPair[pairKey].pools.push(fetchConfig.poolAddress);
             }
 
+            const stalePairs = [];
             for(const groupedFetchConfig of Object.values(poolsToFetchGroupedByPair)) {
-                await FetchUniswapV3PriceHistoryForPair(groupedFetchConfig.pairToFetch, groupedFetchConfig.pools, web3Provider, currentBlock);
+                const lastBlockWithData = await FetchUniswapV3PriceHistoryForPair(groupedFetchConfig.pairToFetch, groupedFetchConfig.pools, web3Provider, currentBlock);
+                if(currentBlock - lastBlockWithData > 500_000) {
+                    stalePairs.push(`no data since ${currentBlock - lastBlockWithData} blocks for ${groupedFetchConfig.pairToFetch.token0}/${groupedFetchConfig.pairToFetch.token1}`);
+                }
+            }
+
+            for(const stalePair of stalePairs) {
+                console.warn(stalePair);
             }
 
             const runEndDate = Math.round(Date.now()/1000);
@@ -194,6 +200,8 @@ async function FetchUniswapV3PriceHistoryForPair(pairToFetch, pools, web3Provide
         }
     }
 
+    let lastBlockWithData = sinceBlock;
+
     // initializes the pools contracts
     const contracts = {};
     for(const poolAddress of pools) {
@@ -236,6 +244,7 @@ async function FetchUniswapV3PriceHistoryForPair(pairToFetch, pools, web3Provide
         for(const blocknumber of Object.keys(results)) {
             toWrite.push(`${blocknumber},${results[blocknumber]}\n`);
             toWriteReversed.push(`${blocknumber},${1/results[blocknumber]}\n`);
+            lastBlockWithData = Number(blocknumber);
         }
 
         fs.appendFileSync(priceHistoryFilename, toWrite.join(''));
@@ -245,6 +254,7 @@ async function FetchUniswapV3PriceHistoryForPair(pairToFetch, pools, web3Provide
         fromBlock = toBlock +1;
     }
 
+    return lastBlockWithData;
 }
 
 async function fetchEvents(startBlock, endBlock, contract, decimals0, decimals1) {
