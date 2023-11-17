@@ -460,27 +460,30 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateral , 
     for(const platform of PLATFORMS) {
         const oldestBlock = fromBlocks[maxSpan];
         const fullLiquidityDataForPlatform = getLiquidity(platform, from, baseAsset, oldestBlock, endBlock);
-        const fullPricesAtBlock = getPricesAtBlockForIntervalViaPivot(platform, from, baseAsset, 0, endBlock, collateral.volatilityPivot);
         if(!fullLiquidityDataForPlatform) {
             continue;
         } 
-        
-        if(!fullPricesAtBlock) {
-            continue;
+
+        const volatilityFilename = path.join(DATA_DIR, 'precomputed', 'volatility', platform, `${from}-${baseAsset}-volatility.json`);
+        if(!fs.existsSync(volatilityFilename)) {
+            throw new Error(`could not find file ${volatilityFilename}`);
         }
 
-        const medianedPrices = medianPricesOverBlocks(fullPricesAtBlock);
-        const volatility = (await rollingBiggestDailyChange(medianedPrices, endBlock, web3Provider)).latest.current;
+        const precomputedVolatility = JSON.parse(fs.readFileSync(volatilityFilename));
+
+        const volatilityAtBlock = precomputedVolatility.history.filter(_ => _.blockStart <= endBlock && _.blockEnd >= endBlock)[0];
+
+        if(!volatilityAtBlock) {
+            throw new Error(`Could not find volatility data for block ${endBlock}`);
+        }
 
         const allBlockNumbers = Object.keys(fullLiquidityDataForPlatform).map(_ => Number(_));
-        const allPricesBlockNumbers = Object.keys(fullPricesAtBlock).map(_ => Number(_));
         // compute the data for each spans
         for (const span of spans) {
             const fromBlock = fromBlocks[span];
             const blockNumberForSpan = allBlockNumbers.filter(_ => _ >= fromBlock); 
-            const priceBlockNumberForSpan = allPricesBlockNumbers.filter(_ => _ >= fromBlock); 
 
-            let volatilityToAdd = volatility;
+            let volatilityToAdd = volatilityAtBlock.current;
             let liquidityToAdd = 0;
             if(blockNumberForSpan.length > 0) {
                 let sumLiquidityForTargetSlippageBps = 0;

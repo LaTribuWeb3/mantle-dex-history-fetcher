@@ -148,6 +148,7 @@ function computeBiggestDailyChange(medianPricesAtBlock, currentBlock) {
     while(currBlock <= currentBlock) {
         cptDay++;
         const stepTargetBlock = currBlock + BLOCK_PER_DAY;
+
         const medianPricesForDay = medianPricesAtBlock.filter(_ => _.block >= currBlock && _.block < stepTargetBlock).map(_ => _.price);
         if(medianPricesForDay.length > 0) {
             const minPriceForDay = Math.min(...medianPricesForDay);
@@ -198,8 +199,13 @@ async function rollingBiggestDailyChange(medianPricesAtBlock, currentBlock, web3
     while(currBlock <= currentBlock) {
         const yesterdayRollingDailyChange = currentRollingDailyChange;
 
-        const stepTargetBlock = Math.min(currentBlock + 1, currBlock + blockPerDay);
+        const stepTargetBlock = currBlock + blockPerDay;
 
+        // ignore if not null day
+        if(currentBlock < stepTargetBlock) {
+            break;
+        }
+        
         const medianPricesForDay = medianPricesAtBlock.filter(_ => _.block >= currBlock && _.block < stepTargetBlock).map(_ => _.price);
         if(medianPricesForDay.length > 0) {
             const minPriceForDay = Math.min(...medianPricesForDay);

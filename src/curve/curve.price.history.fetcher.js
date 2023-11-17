@@ -89,6 +89,7 @@ async function FetchPriceHistory(fetchConfig, currentBlock, web3Provider) {
     } else {
         // by default, fetch since contract creation
         startBlock = await GetContractCreationBlockNumber(web3Provider, fetchConfig.poolAddress);
+        startBlock += 100_000; // leave 100k blocks ~2 weeks after pool creation because many pools starts with weird data
         // clear the CSV if any
         for(const pair of fetchConfig.pairs) {
             fs.rmSync(path.join(DATA_DIR, 'precomputed', 'price', 'curve', `${pair.token0}-${pair.token1}-unified-data.csv`), {force: true});

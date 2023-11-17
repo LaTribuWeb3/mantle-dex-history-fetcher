@@ -192,7 +192,7 @@ async function FetchUniswapV3PriceHistoryForPair(pairToFetch, pools, web3Provide
         // find the oldest pool
         for(const poolAddress of pools) {
             const startBlock = await GetContractCreationBlockNumber(web3Provider, poolAddress);
-            sinceBlock = sinceBlock == 0 ? startBlock : Math.min(sinceBlock, startBlock);
+            sinceBlock = sinceBlock == 0 ? startBlock + 100_000 : Math.min(sinceBlock, startBlock + 100_000);// leave 100k blocks ~2 weeks after pool creation because many pools starts with weird data
         }
     }
 

@@ -153,7 +153,7 @@ async function FetchHistoryForPair(web3Provider, pairKey, historyFileName, curre
     
     if(!startBlock) {
         const deployBlockNumber = await GetContractCreationBlockNumber(web3Provider, pairAddress);
-        startBlock = deployBlockNumber;
+        startBlock = deployBlockNumber + 100_000; // leave 100k blocks ~2 weeks after pool creation because many pools starts with weird data
     }
 
     if(startBlock < minStartBlock) {
