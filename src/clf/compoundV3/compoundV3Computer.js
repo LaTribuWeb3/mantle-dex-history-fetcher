@@ -9,9 +9,9 @@ const { getBlocknumberForTimestamp } = require('../../utils/web3.utils');
 const { normalize, getConfTokenBySymbol } = require('../../utils/token.utils');
 const { compoundV3Pools, cometABI } = require('./compoundV3Computer.config');
 const { RecordMonitoring } = require('../../utils/monitoring');
-const { DATA_DIR, PLATFORMS, REFERENCE_BLOCK_TIMESTAMP, REFERENCE_BLOCK, BLOCK_PER_DAY } = require('../../utils/constants');
+const { DATA_DIR, PLATFORMS, REFERENCE_BLOCK } = require('../../utils/constants');
 const { getLiquidity } = require('../../data.interface/data.interface');
-const { computeParkinsonVolatility, computeBiggestDailyChange, medianPricesOverBlocks } = require('../../utils/volatility');
+const { computeParkinsonVolatility, computeBiggestDailyChange, medianPricesOverBlocks, rollingBiggestDailyChange } = require('../../utils/volatility');
 const { getPricesAtBlockForIntervalViaPivot } = require('../../data.interface/internal/data.interface.utils');
 const spans = [7, 30, 180];
 
@@ -131,7 +131,9 @@ async function computeCLFForPool(cometAddress, baseAsset, collaterals, web3Provi
             resultsData.collateralsData[collateral.symbol] = {};
             resultsData.collateralsData[collateral.symbol].collateral = await getCollateralAmount(collateral, cometContract, startDateUnixSec, endBlock);
             console.log('collateral data', resultsData.collateralsData[collateral.symbol].collateral);
-            resultsData.collateralsData[collateral.symbol].clfs = await computeMarketCLF(assetParameters, collateral, baseAsset, fromBlocks, endBlock, startDateUnixSec);
+            // resultsData.collateralsData[collateral.symbol].clfs = await computeMarketCLF(assetParameters, collateral, baseAsset, fromBlocks, endBlock, startDateUnixSec);
+            resultsData.collateralsData[collateral.symbol].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateral, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider);
+            
             // resultsData.collateralsData[collateral.symbol].liquidityHistory = await computeLiquidityHistory(collateral, fromBlocks, endBlock, baseAsset, assetParameters);
             console.log('resultsData', resultsData);
         }
@@ -445,7 +447,7 @@ function recordResults(results, timestamp) {
  * @param {number} endBlock 
  * @returns {Promise<{7: {volatility: number, liquidity: number}, 30: {volatility: number, liquidity: number}, 180: {volatility: number, liquidity: number}}>}
  */
-async function computeMarketCLFBiggestDailyChange(assetParameters, collateral , baseAsset, fromBlocks, endBlock, startDateUnixSec) {
+async function computeMarketCLFBiggestDailyChange(assetParameters, collateral , baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider) {
     const startDate = new Date(startDateUnixSec * 1000);
     const from = collateral.symbol;
 
@@ -458,7 +460,7 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateral , 
     for(const platform of PLATFORMS) {
         const oldestBlock = fromBlocks[maxSpan];
         const fullLiquidityDataForPlatform = getLiquidity(platform, from, baseAsset, oldestBlock, endBlock);
-        const fullPricesAtBlock = getPricesAtBlockForIntervalViaPivot(platform, from, baseAsset, REFERENCE_BLOCK, endBlock, collateral.volatilityPivot);
+        const fullPricesAtBlock = getPricesAtBlockForIntervalViaPivot(platform, from, baseAsset, 0, endBlock, collateral.volatilityPivot);
         if(!fullLiquidityDataForPlatform) {
             continue;
         } 
@@ -468,7 +470,7 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateral , 
         }
 
         const medianedPrices = medianPricesOverBlocks(fullPricesAtBlock);
-        const volatility = computeBiggestDailyChange(medianedPrices, endBlock);
+        const volatility = (await rollingBiggestDailyChange(medianedPrices, endBlock, web3Provider)).latest.current;
 
         const allBlockNumbers = Object.keys(fullLiquidityDataForPlatform).map(_ => Number(_));
         const allPricesBlockNumbers = Object.keys(fullPricesAtBlock).map(_ => Number(_));
