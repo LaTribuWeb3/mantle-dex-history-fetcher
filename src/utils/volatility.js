@@ -182,6 +182,7 @@ function computeBiggestDailyChange(medianPricesAtBlock, currentBlock) {
  * @param {ethers.providers.StaticJsonRpcProvider} web3Provider 
  */
 async function rollingBiggestDailyChange(medianPricesAtBlock, currentBlock, web3Provider) {
+    const start = Date.now();
     const fromBlock = medianPricesAtBlock[0].block;
     const oldBlockDateSec = (await retry(() => web3Provider.getBlock(fromBlock), [])).timestamp;
     const currentDateSec = (await retry(() => web3Provider.getBlock(currentBlock), [])).timestamp;
@@ -191,7 +192,6 @@ async function rollingBiggestDailyChange(medianPricesAtBlock, currentBlock, web3
     // here, in 'medianPricesAtBlock', we have all the median prices for every 300 blocks
     // we can now find the biggest change over 1 day
     let currBlock = fromBlock;
-    let cptDay = -dayDiff;
     let currentRollingDailyChange = 0;
     const results = [];
     let latest = {};
@@ -228,7 +228,8 @@ async function rollingBiggestDailyChange(medianPricesAtBlock, currentBlock, web3
 
         currBlock = stepTargetBlock;
     }
-    
+
+    logFnDuration(start);
     return { latest, history: results};
 }
 
