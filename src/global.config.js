@@ -286,7 +286,7 @@ const watchedPairs = {
     'WETH-wstETH': {
         pivot: undefined
     },  
-    'CRV-USDC' {
+    'CRV-USDC': {
         pivot: 'WETH'
     } 
 };
