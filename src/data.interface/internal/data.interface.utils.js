@@ -4,7 +4,7 @@ const fs = require('fs');
 const { DATA_DIR, DEFAULT_STEP_BLOCK } = require('../../utils/constants');
 const { fnName, logFnDurationWithLabel } = require('../../utils/utils');
 
-function getPricesAtBlockForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
+function getPricesAtBlockForIntervalNew(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
     const start = Date.now();
 
     let pricesAtBlock = {};
@@ -26,7 +26,7 @@ function getPricesAtBlockForInterval(platform, fromSymbol, toSymbol, fromBlock, 
     return pricesAtBlock;
 }
 
-function getPricesAtBlockForIntervalOld(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
+function getPricesAtBlockForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
     let pricesAtBlock = {};
     if(platform == 'curve') {
         pricesAtBlock = getPricesAtBlockForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBlock);
