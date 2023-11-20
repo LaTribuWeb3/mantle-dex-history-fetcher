@@ -468,9 +468,6 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateral , 
 
         const volatilityAtBlock = rollingVolatility.history.filter(_ => _.blockStart <= endBlock && _.blockEnd >= endBlock)[0];
 
-        if(!volatilityAtBlock) {
-            throw new Error(`Could not find volatility data for block ${endBlock}`);
-        }
 
         const allBlockNumbers = Object.keys(fullLiquidityDataForPlatform).map(_ => Number(_));
         // compute the data for each spans
@@ -478,7 +475,11 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateral , 
             const fromBlock = fromBlocks[span];
             const blockNumberForSpan = allBlockNumbers.filter(_ => _ >= fromBlock); 
 
-            let volatilityToAdd = volatilityAtBlock.current;
+            let volatilityToAdd = 0;
+            if(volatilityAtBlock) {
+                volatilityToAdd = volatilityAtBlock.current;
+            }
+
             let liquidityToAdd = 0;
             if(blockNumberForSpan.length > 0) {
                 let sumLiquidityForTargetSlippageBps = 0;
