@@ -231,4 +231,61 @@ const tokens = {
     },
 };
 
-module.exports = { tokens };
+const watchedPairs = {
+    'stETH-WETH': {
+        pivot: undefined
+    },
+    'WETH-USDC': {
+        pivot: undefined
+    },
+    'HarryPotterObamaSonic10Inu-WETH': {
+        pivot: undefined
+    },
+    'PEPE-WETH': {
+        pivot: undefined
+    },
+    'BLUR-WETH': {
+        pivot: undefined
+    },
+    'SHIB-WETH': {
+        pivot: undefined
+    },
+    'MKR-USDC': {
+        pivot: 'WETH'
+    },
+    'LINK-USDC': {
+        pivot: 'WETH'
+    },
+    'UNI-USDC': {
+        pivot: 'WETH'
+    },
+    'LDO-USDC': {
+        pivot: 'WETH'
+    },
+    'RPL-USDC': {
+        pivot: 'WETH'
+    },
+    'APE-USDC': {
+        pivot: 'WETH'
+    },
+    'CVX-USDC': {
+        pivot: 'WETH'
+    },    
+    'FXS-USDC': {
+        pivot: 'WETH'
+    },    
+    'COMP-USDC': {
+        pivot: 'WETH'
+    },    
+    'WBTC-USDC': {
+        pivot: 'WETH'
+    },    
+    'cbETH-WETH': {
+        pivot: undefined
+    },    
+    'WETH-wstETH': {
+        pivot: undefined
+    },    
+};
+
+module.exports = { tokens, watchedPairs };

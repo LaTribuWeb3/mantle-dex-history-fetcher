@@ -1,6 +1,5 @@
 const { RecordMonitoring } = require('../utils/monitoring');
 const { fnName, roundTo, sleep } = require('../utils/utils');
-const { dashboardPairsToCompute } = require('./precomputer.config');
 const { ethers } = require('ethers');
 
 const fs = require('fs');
@@ -8,16 +7,16 @@ const path = require('path');
 const dotenv = require('dotenv');
 const { DATA_DIR, PLATFORMS } = require('../utils/constants');
 const { getPricesAtBlockForIntervalViaPivot } = require('../data.interface/internal/data.interface.utils');
-const { medianPricesOverBlocks, rollingBiggestDailyChange } = require('../utils/volatility');
+const { medianPricesOverBlocks } = require('../utils/volatility');
+const { watchedPairs } = require('../global.config');
 dotenv.config();
 
 const RUN_EVERY_MINUTES = 360;
 const RPC_URL = process.env.RPC_URL;
 
-const WORKER_NAME = 'Volatility Precomputer';
+const WORKER_NAME = 'Median Prices Precomputer';
 
-async function PrecomputeVolatility() {
-
+async function PrecomputeMedianPrices() {
     // eslint-disable-next-line no-constant-condition
     while(true) {
         const start = Date.now();
@@ -33,8 +32,9 @@ async function PrecomputeVolatility() {
                 throw new Error('Could not find RPC_URL env variable');
             }
 
-            if(!fs.existsSync(path.join(DATA_DIR, 'precomputed', 'volatility'))) {
-                fs.mkdirSync(path.join(DATA_DIR, 'precomputed', 'volatility'), {recursive: true});
+            const medianDirectory = path.join(DATA_DIR, 'precomputed', 'median');
+            if(!fs.existsSync(medianDirectory)) {
+                fs.mkdirSync(medianDirectory, {recursive: true});
             }
 
             console.log(`${fnName()}: starting`);
@@ -42,25 +42,15 @@ async function PrecomputeVolatility() {
             const currentBlock = await web3Provider.getBlockNumber() - 10;
 
             for(const platform of PLATFORMS) {
-                if(!fs.existsSync(path.join(DATA_DIR, 'precomputed', 'volatility', platform))) {
-                    fs.mkdirSync(path.join(DATA_DIR, 'precomputed', 'volatility', platform), {recursive: true});
+                const platformDirectory = path.join(medianDirectory, platform);
+                if(!fs.existsSync(platformDirectory)) {
+                    fs.mkdirSync(platformDirectory, {recursive: true});
                 }
 
-                for(const pairToCompute of dashboardPairsToCompute) {
-                    const filename = path.join(DATA_DIR, 'precomputed', 'volatility', platform, `${pairToCompute.base}-${pairToCompute.quote}-volatility.json`);
-                    // let computedVolatility = undefined;
-                    // if(fs.existsSync(filename)) {
-                    //     computedVolatility = JSON.parse(fs.readFileSync(filename));
-                    // }
-                    const prices = getPricesAtBlockForIntervalViaPivot(platform, pairToCompute.base, pairToCompute.quote, 0, currentBlock, pairToCompute.volatilityPivot);
-                    if(!prices) {
-                        console.log(`Cannot find prices for ${pairToCompute.base}->${pairToCompute.quote}(pivot: ${pairToCompute.volatilityPivot}) for platform: ${platform}`);
-                        continue;
-                    }
-                    const medianed = medianPricesOverBlocks(prices);
-                    const rollingVolatilityResult = await rollingBiggestDailyChange(medianed, currentBlock, web3Provider);
-
-                    fs.writeFileSync(filename, JSON.stringify(rollingVolatilityResult, null, 2));
+                for(const [pairString, pairConfig] of Object.entries(watchedPairs)) {
+                    const base = pairString.split('-')[0];
+                    const quote = pairString.split('-')[1];
+                    precomputeAndSaveMedianPrices(platformDirectory, platform, base, quote, currentBlock, pairConfig.pivot);
                 }
             }
 
@@ -90,4 +80,28 @@ async function PrecomputeVolatility() {
     }
 }
 
-PrecomputeVolatility();
+function precomputeAndSaveMedianPrices(platformDirectory, platform, base, quote, currentBlock, pivot) {
+    console.log(`${fnName()}: starting for ${base}/${quote} via pivot: ${pivot}`);
+    const filename = path.join(platformDirectory, `${base}-${quote}-median-prices.csv`);
+    const filenameReversed = path.join(platformDirectory, `${quote}-${base}-median-prices.csv`);
+    const prices = getPricesAtBlockForIntervalViaPivot(platform, base, quote, 0, currentBlock, pivot);
+    if(!prices) {
+        console.log(`Cannot find prices for ${base}->${quote}(pivot: ${pivot}) for platform: ${platform}`);
+        return;
+    }
+
+    const medianed = medianPricesOverBlocks(prices);
+    const toWrite = [];
+    const toWriteReversed = [];
+    toWrite.push('blocknumber,price\n');
+    toWriteReversed.push('blocknumber,price\n');
+    for(const medianedData of medianed) {
+        toWrite.push(`${medianedData.block},${medianedData.price}\n`);
+        toWriteReversed.push(`${medianedData.block},${1/medianedData.price}\n`);
+}
+
+    fs.writeFileSync(filename, toWrite.join(''));
+    fs.writeFileSync(filenameReversed, toWriteReversed.join(''));
+}
+
+PrecomputeMedianPrices();

@@ -103,6 +103,7 @@ function medianPricesOverBlocks(pricesAtBlock) {
     const pricesBlockNumbers = Object.keys(pricesAtBlock).map(_ => Number(_));
 
     let currBlock = pricesBlockNumbers[0];
+    console.log(`starting median prices since block ${currBlock} to ${pricesBlockNumbers.at(-1)}`);
     const medianPricesAtBlock = [];
     while(currBlock <= pricesBlockNumbers.at(-1)) {
         const stepTargetBlock = currBlock + BIGGEST_DAILY_CHANGE_MEDIAN_OVER_BLOCK;
