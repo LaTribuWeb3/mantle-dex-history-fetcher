@@ -217,5 +217,225 @@ const curvePairs = [
     },
 ]
 
+const curvePricePairs = [
+    {
+        poolAddress: "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
+        poolName: '3Pool',
+        abi: curvePoolAbi,
+        tokens: [
+            {
+                symbol: 'DAI',
+                address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+            },
+            {
+                symbol: 'USDC',
+                address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+            },
+            {
+                symbol: 'USDT',
+                address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+            },
+        ],
+        pairs: [
+            {
+                token0: 'DAI',
+                token1: 'USDC'
+            },
+            {
+                token0: 'DAI',
+                token1: 'USDT'
+            },
+            {
+                token0: 'USDC',
+                token1: 'USDT'
+            },
+        ]
+    }, 
+    {
+        poolAddress: "0xD51a44d3FaE010294C616388b506AcdA1bfAAE46",
+        poolName: 'tricrypto2Pool',
+        abi: triCryptov2Abi,
+        tokens: [
+            {
+                symbol: 'USDT',
+                address: '0xdac17f958d2ee523a2206206994597c13d831ec7',
+            },
+            {
+                symbol: 'WBTC',
+                address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599',
+            },
+            {
+                symbol: 'WETH',
+                address: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+            }
+        ],
+        pairs: [
+            {
+                token0: 'USDT',
+                token1: 'WBTC'
+            },
+            {
+                token0: 'USDT',
+                token1: 'WETH'
+            },
+            {
+                token0: 'WETH',
+                token1: 'WBTC'
+            },
+        ]
+    }, 
+    {
+        poolAddress: "0xdc24316b9ae028f1497c275eb9192a3ea0f67022",
+        poolName: 'stETHPool',
+        abi: stableSwapAbi,
+        tokens: [
+            {
+                symbol: 'WETH',
+                address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+            },
+            {
+                symbol: 'stETH',
+                address: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84',
+            },
+        ],
+        pairs: [
+            {
+                token0: 'WETH',
+                token1: 'stETH'
+            },
+        ]
+    },
+    {
+        poolAddress: "0xa5407eae9ba41422680e2e00537571bcc53efbfd",
+        poolName: 'sUSDPool',
+        abi: susdCurvePoolAbi,
+        tokens: [
+            {
+                symbol: 'DAI',
+                address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+            },
+            {
+                symbol: 'USDC',
+                address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+            },
+            {
+                symbol: 'USDT',
+                address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+            },
+            {
+                symbol: 'sUSD',
+                address: '0x57Ab1ec28D129707052df4dF418D58a2D46d5f51',
+            }
+        ],
+        pairs: [
+            {
+                token0: 'sUSD',
+                token1: 'DAI'
+            },
+            {
+                token0: 'sUSD',
+                token1: 'USDC'
+            },
+            {
+                token0: 'sUSD',
+                token1: 'USDT'
+            },
+        ]
+    },
+    {
+        poolAddress: "0x5fae7e604fc3e24fd43a72867cebac94c65b404a",
+        poolName: 'cbETHPool',
+        abi: cryptov2Abi,
+        tokens: [
+            {
+                symbol: 'WETH',
+                address: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+            },
+            {
+                symbol: 'cbETH',
+                address: '0xbe9895146f7af43049ca1c1ae358b0541ea49704',
+            },
+        ],
+        pairs: [
+            {
+                token0: 'WETH',
+                token1: 'cbETH'
+            }
+        ]
+    },
+    {
+        poolAddress: "0x9409280dc1e6d33ab7a8c6ec03e5763fb61772b5",
+        poolName: 'LDOETHPool',
+        abi: cryptov2Abi,
+        tokens: [
+            {
+                symbol: 'WETH',
+                address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+            },
+            {
+                symbol: 'LDO',
+                address: '0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32',
+            }
+        ],
+        pairs: [
+            {
+                token0: 'WETH',
+                token1: 'LDO'
+            },
+        ]
+    },
+    {
+        poolAddress: "0xb576491f1e6e5e62f1d8f26062ee822b40b0e0d4",
+        poolName: 'CVXETHPool',
+        abi: cryptov2Abi,
+        tokens: [
+            {
+                symbol: 'WETH',
+                address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+            },
+            {
+                symbol: 'CVX',
+                address: '0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B',
+            }
+        ],
+        pairs: [
+            {
+                token0: 'WETH',
+                token1: 'CVX'
+            },
+        ]
+    },
+    {
+        poolAddress: "0x7f86bf177dd4f3494b841a37e810a34dd56c829b",
+        poolName: 'tricryptoUSDCPool',
+        abi: tricryptoFactoryAbi,
+        tokens: [
+            {
+                symbol: 'USDC',
+                address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+            },
+            {
+                symbol: 'WBTC',
+                address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599',
+            },
+            {
+                symbol: 'WETH',
+                address: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+            }
+        ],
+        pairs: [
+            {
+                token0: 'WETH',
+                token1: 'USDC'
+            },
+            {
+                token0: 'WBTC',
+                token1: 'USDC'
+            },
+        ]
+    }
+]
+
 module.exports = { curveFactoryAddress, curvePairs, curvePoolAbi, stableSwapAbi, stableSwapFactoryAbi, 
-                    erc20Abi, newParamAbi, rampAGammaAbi, susdCurvePoolAbi, cryptov2Abi, triCryptov2Abi, tricryptoFactoryAbi };
+                    erc20Abi, newParamAbi, rampAGammaAbi, susdCurvePoolAbi, cryptov2Abi, triCryptov2Abi, tricryptoFactoryAbi,
+                    curvePricePairs };

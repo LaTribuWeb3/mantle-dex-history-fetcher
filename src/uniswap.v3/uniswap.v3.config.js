@@ -76,10 +76,6 @@ const pairsToFetch = [
     "token1": "SNX"
   },
   {
-    "token0": "WBTC",
-    "token1": "SNX"
-  },
-  {
     "token0": "DAI",
     "token1": "SNX"
   },

@@ -25,7 +25,7 @@ function normalize(amount, decimals) {
 /**
  * get a token configuration object searching by symbol
  * @param {string} symbol 
- * @returns {{symbol: string, decimals: number, address: string}} token configuration
+ * @returns {{symbol: string, decimals: number, address: string, dustAmount: number}} token configuration
  */
 function getConfTokenBySymbol(symbol) {
     const tokenConf = tokens[symbol];

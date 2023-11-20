@@ -1,6 +1,7 @@
-const { median } = require("simple-statistics");
-const { roundTo, logFnDuration } = require("./utils");
-const { BLOCK_PER_DAY } = require("./constants");
+const { median } = require('simple-statistics');
+const { roundTo, logFnDuration, retry } = require('./utils');
+const { BLOCK_PER_DAY, LAMBDA } = require('./constants');
+const { ethers } = require('ethers');
 
 /**
  * Compute parkinson liquidity from price dictionary
@@ -99,11 +100,11 @@ function computeParkinsonVolatility(priceAtBlock, fromSymbol, toSymbol, startBlo
 function medianPricesOverBlocks(pricesAtBlock) {
     const start = Date.now();
     const BIGGEST_DAILY_CHANGE_MEDIAN_OVER_BLOCK = 300; // amount of blocks to median the price over
-    const pricesBlockNumbers = Object.keys(pricesAtBlock);
+    const pricesBlockNumbers = Object.keys(pricesAtBlock).map(_ => Number(_));
 
-    let currBlock = Number(pricesBlockNumbers[0]);
+    let currBlock = pricesBlockNumbers[0];
     const medianPricesAtBlock = [];
-    while(currBlock <= Number(pricesBlockNumbers.at(-1))) {
+    while(currBlock <= pricesBlockNumbers.at(-1)) {
         const stepTargetBlock = currBlock + BIGGEST_DAILY_CHANGE_MEDIAN_OVER_BLOCK;
         const blocksToMedian = pricesBlockNumbers.filter(_ => _ >= currBlock && _ < stepTargetBlock);
         if(blocksToMedian.length > 0) {
@@ -131,7 +132,7 @@ function medianPricesOverBlocks(pricesAtBlock) {
 /**
  * Compute the biggest daily change over 3 months after
  * median every prices on 300 blocks
- * @param {{ block: string, price: number}[]} medianPricesAtBlock 
+ * @param {{ block: number, price: number}[]} medianPricesAtBlock 
  * @param {number} currentBlock 
  */
 function computeBiggestDailyChange(medianPricesAtBlock, currentBlock) {
@@ -147,6 +148,7 @@ function computeBiggestDailyChange(medianPricesAtBlock, currentBlock) {
     while(currBlock <= currentBlock) {
         cptDay++;
         const stepTargetBlock = currBlock + BLOCK_PER_DAY;
+
         const medianPricesForDay = medianPricesAtBlock.filter(_ => _.block >= currBlock && _.block < stepTargetBlock).map(_ => _.price);
         if(medianPricesForDay.length > 0) {
             const minPriceForDay = Math.min(...medianPricesForDay);
@@ -172,4 +174,69 @@ function computeBiggestDailyChange(medianPricesAtBlock, currentBlock) {
     return biggestPriceChangePct;
 }
 
-module.exports = { computeParkinsonVolatility, computeBiggestDailyChange, medianPricesOverBlocks };
+
+/**
+ * Compute the biggest daily change over 3 months after
+ * median every prices on 300 blocks
+ * @param {{ block: number, price: number}[]} medianPricesAtBlock 
+ * @param {number} currentBlock 
+ * @param {ethers.providers.StaticJsonRpcProvider} web3Provider 
+ */
+async function rollingBiggestDailyChange(medianPricesAtBlock, currentBlock, web3Provider) {
+    const start = Date.now();
+    const fromBlock = medianPricesAtBlock[0].block;
+    const oldBlockDateSec = (await retry(() => web3Provider.getBlock(fromBlock), [])).timestamp;
+    const currentDateSec = (await retry(() => web3Provider.getBlock(currentBlock), [])).timestamp;
+    const dayDiff = (currentDateSec - oldBlockDateSec) / (24 * 60 * 60);
+    const blockPerDay = (currentBlock - fromBlock) / dayDiff;
+    console.log({blockPerDay});
+    // here, in 'medianPricesAtBlock', we have all the median prices for every 300 blocks
+    // we can now find the biggest change over 1 day
+    let currBlock = fromBlock;
+    let currentRollingDailyChange = 0;
+    const results = [];
+    let latest = {};
+    while(currBlock <= currentBlock) {
+        const yesterdayRollingDailyChange = currentRollingDailyChange;
+
+        const stepTargetBlock = currBlock + blockPerDay;
+
+        // ignore if not null day
+        if(currentBlock < stepTargetBlock) {
+            break;
+        }
+        
+        const medianPricesForDay = medianPricesAtBlock.filter(_ => _.block >= currBlock && _.block < stepTargetBlock).map(_ => _.price);
+        if(medianPricesForDay.length > 0) {
+            const minPriceForDay = Math.min(...medianPricesForDay);
+            const maxPriceForDay = Math.max(...medianPricesForDay);
+    
+            let priceChangePctForDay = (maxPriceForDay - minPriceForDay) / minPriceForDay;
+            currentRollingDailyChange = Math.max(LAMBDA * yesterdayRollingDailyChange, priceChangePctForDay);
+            // console.log(`rollingBiggestDailyChange: day ${cptDay}, priceChange: ${roundTo(priceChangePctForDay*100)}%, yesterday: ${roundTo(yesterdayRollingDailyChange*100)}%, current: ${roundTo(currentRollingDailyChange*100)}%`);
+            
+            results.push({
+                yesterday: yesterdayRollingDailyChange,
+                current: currentRollingDailyChange,
+                blockStart: Math.ceil(currBlock),
+                blockEnd: Math.floor(stepTargetBlock - 1),
+            });
+            
+            latest = {
+                yesterday: yesterdayRollingDailyChange,
+                current: currentRollingDailyChange,
+                blockStart: Math.ceil(currBlock),
+                blockEnd: Math.floor(stepTargetBlock - 1),
+            };
+        } else {
+            // console.log(`no data for day ${new Date(currentDate).toISOString().substring(0, 10)} at block ${currBlock}`);
+        }
+
+        currBlock = stepTargetBlock;
+    }
+
+    logFnDuration(start);
+    return { latest, history: results};
+}
+
+module.exports = { computeParkinsonVolatility, computeBiggestDailyChange, medianPricesOverBlocks, rollingBiggestDailyChange };

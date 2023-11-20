@@ -11,11 +11,12 @@ const { truncateUnifiedFiles } = require('../data.interface/unified.truncator');
 async function generateUnifiedFileSushiswapV2(endBlock) {
     const available = getAvailableSushiswapV2(DATA_DIR);
 
-    if(!fs.existsSync(path.join(DATA_DIR, 'precomputed'))) {
-        fs.mkdirSync(path.join(DATA_DIR, 'precomputed'));
+    if(!fs.existsSync(path.join(DATA_DIR, 'precomputed', 'sushiswapv2'))) {
+        fs.mkdirSync(path.join(DATA_DIR, 'precomputed', 'sushiswapv2'), {recursive: true});
     }
-    if(!fs.existsSync(path.join(DATA_DIR, 'precomputed', 'uniswapv2'))) {
-        fs.mkdirSync(path.join(DATA_DIR, 'precomputed', 'uniswapv2'));
+
+    if(!fs.existsSync(path.join(DATA_DIR, 'precomputed', 'price', 'sushiswapv2'))) {
+        fs.mkdirSync(path.join(DATA_DIR, 'precomputed', 'price', 'sushiswapv2'), {recursive: true});
     }
     
     for(const base of Object.keys(available)) {
@@ -31,13 +32,12 @@ async function generateUnifiedFileSushiswapV2(endBlock) {
 async function createUnifiedFileForPair(endBlock, fromSymbol, toSymbol) {
     console.log(`${fnName()}: create/append for ${fromSymbol} ${toSymbol}`);
     const unifiedFilename = `${fromSymbol}-${toSymbol}-unified-data.csv`;
-    if(!fs.existsSync(path.join(DATA_DIR, 'precomputed', 'sushiswapv2'))) {
-        fs.mkdirSync(path.join(DATA_DIR, 'precomputed', 'sushiswapv2'));
-    }
     
     const unifiedFullFilename = path.join(DATA_DIR, 'precomputed', 'sushiswapv2', unifiedFilename);
+    const unifiedFullFilenamePrice = path.join(DATA_DIR, 'precomputed', 'price', 'sushiswapv2', unifiedFilename);
     let sinceBlock = 0;
     let toWrite = [];
+    let toWritePrice = [];
     if(!fs.existsSync(unifiedFullFilename)) {
         fs.writeFileSync(unifiedFullFilename, 'blocknumber,price,slippagemap\n');
     } else {
@@ -48,6 +48,10 @@ async function createUnifiedFileForPair(endBlock, fromSymbol, toSymbol) {
         }
     }
 
+    if(!fs.existsSync(unifiedFullFilenamePrice)) {
+        fs.writeFileSync(unifiedFullFilenamePrice, 'blocknumber,price\n');
+    }
+
     console.log(`${fnName()}: getting data since ${sinceBlock} to ${endBlock}`);
     const sushiv2Data = getSushiV2DataforBlockInterval(DATA_DIR, fromSymbol, toSymbol, sinceBlock, endBlock);
     const fromConf = getConfTokenBySymbol(fromSymbol);
@@ -55,26 +59,37 @@ async function createUnifiedFileForPair(endBlock, fromSymbol, toSymbol) {
 
     let lastSavedBlock = sinceBlock-1;
     for(const [blockNumber, data] of Object.entries(sushiv2Data)) {
-        // only save every 50 blocks
-        if(lastSavedBlock + 50 > blockNumber) {
-            continue;
-        }
-        const slippageMap = {};
         const normalizedFrom = normalize(data.fromReserve, fromConf.decimals);
         const normalizedTo = normalize(data.toReserve, toConf.decimals);
         const price = computeSushiswapV2Price(normalizedFrom, normalizedTo);
+    
+        // only save every 50 blocks
+        if(lastSavedBlock + 50 > blockNumber) {
+            // just save the price
+            toWritePrice.push(`${blockNumber},${price}\n`);
+            continue;
+        }
+
+        const slippageMap = {};
         for(let slippageBps = 50; slippageBps <= 2000; slippageBps += 50) {
             slippageMap[slippageBps] = computeLiquiditySushiV2Pool(normalizedFrom, normalizedTo, slippageBps/10000);
         }
 
         lastSavedBlock = Number(blockNumber);
         toWrite.push(`${blockNumber},${price},${JSON.stringify(slippageMap)}\n`);
+        toWritePrice.push(`${blockNumber},${price}\n`);
     }
 
     if(toWrite.length == 0) {
         console.log(`${fnName()}: nothing to add to file`);
     } else {
         fs.appendFileSync(unifiedFullFilename, toWrite.join(''));
+    }
+    
+    if(toWritePrice.length == 0) {
+        console.log(`${fnName()}: nothing to add to price file`);
+    } else {
+        fs.appendFileSync(unifiedFullFilenamePrice, toWritePrice.join(''));
     }
 }
 

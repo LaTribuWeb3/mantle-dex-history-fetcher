@@ -58,6 +58,10 @@ const dashboardPairsToCompute = [
         quote: 'WETH',
     },
     {
+        base: 'WETH',
+        quote: 'USDC',
+    },
+    {
         base: 'HarryPotterObamaSonic10Inu',
         quote: 'WETH'
     },
@@ -124,8 +128,18 @@ const dashboardPairsToCompute = [
         volatilityPivot: 'WETH',
     },
     {
+        base: 'COMP',
+        quote: 'USDC',
+        volatilityPivot: 'WETH',
+    },
+    {
         base: 'USDC',
         quote: 'WBTC',
+        volatilityPivot: 'WETH',
+    },
+    {
+        base: 'WBTC',
+        quote: 'USDC',
         volatilityPivot: 'WETH',
     },
     {
