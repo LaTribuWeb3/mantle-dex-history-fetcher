@@ -285,7 +285,10 @@ const watchedPairs = {
     },    
     'WETH-wstETH': {
         pivot: undefined
-    },    
+    },  
+    'CRV-USDC' {
+        pivot: 'WETH'
+    } 
 };
 
 module.exports = { tokens, watchedPairs };
