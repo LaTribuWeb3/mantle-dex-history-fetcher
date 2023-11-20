@@ -8,7 +8,11 @@
 const { getParkinsonVolatilityForInterval, getParkinsonVolatilityForIntervalViaPivot } = require('./internal/data.interface.price');
 const { getAverageLiquidityForInterval, getSlippageMapForInterval } = require('./internal/data.interface.liquidity');
 const { logFnDurationWithLabel } = require('../utils/utils');
-const { PLATFORMS, DEFAULT_STEP_BLOCK } = require('../utils/constants');
+const { PLATFORMS, DEFAULT_STEP_BLOCK, DATA_DIR } = require('../utils/constants');
+const fs = require('fs');
+const path = require('path');
+const { rollingBiggestDailyChange } = require('../utils/volatility');
+const { readMedianPricesFile } = require('./internal/data.interface.utils');
 
 
 //    _____  _   _  _______  ______  _____   ______        _____  ______     ______  _    _  _   _   _____  _______  _____  ____   _   _   _____ 
@@ -82,6 +86,13 @@ function getLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJu
     return liquidity;
 }
 
+function getRollingVolatility(platform, fromSymbol, toSymbol, currentBlock, web3Provider) {
+    // find the median file
+    const medianPrices = readMedianPricesFile(platform, fromSymbol, toSymbol);
+
+    return rollingBiggestDailyChange(medianPrices, currentBlock, web3Provider);
+}
+
 //    _    _  _______  _____  _        _____ 
 //   | |  | ||__   __||_   _|| |      / ____|
 //   | |  | |   | |     | |  | |     | (___  
@@ -101,4 +112,4 @@ function checkPlatform(platform) {
     }
 }
 
-module.exports = { getVolatility, getAverageLiquidity, getLiquidity };
+module.exports = { getVolatility, getAverageLiquidity, getLiquidity, getRollingVolatility };

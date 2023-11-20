@@ -4,7 +4,38 @@ const fs = require('fs');
 const { DATA_DIR, DEFAULT_STEP_BLOCK } = require('../../utils/constants');
 const { fnName, logFnDurationWithLabel } = require('../../utils/utils');
 
-function getPricesAtBlockForIntervalNew(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
+
+/**
+ * 
+ * @param {string} platform 
+ * @param {string} fromSymbol 
+ * @param {string} toSymbol 
+ * @returns {{block: number, price: number}[]} medianPrices
+ */
+function readMedianPricesFile(platform, fromSymbol, toSymbol) {
+    const medianFileName = path.join(DATA_DIR, 'precomputed', 'median', platform, `${fromSymbol}-${toSymbol}-median-prices.csv`);
+    if (!fs.existsSync(medianFileName)) {
+        throw new Error(`Could not find median prices file: ${medianFileName}`);
+    }
+
+    const allData = fs.readFileSync(medianFileName, 'utf-8').split('\n');
+
+    const medianedPrices = [];
+    for (let i = 1; i < allData.length - 1; i++) {
+        const line = allData[i];
+        const obj = {
+            block: Number(line.split(',')[0]),
+            price: Number(line.split(',')[1]),
+        };
+
+        medianedPrices.push(obj);
+    }
+
+    return medianedPrices;
+}
+
+
+function getPricesAtBlockForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
     const start = Date.now();
 
     let pricesAtBlock = {};
@@ -14,7 +45,7 @@ function getPricesAtBlockForIntervalNew(platform, fromSymbol, toSymbol, fromBloc
     if(platform == 'uniswapv3' 
         && ((fromSymbol == 'stETH' && toSymbol == 'WETH') 
             || (fromSymbol == 'WETH' && toSymbol == 'stETH'))) {
-        pricesAtBlock = generateFakePriceForStETHWETHUniswapV3(fromBlock, toBlock);
+        pricesAtBlock = generateFakePriceForStETHWETHUniswapV3(Math.max(fromBlock, 10_000_000), toBlock);
     }
     else {
         const filename = `${fromSymbol}-${toSymbol}-unified-data.csv`;
@@ -26,7 +57,7 @@ function getPricesAtBlockForIntervalNew(platform, fromSymbol, toSymbol, fromBloc
     return pricesAtBlock;
 }
 
-function getPricesAtBlockForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
+function getPricesAtBlockForIntervalOld(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
     let pricesAtBlock = {};
     if(platform == 'curve') {
         pricesAtBlock = getPricesAtBlockForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBlock);
@@ -499,4 +530,4 @@ function extractDataFromUnifiedLineWithQuote(line) {
 // const toto = getUnifiedDataForIntervalByFilename('./data/precomputed/uniswapv3/USDC-WETH-unified-data.csv', 17_038_000, 17_838_000, 300);
 // console.log(toto);
 
-module.exports = { getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, getPricesAtBlockForInterval, getPricesAtBlockForIntervalViaPivot };
+module.exports = { getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, getPricesAtBlockForInterval, getPricesAtBlockForIntervalViaPivot, readMedianPricesFile };
