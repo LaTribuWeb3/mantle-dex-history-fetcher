@@ -11,7 +11,7 @@ const { medianPricesOverBlocks } = require('../utils/volatility');
 const { watchedPairs } = require('../global.config');
 dotenv.config();
 
-const RUN_EVERY_MINUTES = 360;
+const RUN_EVERY_MINUTES = 60;
 const RPC_URL = process.env.RPC_URL;
 
 const WORKER_NAME = 'Median Prices Precomputer';
@@ -105,6 +105,7 @@ async function precomputeAndSaveMedianPrices(platformDirectory, platform, base, 
     const medianed = medianPricesOverBlocks(prices, fileAlreadyExists ? lastBlock + MEDIAN_OVER_BLOCK : undefined);
     if(medianed.length == 0) {
         console.log(`${fnName()}[${platform}]: no new data to save for ${base}/${quote} via pivot: ${pivot}`);
+        return;
     }
     const toWrite = [];
     const toWriteReversed = [];
