@@ -1,6 +1,6 @@
 const { median } = require('simple-statistics');
 const { roundTo, logFnDuration, retry } = require('./utils');
-const { BLOCK_PER_DAY, LAMBDA } = require('./constants');
+const { BLOCK_PER_DAY, LAMBDA, MEDIAN_OVER_BLOCK } = require('./constants');
 const { ethers } = require('ethers');
 
 /**
@@ -97,16 +97,19 @@ function computeParkinsonVolatility(priceAtBlock, fromSymbol, toSymbol, startBlo
  * Compute median every prices over 300 blocks
  * @param {{[blockNumber: number]: price}} pricesAtBlock 
  */
-function medianPricesOverBlocks(pricesAtBlock) {
+function medianPricesOverBlocks(pricesAtBlock, baseBlock) {
     const start = Date.now();
-    const BIGGEST_DAILY_CHANGE_MEDIAN_OVER_BLOCK = 300; // amount of blocks to median the price over
     const pricesBlockNumbers = Object.keys(pricesAtBlock).map(_ => Number(_));
 
-    let currBlock = pricesBlockNumbers[0];
+    let currBlock = baseBlock || pricesBlockNumbers[0];
     console.log(`starting median prices since block ${currBlock} to ${pricesBlockNumbers.at(-1)}`);
     const medianPricesAtBlock = [];
     while(currBlock <= pricesBlockNumbers.at(-1)) {
-        const stepTargetBlock = currBlock + BIGGEST_DAILY_CHANGE_MEDIAN_OVER_BLOCK;
+        const stepTargetBlock = currBlock + MEDIAN_OVER_BLOCK;
+        // only median full block ranges
+        if(stepTargetBlock > pricesBlockNumbers.at(-1)) {
+            break;
+        }
         const blocksToMedian = pricesBlockNumbers.filter(_ => _ >= currBlock && _ < stepTargetBlock);
         if(blocksToMedian.length > 0) {
             const pricesToMedian = [];
@@ -183,13 +186,13 @@ function computeBiggestDailyChange(medianPricesAtBlock, currentBlock) {
  * @param {number} currentBlock 
  * @param {ethers.providers.StaticJsonRpcProvider} web3Provider 
  */
-async function rollingBiggestDailyChange(medianPricesAtBlock, currentBlock, web3Provider) {
+async function rollingBiggestDailyChange(medianPricesAtBlock, endBlock, web3Provider) {
     const start = Date.now();
     const fromBlock = medianPricesAtBlock[0].block;
     const oldBlockDateSec = (await retry(() => web3Provider.getBlock(fromBlock), [])).timestamp;
-    const currentDateSec = (await retry(() => web3Provider.getBlock(currentBlock), [])).timestamp;
+    const currentDateSec = (await retry(() => web3Provider.getBlock(endBlock), [])).timestamp;
     const dayDiff = (currentDateSec - oldBlockDateSec) / (24 * 60 * 60);
-    const blockPerDay = (currentBlock - fromBlock) / dayDiff;
+    const blockPerDay = (endBlock - fromBlock) / dayDiff;
     console.log({blockPerDay});
     // here, in 'medianPricesAtBlock', we have all the median prices for every 300 blocks
     // we can now find the biggest change over 1 day
@@ -197,14 +200,14 @@ async function rollingBiggestDailyChange(medianPricesAtBlock, currentBlock, web3
     let currentRollingDailyChange = 0;
     const results = [];
     let latest = {};
-    while(currBlock <= currentBlock) {
+    while(currBlock <= endBlock) {
         const yesterdayRollingDailyChange = currentRollingDailyChange;
 
-        const stepTargetBlock = currBlock + blockPerDay;
+        let stepTargetBlock = currBlock + blockPerDay;
 
-        // ignore if not null day
-        if(currentBlock < stepTargetBlock) {
-            break;
+        // if the next loop will create a day with too few blocks, create a bigger "last day"
+        if(stepTargetBlock + blockPerDay > endBlock) {
+            stepTargetBlock = endBlock + 1;
         }
         
         const medianPricesForDay = medianPricesAtBlock.filter(_ => _.block >= currBlock && _.block < stepTargetBlock).map(_ => _.price);

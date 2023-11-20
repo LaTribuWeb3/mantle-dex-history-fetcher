@@ -10,7 +10,7 @@ const { normalize, getConfTokenBySymbol } = require('../../utils/token.utils');
 const { compoundV3Pools, cometABI } = require('./compoundV3Computer.config');
 const { RecordMonitoring } = require('../../utils/monitoring');
 const { DATA_DIR, PLATFORMS, REFERENCE_BLOCK } = require('../../utils/constants');
-const { getLiquidity } = require('../../data.interface/data.interface');
+const { getLiquidity, getRollingVolatility } = require('../../data.interface/data.interface');
 const { computeParkinsonVolatility, computeBiggestDailyChange, medianPricesOverBlocks, rollingBiggestDailyChange } = require('../../utils/volatility');
 const { getPricesAtBlockForIntervalViaPivot } = require('../../data.interface/internal/data.interface.utils');
 const spans = [7, 30, 180];
@@ -131,8 +131,8 @@ async function computeCLFForPool(cometAddress, baseAsset, collaterals, web3Provi
             resultsData.collateralsData[collateral.symbol] = {};
             resultsData.collateralsData[collateral.symbol].collateral = await getCollateralAmount(collateral, cometContract, startDateUnixSec, endBlock);
             console.log('collateral data', resultsData.collateralsData[collateral.symbol].collateral);
-            resultsData.collateralsData[collateral.symbol].clfs = await computeMarketCLF(assetParameters, collateral, baseAsset, fromBlocks, endBlock, startDateUnixSec);
-            // resultsData.collateralsData[collateral.symbol].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateral, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider);
+            // resultsData.collateralsData[collateral.symbol].clfs = await computeMarketCLF(assetParameters, collateral, baseAsset, fromBlocks, endBlock, startDateUnixSec);
+            resultsData.collateralsData[collateral.symbol].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateral, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider);
             
             // resultsData.collateralsData[collateral.symbol].liquidityHistory = await computeLiquidityHistory(collateral, fromBlocks, endBlock, baseAsset, assetParameters);
             console.log('resultsData', resultsData);
@@ -462,16 +462,11 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateral , 
         const fullLiquidityDataForPlatform = getLiquidity(platform, from, baseAsset, oldestBlock, endBlock);
         if(!fullLiquidityDataForPlatform) {
             continue;
-        } 
-
-        const volatilityFilename = path.join(DATA_DIR, 'precomputed', 'volatility', platform, `${from}-${baseAsset}-volatility.json`);
-        if(!fs.existsSync(volatilityFilename)) {
-            throw new Error(`could not find file ${volatilityFilename}`);
         }
 
-        const precomputedVolatility = JSON.parse(fs.readFileSync(volatilityFilename));
+        const rollingVolatility = await getRollingVolatility(platform, from, baseAsset, endBlock, web3Provider);
 
-        const volatilityAtBlock = precomputedVolatility.history.filter(_ => _.blockStart <= endBlock && _.blockEnd >= endBlock)[0];
+        const volatilityAtBlock = rollingVolatility.history.filter(_ => _.blockStart <= endBlock && _.blockEnd >= endBlock)[0];
 
         if(!volatilityAtBlock) {
             throw new Error(`Could not find volatility data for block ${endBlock}`);

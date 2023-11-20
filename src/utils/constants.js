@@ -42,6 +42,7 @@ const smartLTVSourceMap = {
 };
 
 const DEFAULT_STEP_BLOCK = 100;
+const MEDIAN_OVER_BLOCK = 300; // amount of blocks to median the price over
 
 const REFERENCE_BLOCK = 15538957; // Sep-15-2022 11:59:59, this is just after TheMerge
 const REFERENCE_BLOCK_TIMESTAMP = 1663243199;
@@ -49,4 +50,4 @@ const BLOCK_PER_DAY = 7128;
 
 const LAMBDA = Math.exp(Math.log(0.5)/(365/2)); // 0.9962091367899786 used when computing the rolling avg biggest daily change
 
-module.exports = { DATA_DIR, PLATFORMS, TARGET_SLIPPAGES, SPANS, BN_1e18, smartLTVSourceMap, DEFAULT_STEP_BLOCK, REFERENCE_BLOCK, REFERENCE_BLOCK_TIMESTAMP, BLOCK_PER_DAY, LAMBDA};
+module.exports = { DATA_DIR, PLATFORMS, TARGET_SLIPPAGES, SPANS, BN_1e18, smartLTVSourceMap, DEFAULT_STEP_BLOCK, REFERENCE_BLOCK, REFERENCE_BLOCK_TIMESTAMP, BLOCK_PER_DAY, LAMBDA, MEDIAN_OVER_BLOCK};
