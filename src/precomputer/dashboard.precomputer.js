@@ -217,6 +217,7 @@ function generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock
     const liquidityBlocks = Object.keys(platformLiquidity).map(_ => Number(_));
     // const pricesBlocks = Object.keys(pricesAtBlock).map(_ => Number(_));
 
+    let previousBlock = undefined;
     for (const block of displayBlocks) {
         platformOutputResult[block] = {};
         const nearestBlockBefore = liquidityBlocks.filter(_ => _ <= block).at(-1);
@@ -225,16 +226,25 @@ function generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock
         }
 
         platformOutputResult[block].slippageMap = platformLiquidity[nearestBlockBefore].slippageMap;
-
         const prices = pricesAtBlock.filter(_ => _.block >= block - BLOCK_PER_DAY && _.block <= block).map(_ => _.price);
         if (prices.length == 0) {
-            platformOutputResult[block].price = 0;
-            platformOutputResult[block].priceAvg = 0;
-            platformOutputResult[block].priceMedian = 0;
-            platformOutputResult[block].priceQ10 = 0;
-            platformOutputResult[block].priceQ90 = 0;
-            platformOutputResult[block].priceMin = 0;
-            platformOutputResult[block].priceMax = 0;
+            if(previousBlock) {
+                platformOutputResult[block].price = platformOutputResult[previousBlock].price;
+                platformOutputResult[block].priceAvg = platformOutputResult[previousBlock].priceAvg;
+                platformOutputResult[block].priceMedian = platformOutputResult[previousBlock].priceMedian;
+                platformOutputResult[block].priceQ10 = platformOutputResult[previousBlock].priceQ10;
+                platformOutputResult[block].priceQ90 = platformOutputResult[previousBlock].priceQ90 ;
+                platformOutputResult[block].priceMin = platformOutputResult[previousBlock].priceMin;
+                platformOutputResult[block].priceMax =  platformOutputResult[previousBlock].priceMax;
+            } else {
+                platformOutputResult[block].price = 0;
+                platformOutputResult[block].priceAvg = 0;
+                platformOutputResult[block].priceMedian = 0;
+                platformOutputResult[block].priceQ10 = 0;
+                platformOutputResult[block].priceQ90 = 0;
+                platformOutputResult[block].priceMin = 0;
+                platformOutputResult[block].priceMax = 0;
+            }
         } else {
             platformOutputResult[block].price = prices.at(-1);
             platformOutputResult[block].priceAvg = average(prices);
@@ -283,6 +293,7 @@ function generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock
         }
 
         platformOutputResult[block].avgSlippageMap = avgSlippage;
+        previousBlock = block;
     }
 
     // compute biggest daily change over the last 3 months
