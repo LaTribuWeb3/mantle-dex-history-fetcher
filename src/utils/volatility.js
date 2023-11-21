@@ -209,7 +209,7 @@ async function rollingBiggestDailyChange(medianPricesAtBlock, endBlock, web3Prov
         if(stepTargetBlock + blockPerDay > endBlock) {
             stepTargetBlock = endBlock + 1;
         }
-        
+
         const medianPricesForDay = medianPricesAtBlock.filter(_ => _.block >= currBlock && _.block < stepTargetBlock).map(_ => _.price);
         if(medianPricesForDay.length > 0) {
             const minPriceForDay = Math.min(...medianPricesForDay);
