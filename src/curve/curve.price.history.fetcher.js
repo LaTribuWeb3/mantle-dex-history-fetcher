@@ -142,27 +142,8 @@ async function FetchPriceHistory(fetchConfig, currentBlock, web3Provider) {
                         const baseQuotePrice = tokenBought / tokenSold;
                         const quoteBasePrice = tokenSold / tokenBought;
 
-                        // save prices as array, will be medianed when saving
-                        if(!priceData[`${baseToken.symbol}-${quoteToken.symbol}`][e.blockNumber]) {
-                            priceData[`${baseToken.symbol}-${quoteToken.symbol}`][e.blockNumber] = {
-                                totalWeight: 0,
-                                price: 0
-                            };
-                        }
-                        
-                        priceData[`${baseToken.symbol}-${quoteToken.symbol}`][e.blockNumber].totalWeight += tokenSold;
-                        priceData[`${baseToken.symbol}-${quoteToken.symbol}`][e.blockNumber].price += baseQuotePrice * tokenSold;
-
-                        
-                        if(!priceData[`${quoteToken.symbol}-${baseToken.symbol}`][e.blockNumber]) {
-                            priceData[`${quoteToken.symbol}-${baseToken.symbol}`][e.blockNumber] = {
-                                totalWeight: 0,
-                                price: 0
-                            };
-                        }
-
-                        priceData[`${quoteToken.symbol}-${baseToken.symbol}`][e.blockNumber].totalWeight += tokenBought;
-                        priceData[`${quoteToken.symbol}-${baseToken.symbol}`][e.blockNumber].price += quoteBasePrice * tokenBought;
+                        priceData[`${baseToken.symbol}-${quoteToken.symbol}`][e.blockNumber] = baseQuotePrice;
+                        priceData[`${quoteToken.symbol}-${baseToken.symbol}`][e.blockNumber] = quoteBasePrice;
                     }
                 }
                 
@@ -226,9 +207,8 @@ function savePriceData(priceData) {
 
         const toWrite = [];
         for (const blockNumber of Object.keys(priceData[pair])) {
-            const priceDataAtBlock = priceData[pair][blockNumber];
-            const weightedAverage = priceDataAtBlock.price / priceDataAtBlock.totalWeight;
-            toWrite.push(`${blockNumber},${weightedAverage}\n`);
+            const price = priceData[pair][blockNumber];
+            toWrite.push(`${blockNumber},${price}\n`);
         }
 
         fs.appendFileSync(fileName, toWrite.join(''));
