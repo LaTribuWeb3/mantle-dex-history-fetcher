@@ -199,7 +199,6 @@ async function rollingBiggestDailyChange(medianPricesAtBlock, endBlock, web3Prov
     let currBlock = fromBlock;
     let currentRollingDailyChange = 0;
     const results = [];
-    let latest = {};
     while(currBlock <= endBlock) {
         const yesterdayRollingDailyChange = currentRollingDailyChange;
 
@@ -217,30 +216,22 @@ async function rollingBiggestDailyChange(medianPricesAtBlock, endBlock, web3Prov
     
             let priceChangePctForDay = (maxPriceForDay - minPriceForDay) / minPriceForDay;
             currentRollingDailyChange = Math.max(LAMBDA * yesterdayRollingDailyChange, priceChangePctForDay);
-            // console.log(`rollingBiggestDailyChange: day ${cptDay}, priceChange: ${roundTo(priceChangePctForDay*100)}%, yesterday: ${roundTo(yesterdayRollingDailyChange*100)}%, current: ${roundTo(currentRollingDailyChange*100)}%`);
-            
-            results.push({
-                yesterday: yesterdayRollingDailyChange,
-                current: currentRollingDailyChange,
-                blockStart: Math.ceil(currBlock),
-                blockEnd: Math.floor(stepTargetBlock - 1),
-            });
-            
-            latest = {
-                yesterday: yesterdayRollingDailyChange,
-                current: currentRollingDailyChange,
-                blockStart: Math.ceil(currBlock),
-                blockEnd: Math.floor(stepTargetBlock - 1),
-            };
         } else {
-            // console.log(`no data for day ${new Date(currentDate).toISOString().substring(0, 10)} at block ${currBlock}`);
+            // if no data for the block interval, just set current value = LAMBDA * yesterday's value
+            currentRollingDailyChange = LAMBDA * yesterdayRollingDailyChange;
         }
-
+        
+        results.push({
+            yesterday: yesterdayRollingDailyChange,
+            current: currentRollingDailyChange,
+            blockStart: Math.ceil(currBlock),
+            blockEnd: Math.floor(stepTargetBlock - 1),
+        });
         currBlock = stepTargetBlock;
     }
 
     logFnDuration(start);
-    return { latest, history: results};
+    return { latest: results.at(-1), history: results};
 }
 
 module.exports = { computeParkinsonVolatility, computeBiggestDailyChange, medianPricesOverBlocks, rollingBiggestDailyChange };
