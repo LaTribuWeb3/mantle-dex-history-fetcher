@@ -512,6 +512,7 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateral , 
     /// compute CLFs for all spans and all volatilities
     const results = {};
     for(const volatilitySpan of spans) {
+        results[volatilitySpan] = {};
         for(const liquiditySpan of spans) {
             results[volatilitySpan][liquiditySpan] = findRiskLevelFromParameters(parameters[volatilitySpan].volatility, parameters[liquiditySpan].liquidity, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCap * assetParameters.LTV / 100);
         }
