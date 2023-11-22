@@ -131,8 +131,8 @@ async function computeCLFForPool(cometAddress, baseAsset, collaterals, web3Provi
             resultsData.collateralsData[collateral.symbol] = {};
             resultsData.collateralsData[collateral.symbol].collateral = await getCollateralAmount(collateral, cometContract, startDateUnixSec, endBlock);
             console.log('collateral data', resultsData.collateralsData[collateral.symbol].collateral);
-            resultsData.collateralsData[collateral.symbol].clfs = await computeMarketCLF(assetParameters, collateral, baseAsset, fromBlocks, endBlock, startDateUnixSec);
-            // resultsData.collateralsData[collateral.symbol].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateral, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider);
+            // resultsData.collateralsData[collateral.symbol].clfs = await computeMarketCLF(assetParameters, collateral, baseAsset, fromBlocks, endBlock, startDateUnixSec);
+            resultsData.collateralsData[collateral.symbol].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateral, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider);
             
             // resultsData.collateralsData[collateral.symbol].liquidityHistory = await computeLiquidityHistory(collateral, fromBlocks, endBlock, baseAsset, assetParameters);
             console.log('resultsData', resultsData);
@@ -456,6 +456,27 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateral , 
     // for each platform, compute the volatility and the avg liquidity
     // only request one data (the biggest span) and recompute the avg for each spans
     const maxSpan = Math.max(...spans);
+    const rollingVolatility = await getRollingVolatility('uniswapv3', from, baseAsset, await web3Provider.getBlockNumber(), web3Provider);
+    const volatilityAtBlock = rollingVolatility.history.filter(_ => _.blockStart <= endBlock && _.blockEnd >= endBlock)[0];
+    
+    let volatility = 0;
+    if(volatilityAtBlock) {
+        volatility = volatilityAtBlock.current;
+    } else if(rollingVolatility.latest && rollingVolatility.latest.current) {
+        volatility = rollingVolatility.latest.current;
+    }
+    else {
+        throw new Error('CANNOT FIND VOLATILITY');
+    }
+
+    console.log(`[${from}-${baseAsset}] volatility: ${roundTo(volatility*100)}%`);
+
+    for (const span of spans) {
+        parameters[span] = {
+            volatility,
+            liquidity: 0,
+        };
+    }
 
     for(const platform of PLATFORMS) {
         const oldestBlock = fromBlocks[maxSpan];
@@ -464,90 +485,38 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateral , 
             continue;
         }
 
-        const rollingVolatility = await getRollingVolatility(platform, from, baseAsset, endBlock, web3Provider);
-
-        const volatilityAtBlock = rollingVolatility.history.filter(_ => _.blockStart <= endBlock && _.blockEnd >= endBlock)[0];
-
-
         const allBlockNumbers = Object.keys(fullLiquidityDataForPlatform).map(_ => Number(_));
-        // compute the data for each spans
+        // compute the liquidity data for each spans
         for (const span of spans) {
             const fromBlock = fromBlocks[span];
             const blockNumberForSpan = allBlockNumbers.filter(_ => _ >= fromBlock); 
-
-            let volatilityToAdd = 0;
-            if(volatilityAtBlock) {
-                volatilityToAdd = volatilityAtBlock.current;
-            }
 
             let liquidityToAdd = 0;
             if(blockNumberForSpan.length > 0) {
                 let sumLiquidityForTargetSlippageBps = 0;
                 for(const blockNumber of blockNumberForSpan) {
-    
                     sumLiquidityForTargetSlippageBps += fullLiquidityDataForPlatform[blockNumber].slippageMap[assetParameters.liquidationBonusBPS].base;
                 }
     
                 liquidityToAdd = sumLiquidityForTargetSlippageBps / blockNumberForSpan.length;
             }
 
-            // if(priceBlockNumberForSpan.length > 0) {
-            //     const pricesAtBlock = {};
-            //     for(const blockNumber of priceBlockNumberForSpan) {
-            //         pricesAtBlock[blockNumber] = fullPricesAtBlock[blockNumber];
-            //     }
-
-            //     volatilityToAdd = computeParkinsonVolatility(pricesAtBlock, from, baseAsset, fromBlock, endBlock, span);
-            // }
-
-            if(!parameters[span]) {
-                parameters[span] = {
-                    volatility: 0,
-                    liquidity: 0,
-                    // the weight will be calculated as the avg liquidity available
-                    volatilityWeight: 0
-
-                };
-            }
-
-            // here the volatility is stored weighted by the available liquidity
-            parameters[span].volatility += volatilityToAdd * liquidityToAdd;
             parameters[span].liquidity += liquidityToAdd;
-            if(volatilityToAdd > 0) {
-                parameters[span].volatilityWeight += liquidityToAdd;
-            }
-
-            console.log(`[${from}-${baseAsset}] [${span}d] [${platform}] volatility: ${roundTo(volatilityToAdd*100, 2)}%`);
             console.log(`[${from}-${baseAsset}] [${span}d] [${platform}] liquidity: ${liquidityToAdd}`);
         }
     }
 
-    // at the end, avg the volatility
-    for(const span of spans) {
-        parameters[span].volatility = parameters[span].volatility / parameters[span].volatilityWeight;
-    }
-
     console.log('parameters', parameters);
-
 
     recordParameters(`${from}-${baseAsset}`, { parameters, assetParameters }, startDate);
     /// compute CLFs for all spans and all volatilities
     const results = {};
-    for (let i = 0; i < spans.length; i++) {
-        const volatilitySpan = spans[i];
-        results[volatilitySpan] = {};
-        for (let j = 0; j < spans.length; j++) {
-            const liquiditySpan = spans[j];
-            if (parameters[volatilitySpan].volatility !== 0) {
-                let volatilityToUse = parameters[volatilitySpan].volatility;
-                if(volatilityToUse < 1 / 10000) {
-                    volatilityToUse = parameters[spans[i+1]].volatility;
-                }
-
-                results[volatilitySpan][liquiditySpan] = findRiskLevelFromParameters(volatilityToUse, parameters[liquiditySpan].liquidity, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCap * assetParameters.LTV / 100);
-            }
+    for(const volatilitySpan of spans) {
+        for(const liquiditySpan of spans) {
+            results[volatilitySpan][liquiditySpan] = findRiskLevelFromParameters(parameters[volatilitySpan].volatility, parameters[liquiditySpan].liquidity, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCap * assetParameters.LTV / 100);
         }
     }
+    
     console.log('results', results);
     return results;
 }
