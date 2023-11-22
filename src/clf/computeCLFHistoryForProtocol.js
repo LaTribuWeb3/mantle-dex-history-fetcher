@@ -34,6 +34,13 @@ function unifyProtocolData(protocol) {
                     }
                     if (collateralValues) {
                         protocolData[market][collateral][day] = collateralValues.clfs;
+
+                        // read the pair file
+                        const pairFilename = path.join(folderPath, `${day}_${collateral}-${market}_${protocol}_CLFs.json`);
+                        const pairData = JSON.parse(fs.readFileSync(pairFilename, 'utf-8'));
+                        
+                        protocolData[market][collateral][day].protocolParameters = pairData.assetParameters;
+                        protocolData[market][collateral][day].parameters = pairData.parameters;
                     }
                 }
             }
@@ -70,11 +77,17 @@ function computeCLFHistoryForProtocol(protocol = 'compoundv3') {
                         const index = orderedCLFData[market][volatility][span].findIndex(_ => _.date === date);
                         if (index >= 0) {
                             orderedCLFData[market][volatility][span][index][token] = dateData[volatility][span];
+                            orderedCLFData[market][volatility][span][index][`${token}-volatility`] = dateData.parameters[volatility].volatility;
+                            orderedCLFData[market][volatility][span][index][`${token}-liquidity`] = dateData.parameters[span].liquidity;
+                            orderedCLFData[market][volatility][span][index][`${token}-parameters`] = dateData.protocolParameters;
                         }
                         else {
                             const objectToStore = {
                                 date: date,
-                                [`${token}`]: dateData[volatility][span]
+                                [`${token}`]: dateData[volatility][span],
+                                [`${token}-volatility`]: dateData.parameters[volatility].volatility,
+                                [`${token}-liquidity`]: dateData.parameters[span].liquidity,
+                                [`${token}-parameters`]: dateData.protocolParameters,
                             };
 
                             orderedCLFData[market][volatility][span].push(objectToStore);
