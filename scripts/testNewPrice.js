@@ -9,17 +9,17 @@ async function testNewPrice() {
     
     const web3Provider = new ethers.providers.StaticJsonRpcProvider('https://eth.llamarpc.com');
     const currentBlock = await  web3Provider.getBlockNumber();
-    const platform = 'curve';
-    const base = 'LDO';
-    const quote = 'USDC';
-    const pivot = 'WETH';
+    const platform = 'uniswapv3';
+    const base = 'wstETH';
+    const quote = 'WETH';
+    const pivot = undefined;
     const prices = getPricesAtBlockForIntervalViaPivot(platform, base, quote, 0, currentBlock, pivot);
     const blocknumbers = Object.keys(prices);
     console.log(blocknumbers.length);
     console.log(blocknumbers[0]);
 
     const medianed = medianPricesOverBlocks(prices);
-    const rollingVolatilityResult = await rollingBiggestDailyChange(medianed, currentBlock, web3Provider);
+    const rollingVolatilityResult = await rollingBiggestDailyChange(medianed, web3Provider);
     console.log(rollingVolatilityResult.latest);
 
     if(!fs.existsSync(path.join(DATA_DIR, 'precomputed', 'volatility', platform))) {

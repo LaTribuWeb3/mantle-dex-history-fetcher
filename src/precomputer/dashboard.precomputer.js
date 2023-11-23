@@ -89,7 +89,7 @@ async function PrecomputeDashboardData() {
                             throw new Error(`Could not get price at block for ${platform} ${pair.base} ${pair.quote} ${pair.volatilityPivot}`);
                         }
 
-                        const rollingVolatility = await getRollingVolatility(platform, pair.base, pair.quote, currentBlock, web3Provider);
+                        const rollingVolatility = await getRollingVolatility(platform, pair.base, pair.quote, web3Provider);
 
                         const startDate = Date.now();
                         const platformOutput = generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, platform, rollingVolatility);                        

@@ -86,11 +86,11 @@ function getLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJu
     return liquidity;
 }
 
-async function getRollingVolatility(platform, fromSymbol, toSymbol, currentBlock, web3Provider) {
+async function getRollingVolatility(platform, fromSymbol, toSymbol, web3Provider) {
     // find the median file
     const medianPrices = readMedianPricesFile(platform, fromSymbol, toSymbol);
 
-    return await rollingBiggestDailyChange(medianPrices, currentBlock, web3Provider);
+    return await rollingBiggestDailyChange(medianPrices, web3Provider);
 }
 
 //    _    _  _______  _____  _        _____ 
