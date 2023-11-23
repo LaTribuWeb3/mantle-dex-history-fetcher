@@ -159,6 +159,8 @@ async function FetchUniswapV3PriceHistoryForPair(pairToFetch, pools, web3Provide
     const token0Conf = getConfTokenBySymbol(pairToFetch.token0);
     const token1Conf = getConfTokenBySymbol(pairToFetch.token1);
 
+    const label = `[${token0Conf.symbol}-${token1Conf.symbol}]`;
+
     // get the first block to fetch
     const priceHistoryFilename = path.join(DATA_DIR, 'precomputed', 'price', 'uniswapv3', `${pairToFetch.token0}-${pairToFetch.token1}-unified-data.csv`);
     const priceHistoryReversedFilename = path.join(DATA_DIR, 'precomputed', 'price', 'uniswapv3', `${pairToFetch.token1}-${pairToFetch.token0}-unified-data.csv`);
@@ -214,33 +216,57 @@ async function FetchUniswapV3PriceHistoryForPair(pairToFetch, pools, web3Provide
             toBlock = currentBlock;
         }
 
-        const allSwaps = [];
+        const tradesByPool = {};
+        console.log(`${label}: fetching events for blocks [${fromBlock}-${toBlock}]`);
         for(const poolAddress of pools) {
             const contract = contracts[poolAddress];
             const swaps = await fetchEvents(fromBlock, toBlock, contract, token0Conf.decimals, token1Conf.decimals);
-            const swapCount = Object.keys(swaps).length;
-            console.log(`found ${swapCount} swap event for pool ${poolAddress}`);
-            allSwaps.push(swaps);
+            // const swapCount = swaps.length;
+            // console.log(`${label}: found ${swapCount} swap event for pool ${poolAddress}`);
+            tradesByPool[poolAddress] = swaps;
         }
 
-        // sort by number of swaps
-        allSwaps.sort((a,b) => Object.keys(a).length - Object.keys(b).length);
+        let mainPool = pools[0];
+        let mainPoolTradeCount = 0;
+        for(const poolAddress of pools) {
+            const poolSwaps = tradesByPool[poolAddress];
+            if(poolSwaps.length > mainPoolTradeCount) {
+                mainPoolTradeCount = poolSwaps.length;
+                mainPool = poolAddress;
+            }
+        }
+        if(mainPoolTradeCount == 0) {
+            console.log(`${label}: not a single swap, ignoring block interval`);
+            fromBlock = toBlock +1;
+            continue;
+        }
 
-        const results = {};
-        for(const swaps of allSwaps) {
-            const blockNumbers = Object.keys(swaps);
-            console.log(`working on ${blockNumbers.length} swaps`);
-            for(const blocknumber of blockNumbers) {
-                results[blocknumber] = swaps[blocknumber];
+        let allSwaps =  tradesByPool[mainPool];
+        console.log(`${label}: [pool ${mainPool}]: ${mainPoolTradeCount} swaps`);
+
+        for(const poolAddress of pools) {
+            if(poolAddress == mainPool) {
+                continue;
+            }
+
+            const poolSwaps = tradesByPool[poolAddress];
+            if(poolSwaps.length < mainPoolTradeCount * 0.5) {
+                console.log(`${label}: [pool ${poolAddress}]: ${poolSwaps.length} swaps | too few, swaps discarded`);
+            } else {
+                console.log(`${label}: [pool ${poolAddress}]: ${poolSwaps.length} swaps | enough, keeping swaps`);
+                allSwaps = allSwaps.concat(poolSwaps);
             }
         }
 
+        // sort by blocks
+        allSwaps.sort((a,b) => a.block - b.block);
+
         const toWrite = [];
         const toWriteReversed = [];
-        for(const blocknumber of Object.keys(results)) {
-            toWrite.push(`${blocknumber},${results[blocknumber]}\n`);
-            toWriteReversed.push(`${blocknumber},${1/results[blocknumber]}\n`);
-            lastBlockWithData = Number(blocknumber);
+        for(const priceData of allSwaps) {
+            toWrite.push(`${priceData.block},${priceData.price}\n`);
+            toWriteReversed.push(`${priceData.block},${1/priceData.price}\n`);
+            lastBlockWithData = priceData.block;
         }
 
         fs.appendFileSync(priceHistoryFilename, toWrite.join(''));
@@ -259,7 +285,7 @@ async function fetchEvents(startBlock, endBlock, contract, decimals0, decimals1)
     let fromBlock =  startBlock;
     let toBlock = 0;
     let cptError = 0;
-    const swapResults = {};
+    const swapResults = [];
     while(toBlock < endBlock) {
         toBlock = fromBlock + blockStep - 1;
         if(toBlock > endBlock) {
@@ -281,11 +307,14 @@ async function fetchEvents(startBlock, endBlock, contract, decimals0, decimals1)
             continue;
         }
 
-        console.log(`${fnName()}[${fromBlock} - ${toBlock}]: found ${events.length} Swap events after ${cptError} errors (fetched ${toBlock-fromBlock+1} blocks)`);
+        // console.log(`${fnName()}[${fromBlock} - ${toBlock}]: found ${events.length} Swap events after ${cptError} errors (fetched ${toBlock-fromBlock+1} blocks)`);
         
         if(events.length != 0) {
             for(const e of events) {
-                swapResults[e.blockNumber] = getPriceFromSqrt(e.args.sqrtPriceX96, decimals0, decimals1);
+                swapResults.push({
+                    block: e.blockNumber,
+                    price: getPriceFromSqrt(e.args.sqrtPriceX96, decimals0, decimals1)
+                });
             }
 
             // try to find the blockstep to reach 9000 events per call as the RPC limit is 10 000, 
