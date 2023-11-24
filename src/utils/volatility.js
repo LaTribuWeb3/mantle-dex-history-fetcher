@@ -186,7 +186,7 @@ function computeBiggestDailyChange(medianPricesAtBlock, currentBlock) {
  * @param {number} currentBlock 
  * @param {ethers.providers.StaticJsonRpcProvider} web3Provider 
  */
-async function rollingBiggestDailyChange(medianPricesAtBlock, web3Provider) {
+async function rollingBiggestDailyChange(medianPricesAtBlock, web3Provider, lambda = LAMBDA) {
     const start = Date.now();
     const fromBlock = medianPricesAtBlock[0].block;
     const endBlock = medianPricesAtBlock.at(-1).block;
@@ -200,6 +200,8 @@ async function rollingBiggestDailyChange(medianPricesAtBlock, web3Provider) {
     let currBlock = fromBlock;
     let currentRollingDailyChange = 0;
     const results = [];
+    let lastMinPrice = 0;
+    let lastMaxPrice = 0;
     while(currBlock <= endBlock) {
         const yesterdayRollingDailyChange = currentRollingDailyChange;
 
@@ -213,13 +215,15 @@ async function rollingBiggestDailyChange(medianPricesAtBlock, web3Provider) {
         const medianPricesForDay = medianPricesAtBlock.filter(_ => _.block >= currBlock && _.block < stepTargetBlock).map(_ => _.price);
         if(medianPricesForDay.length > 0) {
             const minPriceForDay = Math.min(...medianPricesForDay);
+            lastMinPrice = minPriceForDay;
             const maxPriceForDay = Math.max(...medianPricesForDay);
+            lastMaxPrice = maxPriceForDay;
     
             let priceChangePctForDay = (maxPriceForDay - minPriceForDay) / minPriceForDay;
-            currentRollingDailyChange = Math.max(LAMBDA * yesterdayRollingDailyChange, priceChangePctForDay);
+            currentRollingDailyChange = Math.max(lambda * yesterdayRollingDailyChange, priceChangePctForDay);
         } else {
             // if no data for the block interval, just set current value = LAMBDA * yesterday's value
-            currentRollingDailyChange = LAMBDA * yesterdayRollingDailyChange;
+            currentRollingDailyChange = lambda * yesterdayRollingDailyChange;
         }
         
         results.push({
@@ -227,6 +231,8 @@ async function rollingBiggestDailyChange(medianPricesAtBlock, web3Provider) {
             current: currentRollingDailyChange,
             blockStart: Math.ceil(currBlock),
             blockEnd: Math.floor(stepTargetBlock - 1),
+            minPrice: lastMinPrice,
+            maxPrice: lastMaxPrice,
         });
         currBlock = stepTargetBlock;
     }

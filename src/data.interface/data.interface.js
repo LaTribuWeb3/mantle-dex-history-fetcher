@@ -8,7 +8,7 @@
 const { getParkinsonVolatilityForInterval, getParkinsonVolatilityForIntervalViaPivot } = require('./internal/data.interface.price');
 const { getAverageLiquidityForInterval, getSlippageMapForInterval } = require('./internal/data.interface.liquidity');
 const { logFnDurationWithLabel } = require('../utils/utils');
-const { PLATFORMS, DEFAULT_STEP_BLOCK, DATA_DIR } = require('../utils/constants');
+const { PLATFORMS, DEFAULT_STEP_BLOCK, DATA_DIR, LAMBDA } = require('../utils/constants');
 const fs = require('fs');
 const path = require('path');
 const { rollingBiggestDailyChange } = require('../utils/volatility');
@@ -86,11 +86,11 @@ function getLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJu
     return liquidity;
 }
 
-async function getRollingVolatility(platform, fromSymbol, toSymbol, web3Provider) {
+async function getRollingVolatility(platform, fromSymbol, toSymbol, web3Provider, lambda = LAMBDA) {
     // find the median file
     const medianPrices = readMedianPricesFile(platform, fromSymbol, toSymbol);
 
-    return await rollingBiggestDailyChange(medianPrices, web3Provider);
+    return await rollingBiggestDailyChange(medianPrices, web3Provider, lambda);
 }
 
 //    _    _  _______  _____  _        _____ 

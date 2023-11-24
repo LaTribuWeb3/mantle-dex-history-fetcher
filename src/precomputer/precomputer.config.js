@@ -50,6 +50,10 @@ const pairsToCompute = {
 
 const dashboardPairsToCompute = [
     {
+        base: 'wstETH',
+        quote: 'WETH',
+    },
+    {
         base: 'stETH',
         quote: 'WETH',
     },

@@ -48,8 +48,11 @@ const REFERENCE_BLOCK = 15538957; // Sep-15-2022 11:59:59, this is just after Th
 const REFERENCE_BLOCK_TIMESTAMP = 1663243199;
 const BLOCK_PER_DAY = 7128;
 
-// const LAMBDA = Math.exp(Math.log(0.5)/(365/2)); // 0.9962091367899786 used when computing the rolling avg biggest daily change
-const LAMBDA = Math.exp(Math.log(0.5)/(730/2)); // 0.9981027686515946 used when computing the rolling avg biggest daily change
+const LAMBDA = Math.exp(Math.log(0.5)/(365)); // 0.9962091367899786 used when computing the rolling avg biggest daily change
+// const LAMBDA = Math.exp(Math.log(0.5)/(730)); // 0.9981027686515946 used when computing the rolling avg biggest daily change
 
-console.log({LAMBDA});
-module.exports = { DATA_DIR, PLATFORMS, TARGET_SLIPPAGES, SPANS, BN_1e18, smartLTVSourceMap, DEFAULT_STEP_BLOCK, REFERENCE_BLOCK, REFERENCE_BLOCK_TIMESTAMP, BLOCK_PER_DAY, LAMBDA, MEDIAN_OVER_BLOCK};
+const HALF_LIFE_1Y = Math.exp(Math.log(0.5)/(365)); // 0.9962091367899786 used when computing the rolling avg biggest daily change
+const HALF_LIFE_2Y = Math.exp(Math.log(0.5)/(730)); // 0.9981027686515946 used when computing the rolling avg biggest daily change
+
+module.exports = { DATA_DIR, PLATFORMS, TARGET_SLIPPAGES, SPANS, BN_1e18, smartLTVSourceMap, DEFAULT_STEP_BLOCK, 
+    REFERENCE_BLOCK, REFERENCE_BLOCK_TIMESTAMP, BLOCK_PER_DAY, LAMBDA, MEDIAN_OVER_BLOCK, HALF_LIFE_1Y, HALF_LIFE_2Y};
