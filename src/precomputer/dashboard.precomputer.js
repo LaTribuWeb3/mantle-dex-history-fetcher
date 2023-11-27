@@ -1,7 +1,6 @@
 const { RecordMonitoring } = require('../utils/monitoring');
 const { ethers } = require('ethers');
 const { fnName, roundTo, sleep, logFnDurationWithLabel, logFnDuration } = require('../utils/utils');
-const { dashboardPairsToCompute } = require('./precomputer.config');
 const { DATA_DIR, PLATFORMS } = require('../utils/constants');
 
 const fs = require('fs');
@@ -10,6 +9,7 @@ const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
 const { getLiquidity, getRollingVolatility } = require('../data.interface/data.interface');
 const { getDefaultSlippageMap, readMedianPricesFile } = require('../data.interface/internal/data.interface.utils');
 const { median, average, quantile } = require('simple-statistics');
+const { watchedPairs } = require('../global.config');
 
 const RUN_EVERY_MINUTES = 6 * 60; // in minutes
 const MONITORING_NAME = 'Dashboard Precomputer';
@@ -74,7 +74,24 @@ async function PrecomputeDashboardData() {
                 fs.mkdirSync(dirPath, {recursive: true});
             }
 
-            for(const pair of dashboardPairsToCompute) {
+            const pairsToCompute = [];
+            for(const [base, quotes] of Object.entries(watchedPairs)) {
+                for(const quoteConfig of quotes) {
+                    pairsToCompute.push({
+                        base: base,
+                        quote: quoteConfig.quote,
+                        pivots: quoteConfig.pivots
+                    });
+
+                    pairsToCompute.push({
+                        base: quoteConfig.quote,
+                        quote: base,
+                        pivots: quoteConfig.pivots
+                    });
+                }
+            }
+
+            for(const pair of pairsToCompute) {
                 console.log(`${fnName()}: precomputing for pair ${pair.base}/${pair.quote}`);
                 let allPlatformsOutput = undefined;
                 for(const platform of PLATFORMS) {
@@ -185,7 +202,7 @@ async function PrecomputeDashboardData() {
                 'lastDuration': runEndDate - Math.round(runStartDate / 1000)
             });
     
-            logFnDuration(runStartDate, dashboardPairsToCompute.length, 'pairs to compute');
+            logFnDuration(runStartDate, pairsToCompute.length, 'pairs to compute');
             const sleepTime = RUN_EVERY_MINUTES * 60 * 1000 - (Date.now() - runStartDate);
             if(sleepTime > 0) {
                 console.log(`${fnName()}: sleeping ${roundTo(sleepTime/1000/60)} minutes`);
