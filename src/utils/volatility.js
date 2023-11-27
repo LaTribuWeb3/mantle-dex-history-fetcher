@@ -1,7 +1,6 @@
 const { median } = require('simple-statistics');
 const { roundTo, logFnDuration, retry } = require('./utils');
 const { BLOCK_PER_DAY, LAMBDA, MEDIAN_OVER_BLOCK } = require('./constants');
-const { ethers } = require('ethers');
 
 /**
  * Compute parkinson liquidity from price dictionary
@@ -95,29 +94,23 @@ function computeParkinsonVolatility(priceAtBlock, fromSymbol, toSymbol, startBlo
 
 /**
  * Compute median every prices over 300 blocks
- * @param {{[blockNumber: number]: price}} pricesAtBlock 
+ * @param {{ block: number, price: number}[]} pricesAtBlock 
  */
 function medianPricesOverBlocks(pricesAtBlock, baseBlock) {
     const start = Date.now();
-    const pricesBlockNumbers = Object.keys(pricesAtBlock).map(_ => Number(_));
 
-    let currBlock = baseBlock || pricesBlockNumbers[0];
-    console.log(`starting median prices since block ${currBlock} to ${pricesBlockNumbers.at(-1)}`);
+    let currBlock = baseBlock || pricesAtBlock[0].block;
+    console.log(`starting median prices since block ${currBlock} to ${pricesAtBlock.at(-1).block}`);
     const medianPricesAtBlock = [];
-    while(currBlock <= pricesBlockNumbers.at(-1)) {
+    while(currBlock <= pricesAtBlock.at(-1).block) {
         const stepTargetBlock = currBlock + MEDIAN_OVER_BLOCK;
         // only median full block ranges
-        if(stepTargetBlock > pricesBlockNumbers.at(-1)) {
+        if(stepTargetBlock > pricesAtBlock.at(-1).block) {
             break;
         }
-        const blocksToMedian = pricesBlockNumbers.filter(_ => _ >= currBlock && _ < stepTargetBlock);
+        const blocksToMedian =  pricesAtBlock.filter(_ => _.block >= currBlock && _.block < stepTargetBlock);
         if(blocksToMedian.length > 0) {
-            const pricesToMedian = [];
-            for(const blockToMedian of blocksToMedian) {
-                pricesToMedian.push(pricesAtBlock[blockToMedian]);
-            }
-
-            const medianPrice = median(pricesToMedian);
+            const medianPrice = median(blocksToMedian.map(_ => _.price));
             if(medianPrice > 0) {
                 medianPricesAtBlock.push({
                     block: currBlock,
@@ -129,7 +122,7 @@ function medianPricesOverBlocks(pricesAtBlock, baseBlock) {
         currBlock = stepTargetBlock;
     }
 
-    logFnDuration(start, pricesBlockNumbers.length);
+    logFnDuration(start, pricesAtBlock.length);
     return medianPricesAtBlock;
 }
 

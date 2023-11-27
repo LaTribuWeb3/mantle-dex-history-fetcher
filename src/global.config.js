@@ -233,61 +233,61 @@ const tokens = {
 
 const watchedPairs = {
     'stETH-WETH': {
-        pivot: undefined
+        pivots: undefined
     },
     'WETH-USDC': {
-        pivot: undefined
+        pivots: undefined
     },
     'HarryPotterObamaSonic10Inu-WETH': {
-        pivot: undefined
+        pivots: undefined
     },
     'PEPE-WETH': {
-        pivot: undefined
+        pivots: undefined
     },
     'BLUR-WETH': {
-        pivot: undefined
+        pivots: undefined
     },
     'SHIB-WETH': {
-        pivot: undefined
+        pivots: undefined
     },
     'MKR-USDC': {
-        pivot: 'WETH'
+        pivots: ['WETH']
     },
     'LINK-USDC': {
-        pivot: 'WETH'
+        pivots: ['WETH']
     },
     'UNI-USDC': {
-        pivot: 'WETH'
+        pivots: ['WETH']
     },
     'LDO-USDC': {
-        pivot: 'WETH'
+        pivots: ['WETH']
     },
     'RPL-USDC': {
-        pivot: 'WETH'
+        pivots: ['WETH']
     },
     'APE-USDC': {
-        pivot: 'WETH'
+        pivots: ['WETH']
     },
     'CVX-USDC': {
-        pivot: 'WETH'
+        pivots: ['WETH']
     },    
     'FXS-USDC': {
-        pivot: 'WETH'
+        pivots: ['WETH']
     },    
     'COMP-USDC': {
-        pivot: 'WETH'
+        pivots: ['WETH']
     },    
     'WBTC-USDC': {
-        pivot: 'WETH'
+        pivots: ['WETH']
     },    
     'cbETH-WETH': {
-        pivot: undefined
+        pivots: undefined
     },    
     'WETH-wstETH': {
-        pivot: undefined
+        pivots: undefined
     },  
     'CRV-USDC': {
-        pivot: 'WETH'
+        pivots: ['WETH']
     } 
 };
 

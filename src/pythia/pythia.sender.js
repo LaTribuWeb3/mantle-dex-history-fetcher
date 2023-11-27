@@ -7,7 +7,7 @@ const { getConfTokenBySymbol } = require('../utils/token.utils');
 dotenv.config();
 const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
 const { RecordMonitoring } = require('../utils/monitoring');
-const { getAverageLiquidity, getVolatility } = require('../data.interface/data.interface');
+const { getAverageLiquidity, getVolatility, getRollingVolatility } = require('../data.interface/data.interface');
 const { BN_1e18, TARGET_SLIPPAGES, smartLTVSourceMap } = require('../utils/constants');
 
 const SPANS = [7, 30, 180, 365]; // we dont use constants.js span because we don't generate 1d data
@@ -125,14 +125,20 @@ async function SendToPythia() {
  * @param {number} endBlock 
  * @returns {{asset: string, key: string, value: string, updateTimeSeconds: number}}
  */
-function generateVolatilityData(baseSymbol, span, startBlock, endBlock) {
+async function generateVolatilityData(baseSymbol, span, startBlock, endBlock, web3Provider) {
     const tokenConf = getConfTokenBySymbol(baseSymbol);
     const usdcConf = getConfTokenBySymbol('USDC');
 
     let volatility = 0;
     let volatilityCpt = 0;
     for(const platform of PLATFORMS_TO_USE) {
-        const vol = getVolatility(platform, baseSymbol, 'USDC', startBlock, endBlock, span);
+        const rollingVolatility = await getRollingVolatility(platform, baseSymbol, 'USDC', web3Provider);
+
+        let vol = 0;
+        if(rollingVolatility) {
+            vol = rollingVolatility.latest.current;
+        }
+        
         if(vol != 0) {
             volatilityCpt++;
             volatility += vol;

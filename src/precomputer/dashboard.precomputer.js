@@ -8,8 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
 const { getLiquidity, getRollingVolatility } = require('../data.interface/data.interface');
-const { computeParkinsonVolatility } = require('../utils/volatility');
-const { getDefaultSlippageMap, getPricesAtBlockForIntervalViaPivot, readMedianPricesFile } = require('../data.interface/internal/data.interface.utils');
+const { getDefaultSlippageMap, readMedianPricesFile } = require('../data.interface/internal/data.interface.utils');
 const { median, average, quantile } = require('simple-statistics');
 
 const RUN_EVERY_MINUTES = 6 * 60; // in minutes
@@ -20,7 +19,6 @@ const NB_DAYS = 180;
 const TARGET_DATA_POINTS = NB_DAYS;
 const NB_DAYS_AVG = 30;
 
-const BIGGEST_DAILY_CHANGE_MEDIAN_OVER_BLOCK = 300; // amount of blocks to median the price over
 const BIGGEST_DAILY_CHANGE_OVER_DAYS = 90; // amount of days to compute the biggest daily change
 let BLOCK_PER_DAY = 0; // 7127
 
