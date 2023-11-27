@@ -219,7 +219,7 @@ async function rollingBiggestDailyChange(medianPricesAtBlock, web3Provider, lamb
             const maxPriceForDay = Math.max(...medianPricesForDay);
             lastMaxPrice = maxPriceForDay;
     
-            let priceChangePctForDay = (maxPriceForDay - minPriceForDay) / minPriceForDay;
+            let priceChangePctForDay = Math.abs(Math.log(maxPriceForDay/minPriceForDay));
             currentRollingDailyChange = Math.max(lambda * yesterdayRollingDailyChange, priceChangePctForDay);
         } else {
             // if no data for the block interval, just set current value = LAMBDA * yesterday's value
