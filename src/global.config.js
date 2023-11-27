@@ -232,63 +232,173 @@ const tokens = {
 };
 
 const watchedPairs = {
-    'stETH-WETH': {
-        pivots: undefined
-    },
-    'WETH-USDC': {
-        pivots: undefined
-    },
-    'HarryPotterObamaSonic10Inu-WETH': {
-        pivots: undefined
-    },
-    'PEPE-WETH': {
-        pivots: undefined
-    },
-    'BLUR-WETH': {
-        pivots: undefined
-    },
-    'SHIB-WETH': {
-        pivots: undefined
-    },
-    'MKR-USDC': {
-        pivots: ['WETH']
-    },
-    'LINK-USDC': {
-        pivots: ['WETH']
-    },
-    'UNI-USDC': {
-        pivots: ['WETH']
-    },
-    'LDO-USDC': {
-        pivots: ['WETH']
-    },
-    'RPL-USDC': {
-        pivots: ['WETH']
-    },
-    'APE-USDC': {
-        pivots: ['WETH']
-    },
-    'CVX-USDC': {
-        pivots: ['WETH']
-    },    
-    'FXS-USDC': {
-        pivots: ['WETH']
-    },    
-    'COMP-USDC': {
-        pivots: ['WETH']
-    },    
-    'WBTC-USDC': {
-        pivots: ['WETH']
-    },    
-    'cbETH-WETH': {
-        pivots: undefined
-    },    
-    'WETH-wstETH': {
-        pivots: undefined
-    },  
-    'CRV-USDC': {
-        pivots: ['WETH']
-    } 
+    'WETH': [
+        {
+            quote: 'stETH',
+            pivots: undefined
+        },
+        {
+            quote: 'USDC',
+            pivots: undefined
+        },
+        {
+            quote: 'PEPE',
+            pivots: undefined
+        },
+        {
+            quote: 'BLUR',
+            pivots: undefined
+        },
+        {
+            quote: 'SHIB',
+            pivots: undefined
+        },
+        {
+            quote: 'HarryPotterObamaSonic10Inu',
+            pivots: undefined
+        },
+        {
+            quote: 'cbETH',
+            pivots: undefined
+        },
+        {
+            quote: 'wstETH',
+            pivots: undefined
+        },
+        {
+            quote: 'WBTC',
+            pivots: undefined
+        },
+        {
+            quote: 'DAI',
+            pivots: undefined
+        },
+        {
+            quote: 'wstETH',
+            pivots: undefined
+        },
+        {
+            quote: 'MANA',
+            pivots: undefined
+        },
+        {
+            quote: 'MKR',
+            pivots: undefined
+        },
+        {
+            quote: 'SNX',
+            pivots: undefined
+        },
+        {
+            quote: 'sUSD',
+            pivots: undefined
+        },
+        {
+            quote: 'UNI',
+            pivots: undefined
+        },
+        {
+            quote: 'USDT',
+            pivots: undefined
+        },
+    ],
+    'USDC': [
+        {
+            quote: 'MKR',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'LINK',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'UNI',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'LDO',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'RPL',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'APE',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'CVX',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'FXS',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'COMP',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'WBTC',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'CRV',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'DAI',
+            pivots: undefined
+        },
+        {
+            quote: 'MANA',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'SNX',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'sUSD',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'USDT',
+            pivots: undefined
+        },
+    ],
+    'WBTC': [
+        {
+            quote: 'DAI',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'MANA',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'MKR',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'SNX',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'sUSD',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'UNI',
+            pivots: ['WETH']
+        },
+        {
+            quote: 'USDT',
+            pivots: ['WETH']
+        },
+    ]
+    
 };
 
 module.exports = { tokens, watchedPairs };

@@ -41,16 +41,17 @@ async function PrecomputeMedianPrices() {
             const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
             const currentBlock = await web3Provider.getBlockNumber() - 10;
 
-            for(const platform of ['curve'] /*PLATFORMS*/) {
+            for(const platform of PLATFORMS) {
                 const platformDirectory = path.join(medianDirectory, platform);
                 if(!fs.existsSync(platformDirectory)) {
                     fs.mkdirSync(platformDirectory, {recursive: true});
                 }
 
-                for(const [pairString, pairConfig] of Object.entries(watchedPairs)) {
-                    const base = pairString.split('-')[0];
-                    const quote = pairString.split('-')[1];
-                    await precomputeAndSaveMedianPrices(platformDirectory, platform, base, quote, currentBlock, pairConfig.pivots);
+                for(const [base, quotes] of Object.entries(watchedPairs)) {
+                    for(const quoteConfig of quotes) {
+                        const quote = quoteConfig.quote;
+                        await precomputeAndSaveMedianPrices(platformDirectory, platform, base, quote, currentBlock, quoteConfig.pivots);
+                    }
                 }
             }
 

@@ -62,6 +62,7 @@ async function getRollingVolatility(platform, fromSymbol, toSymbol, web3Provider
     // find the median file
     const medianPrices = getPrices(platform, fromSymbol, toSymbol);
     if(!medianPrices) {
+        console.warn(`No median prices for ${platform}, ${fromSymbol}, ${toSymbol}`)
         return undefined;
     }
 

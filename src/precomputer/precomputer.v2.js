@@ -63,6 +63,7 @@ async function precomputeDataV2() {
                             const liquidityDataAggreg = getLiquidity(platform, base, quote, startBlock, currentBlock, true, blockStep);
                             if(!liquidityDataAggreg || Object.keys(liquidityDataAggreg).length == 0) {
                                 // no data for pair
+                                console.log(`${fnName()} [${base}/${quote}] [${span}d] no data`);
                                 continue;
                             }
                             Object.keys(liquidityDataAggreg).forEach(_ => allBlocksForSpan.add(Number(_)));
