@@ -15,7 +15,7 @@ const path = require('path');
 const RPC_URL = process.env.RPC_URL;
 const MINIMUM_TO_APPEND = process.env.MINIMUM_TO_APPEND || 5000;
 
-const RUN_EVERY_MINUTES = 30;
+const runEverySec = 60 * 60;
 
 /**
  * Fetch all liquidity history from UniswapV2 pairs
@@ -30,7 +30,7 @@ async function UniswapV2HistoryFetcher() {
                 'name': 'UniswapV2 Fetcher',
                 'status': 'running',
                 'lastStart': Math.round(start/1000),
-                'runEvery': RUN_EVERY_MINUTES * 60
+                'runEvery': runEverySec
             });
             if(!RPC_URL) {
                 throw new Error('Could not find RPC_URL env variable');
@@ -98,7 +98,7 @@ async function UniswapV2HistoryFetcher() {
         }
         // sleep 10 min - time it took to run the loop
         // if the loop took more than 10 minutes, restart directly
-        const sleepTime = RUN_EVERY_MINUTES * 60 * 1000 - (Date.now() - start);
+        const sleepTime = runEverySec * 1000 - (Date.now() - start);
         if(sleepTime > 0) {
             console.log(`${fnName()}: sleeping ${roundTo(sleepTime/1000/60)} minutes`);
             await sleep(sleepTime);

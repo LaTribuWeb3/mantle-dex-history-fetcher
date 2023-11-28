@@ -17,6 +17,7 @@ const { generateUnifiedFileCurve } = require('./curve.unified.generator');
 dotenv.config();
 const SAVE_BLOCK_STEP = 50;
 const RPC_URL = process.env.RPC_URL;
+const runEverySec = 60 * 60;
 
 const runnerName = 'Curve Fetcher';
 /**
@@ -34,7 +35,7 @@ async function CurveHistoryFetcher() {
                 'name': runnerName,
                 'status': 'running',
                 'lastStart': Math.round(start/1000),
-                'runEvery': 30 * 60
+                'runEvery': runEverySec
             });
 
             if(!fs.existsSync(path.join(DATA_DIR, 'curve'))) {
@@ -110,7 +111,7 @@ async function CurveHistoryFetcher() {
 
         // sleep 30 min minus time it took to run the loop
         // if the loop took more than 30 minutes, restart directly
-        const sleepTime = 30 * 60 * 1000 - (Date.now() - start);
+        const sleepTime = runEverySec * 1000 - (Date.now() - start);
         if(sleepTime > 0) {
             console.log(`${fnName()}: sleeping ${roundTo(sleepTime/1000/60)} minutes`);
             await sleep(sleepTime);

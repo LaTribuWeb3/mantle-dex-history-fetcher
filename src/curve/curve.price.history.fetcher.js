@@ -14,7 +14,7 @@ dotenv.config();
 const RPC_URL = process.env.RPC_URL;
 
 const runnerName = 'Curve Price Fetcher';
-const runEvery = 30 * 60;
+const runEverySec = 60 * 60;
 /**
  * the main entrypoint of the script, will run the fetch against all pool in the config
  */
@@ -27,7 +27,7 @@ async function CurvePriceHistoryFetcher() {
                 'name': runnerName,
                 'status': 'running',
                 'lastStart': Math.round(start/1000),
-                'runEvery': runEvery
+                'runEvery': runEverySec
             });
 
             if(!fs.existsSync(path.join(DATA_DIR, 'precomputed', 'price', 'curve'))) {
@@ -61,7 +61,7 @@ async function CurvePriceHistoryFetcher() {
 
         // sleep 30 min minus time it took to run the loop
         // if the loop took more than 30 minutes, restart directly
-        const sleepTime = 30 * 60 * 1000 - (Date.now() - start);
+        const sleepTime = runEverySec * 1000 - (Date.now() - start);
         if(sleepTime > 0) {
             console.log(`${fnName()}: sleeping ${roundTo(sleepTime/1000/60)} minutes`);
             await sleep(sleepTime);
