@@ -7,12 +7,14 @@ const { computeAveragesForProtocol } = require('./computeAveragesForProtocol');
 const { DATA_DIR } = require('../utils/constants');
 const { CLFsConfig } = require('./CLFs.config');
 const { computeCLFHistoryForProtocol } = require('./computeCLFHistoryForProtocol');
+const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
 
 async function main() {
     const start = Date.now();
     const fetchEveryMinutes = 1440;
     // eslint-disable-next-line no-constant-condition
     while (true) {
+        await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
         console.log('launching CLFs Runner');
         for (const protocol of CLFsConfig) {
             await protocol.toLaunch(fetchEveryMinutes);

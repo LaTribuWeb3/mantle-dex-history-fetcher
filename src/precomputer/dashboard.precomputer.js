@@ -10,6 +10,7 @@ const { getLiquidity, getRollingVolatility } = require('../data.interface/data.i
 const { getDefaultSlippageMap, readMedianPricesFile } = require('../data.interface/internal/data.interface.utils');
 const { median, average, quantile } = require('simple-statistics');
 const { watchedPairs } = require('../global.config');
+const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
 
 const RUN_EVERY_MINUTES = 6 * 60; // in minutes
 const MONITORING_NAME = 'Dashboard Precomputer';
@@ -25,6 +26,7 @@ let BLOCK_PER_DAY = 0; // 7127
 async function PrecomputeDashboardData() {
 // eslint-disable-next-line no-constant-condition
     while(true) {
+        await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
         const runStartDate = Date.now();
         console.log({TARGET_DATA_POINTS});
         console.log({NB_DAYS});

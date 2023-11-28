@@ -397,7 +397,7 @@ const watchedPairs = {
             quote: 'USDT',
             pivots: ['WETH']
         },
-    ]  
+    ]
 };
 
 module.exports = { tokens, watchedPairs };

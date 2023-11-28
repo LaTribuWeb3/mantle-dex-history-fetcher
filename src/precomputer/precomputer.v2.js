@@ -8,6 +8,7 @@ const { getLiquidity, getVolatility, getRollingVolatility } = require('../data.i
 const path = require('path');
 const { SPANS, PLATFORMS, DATA_DIR, TARGET_SLIPPAGES } = require('../utils/constants');
 const fs = require('fs');
+const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
 
 const RPC_URL = process.env.RPC_URL;
 const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
@@ -22,6 +23,7 @@ const MONITORING_NAME = 'Precomputer V2';
 async function precomputeDataV2() {
     // eslint-disable-next-line no-constant-condition
     while(true) {
+        await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
         const runStartDate = Date.now();
         volatilityCache = {};
         try {

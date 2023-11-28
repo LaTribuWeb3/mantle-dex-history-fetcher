@@ -50,7 +50,7 @@ async function CurveHistoryFetcher(onlyOnce = false) {
             let fetchPromises = [];
             for(const fetchConfig of curveConfig.curvePairs) {
                 fetchPromises.push(FetchHistory(fetchConfig, currentBlock, web3Provider));
-                await sleep(10000);
+                await sleep(2000);
             }
 
             const lastDataResults = await Promise.all(fetchPromises);

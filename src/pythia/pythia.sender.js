@@ -9,6 +9,7 @@ const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
 const { RecordMonitoring } = require('../utils/monitoring');
 const { getAverageLiquidity, getVolatility, getRollingVolatility } = require('../data.interface/data.interface');
 const { BN_1e18, TARGET_SLIPPAGES, smartLTVSourceMap } = require('../utils/constants');
+const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
 
 const SPANS = [7, 30, 180, 365]; // we dont use constants.js span because we don't generate 1d data
 const MONITORING_NAME = 'Pythia Sender';
@@ -31,6 +32,8 @@ async function SendToPythia() {
     
     // eslint-disable-next-line no-constant-condition
     while(true) {
+        await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
+
         const start = Date.now();
         try {
             await RecordMonitoring({
