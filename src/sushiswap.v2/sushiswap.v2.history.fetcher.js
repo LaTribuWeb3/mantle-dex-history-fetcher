@@ -23,7 +23,7 @@ const runEverySec = 60 * 60;
  * Fetch all liquidity history from UniswapV2 pairs
  * The pairs to fetch are read from the config file './uniswap.v2.config'
  */
-async function SushiswapV2HistoryFetcher() {
+async function SushiswapV2HistoryFetcher(onlyOnce = false) {
     // eslint-disable-next-line no-constant-condition
     while(true) {
         const start = Date.now();
@@ -97,6 +97,10 @@ async function SushiswapV2HistoryFetcher() {
                 'status': 'error',
                 'error': errorMsg
             });
+        }
+
+        if(onlyOnce) {
+            return;
         }
         // sleep 10 min - time it took to run the loop
         // if the loop took more than 10 minutes, restart directly
@@ -241,4 +245,6 @@ async function FetchHistoryForPair(web3Provider, pairConfig, currentBlock, minSt
     return lastEventBlock < currentBlock - 500_000;
 }
 
-SushiswapV2HistoryFetcher();
+// SushiswapV2HistoryFetcher();
+
+module.exports = { SushiswapV2HistoryFetcher };

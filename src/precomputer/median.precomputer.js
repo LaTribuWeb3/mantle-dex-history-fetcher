@@ -11,12 +11,12 @@ const { medianPricesOverBlocks } = require('../utils/volatility');
 const { watchedPairs } = require('../global.config');
 dotenv.config();
 
-const RUN_EVERY_MINUTES = 60;
+const runEverySec = 60 * 60;
 const RPC_URL = process.env.RPC_URL;
 
 const WORKER_NAME = 'Median Prices Precomputer';
 
-async function PrecomputeMedianPrices() {
+async function PrecomputeMedianPrices(onlyOnce = false) {
     // eslint-disable-next-line no-constant-condition
     while(true) {
         const start = Date.now();
@@ -25,7 +25,7 @@ async function PrecomputeMedianPrices() {
                 'name': WORKER_NAME,
                 'status': 'running',
                 'lastStart': Math.round(start/1000),
-                'runEvery': RUN_EVERY_MINUTES * 60
+                'runEvery': runEverySec
             });
 
             if(!RPC_URL) {
@@ -37,11 +37,22 @@ async function PrecomputeMedianPrices() {
                 fs.mkdirSync(medianDirectory, {recursive: true});
             }
 
+            // this allows to run the computer for only specified platform, like this:
+            //      "node .\src\precomputer\median.precomputer.js sushiswapv2"
+            //      "node .\src\precomputer\median.precomputer.js sushiswapv2,uniswapv2"
+            let platformsToCompute = PLATFORMS;
+            if(process.argv[2]) {
+                platformsToCompute = process.argv[2].split(',');
+            } 
+            // else {
+            //     platformsToCompute.push('all');
+            // }
+
             console.log(`${fnName()}: starting`);
             const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
             const currentBlock = await web3Provider.getBlockNumber() - 10;
 
-            for(const platform of PLATFORMS) {
+            for(const platform of platformsToCompute) {
                 const platformDirectory = path.join(medianDirectory, platform);
                 if(!fs.existsSync(platformDirectory)) {
                     fs.mkdirSync(platformDirectory, {recursive: true});
@@ -73,7 +84,10 @@ async function PrecomputeMedianPrices() {
             });
         }
 
-        const sleepTime = RUN_EVERY_MINUTES * 60 * 1000 - (Date.now() - start);
+        if(onlyOnce) {
+            return;
+        }
+        const sleepTime = runEverySec * 1000 - (Date.now() - start);
         if(sleepTime > 0) {
             console.log(`${fnName()}: sleeping ${roundTo(sleepTime/1000/60)} minutes`);
             await sleep(sleepTime);
@@ -86,6 +100,7 @@ async function precomputeAndSaveMedianPrices(platformDirectory, platform, base, 
     const filename = path.join(platformDirectory, `${base}-${quote}-median-prices.csv`);
     const filenameReversed = path.join(platformDirectory, `${quote}-${base}-median-prices.csv`);
 
+
     // get the last block already medianed
     let lastBlock = 0;
     let fileAlreadyExists = fs.existsSync(filename);
@@ -97,34 +112,18 @@ async function precomputeAndSaveMedianPrices(platformDirectory, platform, base, 
         }
     }
 
-    // specific case for curve with USDC as the quote or base
-    // add USDT as a step
-    if(pivots && platform == 'curve' && pivots[0] == 'WETH' && quote == 'USDC') {
-        pivots = ['WETH', 'USDT'];
-    }
-    if(pivots && platform == 'curve' && pivots[0] == 'WETH' && base == 'USDC') {
-        pivots = ['USDT', 'WETH'];
-    }
-    
-    const prices = getPricesAtBlockForIntervalViaPivots(platform, base, quote, lastBlock + 1, currentBlock, pivots);
-    if(!prices) {
-        console.log(`Cannot find prices for ${base}->${quote}(pivot: ${pivots}) for platform: ${platform}`);
-        return;
-    }
+    const medianed = platform == 'all' ? 
+        getMedianPricesAllPlatforms(base, quote, lastBlock, currentBlock, pivots, fileAlreadyExists) : 
+        getMedianPricesForPlatform(platform, base, quote, lastBlock, currentBlock, pivots, fileAlreadyExists);
 
-    if(prices.length == 0) {
-        console.log(`${fnName()}[${platform}]: no new data to save for ${base}/${quote} via pivot: ${pivots}`);
-        return;
-    }
-
-    const medianed = medianPricesOverBlocks(prices, fileAlreadyExists ? lastBlock + MEDIAN_OVER_BLOCK : undefined);
     if(medianed.length == 0) {
         console.log(`${fnName()}[${platform}]: no new data to save for ${base}/${quote} via pivot: ${pivots}`);
         return;
     }
-    
+
     const toWrite = [];
     const toWriteReversed = [];
+
     if(!fs.existsSync(filename)) {
         fs.writeFileSync(filename, 'blocknumber,price\n');
         fs.writeFileSync(filenameReversed, 'blocknumber,price\n');
@@ -139,4 +138,48 @@ async function precomputeAndSaveMedianPrices(platformDirectory, platform, base, 
     fs.appendFileSync(filenameReversed, toWriteReversed.join(''));
 }
 
-PrecomputeMedianPrices();
+function getMedianPricesAllPlatforms(base, quote, lastBlock, currentBlock, pivots, fileAlreadyExists) {
+    let allPrices = [];
+    for (const subPlatform of PLATFORMS) {
+        const prices = getPricesAtBlockForIntervalViaPivots(subPlatform, base, quote, lastBlock + 1, currentBlock, pivots);
+        if (!prices) {
+            console.log(`Cannot find prices for ${base}->${quote}(pivot: ${pivots}) for platform: ${subPlatform}`);
+            continue;
+        }
+
+        allPrices = allPrices.concat(prices);
+    }
+
+    // here we have all the prices data from all platforms, sorting them before calling the median
+    allPrices.sort((a, b) => a.block - b.block);
+
+    const medianed = medianPricesOverBlocks(allPrices, fileAlreadyExists ? lastBlock + MEDIAN_OVER_BLOCK : undefined);
+    return medianed;
+}
+
+function getMedianPricesForPlatform(platform, base, quote, lastBlock, currentBlock, pivots, fileAlreadyExists) {
+    // specific case for curve with USDC as the quote or base
+    // add USDT as a step
+    if(pivots && platform == 'curve' && pivots[0] == 'WETH' && quote == 'USDC') {
+        pivots = ['WETH', 'USDT'];
+    }
+    if(pivots && platform == 'curve' && pivots[0] == 'WETH' && base == 'USDC') {
+        pivots = ['USDT', 'WETH'];
+    }
+        
+    const prices = getPricesAtBlockForIntervalViaPivots(platform, base, quote, lastBlock + 1, currentBlock, pivots);
+    if(!prices) {
+        console.log(`Cannot find prices for ${base}->${quote}(pivot: ${pivots}) for platform: ${platform}`);
+        return [];
+    }
+
+    if(prices.length == 0) {
+        console.log(`${fnName()}[${platform}]: no new data to save for ${base}/${quote} via pivot: ${pivots}`);
+        return [];
+    }
+
+    const medianed = medianPricesOverBlocks(prices, fileAlreadyExists ? lastBlock + MEDIAN_OVER_BLOCK : undefined);
+    return medianed;
+}
+
+module.exports = { PrecomputeMedianPrices };

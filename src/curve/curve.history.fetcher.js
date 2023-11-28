@@ -23,7 +23,7 @@ const runnerName = 'Curve Fetcher';
 /**
  * the main entrypoint of the script, will run the fetch against all pool in the config
  */
-async function CurveHistoryFetcher() {
+async function CurveHistoryFetcher(onlyOnce = false) {
     // run the process with 'multi' param to run the unified file generator in multithread
     const multiThread = process.argv[2] == 'multi' ? true : false;
     console.log({multiThread});
@@ -109,6 +109,9 @@ async function CurveHistoryFetcher() {
             });
         }
 
+        if(onlyOnce) {
+            return;
+        }
         // sleep 30 min minus time it took to run the loop
         // if the loop took more than 30 minutes, restart directly
         const sleepTime = runEverySec * 1000 - (Date.now() - start);
@@ -468,4 +471,6 @@ async function getAllBlocksWithEventsForContractAndTopics(fetchConfig, startBloc
     return Array.from(blockSet);
 }
 
-CurveHistoryFetcher();
+// CurveHistoryFetcher();
+
+module.exports = { CurveHistoryFetcher };

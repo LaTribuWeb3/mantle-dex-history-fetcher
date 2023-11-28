@@ -24,13 +24,11 @@ const runEverySec = 60 * 60;
 
 const WORKER_NAME = 'UniswapV3 Price Fetcher';
 
-UniswapV3PriceHistoryFetcher();
-
 /**
  * Fetch all liquidity history from UniswapV3 pairs
  * The pairs to fetch are read from the config file './uniswap.v3.config'
  */
-async function UniswapV3PriceHistoryFetcher() {
+async function UniswapV3PriceHistoryFetcher(onlyOnce = false) {
     // eslint-disable-next-line no-constant-condition
     while(true) {
         const start = Date.now();
@@ -100,6 +98,10 @@ async function UniswapV3PriceHistoryFetcher() {
                 'status': 'error',
                 'error': errorMsg
             });
+        }
+        
+        if(onlyOnce) {
+            return;
         }
 
         const sleepTime = runEverySec * 1000 - (Date.now() - start);
@@ -331,3 +333,5 @@ async function fetchEvents(startBlock, endBlock, contract, decimals0, decimals1)
 
     return swapResults;
 }
+
+module.exports = { UniswapV3PriceHistoryFetcher };

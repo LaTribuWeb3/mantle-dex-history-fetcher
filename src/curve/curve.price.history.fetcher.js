@@ -18,7 +18,7 @@ const runEverySec = 60 * 60;
 /**
  * the main entrypoint of the script, will run the fetch against all pool in the config
  */
-async function CurvePriceHistoryFetcher() {
+async function CurvePriceHistoryFetcher(onlyOnce = false) {
     // eslint-disable-next-line no-constant-condition
     while(true) {
         const start = Date.now();
@@ -57,6 +57,10 @@ async function CurvePriceHistoryFetcher() {
                 'status': 'error',
                 'error': errorMsg
             });
+        }
+
+        if(onlyOnce) {
+            return;
         }
 
         // sleep 30 min minus time it took to run the loop
@@ -188,9 +192,6 @@ async function FetchPriceHistory(fetchConfig, currentBlock, web3Provider) {
     fs.writeFileSync(lastFetchFileName, JSON.stringify(lastFetchData, null, 2));
 }
 
-
-CurvePriceHistoryFetcher();
-
 function initPriceData(fetchConfig) {
     const priceData = {};
     for (const pair of fetchConfig.pairs) {
@@ -217,3 +218,5 @@ function savePriceData(priceData) {
         fs.appendFileSync(fileName, toWrite.join(''));
     }
 }
+
+module.exports = { CurvePriceHistoryFetcher };

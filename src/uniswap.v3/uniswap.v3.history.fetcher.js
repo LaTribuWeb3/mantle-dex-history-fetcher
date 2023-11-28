@@ -26,13 +26,11 @@ const UNISWAPV3_FEES = [100, 500, 3000, 10000];
 
 const runEverySec = 60 * 60;
 
-UniswapV3HistoryFetcher();
-
 /**
  * Fetch all liquidity history from UniswapV2 pairs
  * The pairs to fetch are read from the config file './uniswap.v2.config'
  */
-async function UniswapV3HistoryFetcher() {
+async function UniswapV3HistoryFetcher(onlyOnce = false) {
     // eslint-disable-next-line no-constant-condition
     while(true) {
         const start = Date.now();
@@ -111,6 +109,9 @@ async function UniswapV3HistoryFetcher() {
             });
         }
 
+        if(onlyOnce) {
+            return;
+        }
         const sleepTime = runEverySec * 1000 - (Date.now() - start);
         if(sleepTime > 0) {
             console.log(`${fnName()}: sleeping ${roundTo(sleepTime/1000/60)} minutes`);
@@ -393,3 +394,5 @@ function getSaveData(token0, token1, latestData) {
     latestData.lastDataSave = latestData.blockNumber;
     return `${latestData.blockNumber},${JSON.stringify(saveValue)}\n`;
 }
+
+module.exports = { UniswapV3HistoryFetcher };
