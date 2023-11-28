@@ -97,15 +97,23 @@ async function precomputeAndSaveMedianPrices(platformDirectory, platform, base, 
         }
     }
 
-    // specific case for curve with USDC as the quote
+    // specific case for curve with USDC as the quote or base
     // add USDT as a step
     if(pivots && platform == 'curve' && pivots[0] == 'WETH' && quote == 'USDC') {
-        pivots.push('USDT');
+        pivots = ['WETH', 'USDT'];
     }
-
+    if(pivots && platform == 'curve' && pivots[0] == 'WETH' && base == 'USDC') {
+        pivots = ['USDT', 'WETH'];
+    }
+    
     const prices = getPricesAtBlockForIntervalViaPivots(platform, base, quote, lastBlock + 1, currentBlock, pivots);
     if(!prices) {
         console.log(`Cannot find prices for ${base}->${quote}(pivot: ${pivots}) for platform: ${platform}`);
+        return;
+    }
+
+    if(prices.length == 0) {
+        console.log(`${fnName()}[${platform}]: no new data to save for ${base}/${quote} via pivot: ${pivots}`);
         return;
     }
 
