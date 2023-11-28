@@ -4,7 +4,7 @@ const { sleep, fnName, roundTo, logFnDurationWithLabel, retry } = require('../ut
 const { default: axios } = require('axios');
 const { RecordMonitoring } = require('../utils/monitoring');
 const { pairsToCompute } = require('./precomputer.config');
-const { getLiquidity, getVolatility } = require('../data.interface/data.interface');
+const { getLiquidity, getVolatility, getRollingVolatility } = require('../data.interface/data.interface');
 const path = require('path');
 const { SPANS, PLATFORMS, DATA_DIR, TARGET_SLIPPAGES } = require('../utils/constants');
 const fs = require('fs');
@@ -23,6 +23,7 @@ async function precomputeDataV2() {
     // eslint-disable-next-line no-constant-condition
     while(true) {
         const runStartDate = Date.now();
+        volatilityCache = {};
         try {
             await RecordMonitoring({
                 'name': MONITORING_NAME,
@@ -62,11 +63,12 @@ async function precomputeDataV2() {
                             const liquidityDataAggreg = getLiquidity(platform, base, quote, startBlock, currentBlock, true, blockStep);
                             if(!liquidityDataAggreg || Object.keys(liquidityDataAggreg).length == 0) {
                                 // no data for pair
+                                console.log(`${fnName()} [${base}/${quote}] [${span}d] no data`);
                                 continue;
                             }
                             Object.keys(liquidityDataAggreg).forEach(_ => allBlocksForSpan.add(Number(_)));
-
-                            const volatility = getVolatility(platform, base, quote, startBlock, currentBlock, span);
+                            
+                            const volatility = await getCachedVolatility(platform, base, quote, web3Provider);
                             const liquidityAverageAggreg = computeAverageData(liquidityDataAggreg);
 
                             const precomputedObj = toPrecomputed(base, quote, blockStep, liquidityDataAggreg, volatility);
@@ -127,6 +129,30 @@ async function precomputeDataV2() {
             await sleep(sleepTime);
         }
     }
+}
+
+let volatilityCache = {};
+
+/**
+ * 
+ * @param {*} platform 
+ * @param {*} base 
+ * @param {*} quote 
+ * @param {*} web3Provider 
+ * @returns {Promise<number>}
+ */
+async function getCachedVolatility(platform, base, quote, web3Provider) {
+    const key = `${platform}-${base}-${quote}`;
+    if(!volatilityCache[key]) {
+        const rollingVolatility = await getRollingVolatility(platform, base, quote, web3Provider);
+        if(rollingVolatility) {
+            volatilityCache[key] = rollingVolatility.latest.current;
+        } else {
+            volatilityCache[key] = 0;
+        }
+    }
+
+    return volatilityCache[key];
 }
 
 /**

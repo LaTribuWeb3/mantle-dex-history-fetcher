@@ -24,7 +24,6 @@ async function main() {
             const graphData = computeCLFHistoryForProtocol(protocol.name);
             console.log('writing graphData file');
             recordResults(graphData, `${protocol.name}_graphData`);
-
         }
         console.log('unifying all the protocols files');
         const toWrite = unifyFiles();

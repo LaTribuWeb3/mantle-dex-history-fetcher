@@ -4,13 +4,11 @@ const { GetContractCreationBlockNumber } = require('../utils/web3.utils');
 const curveConfig = require('./curve.config');
 const fs = require('fs');
 const path = require('path');
-const { sleep, fnName, readLastLine, roundTo, retry } = require('../utils/utils');
+const { sleep, fnName, roundTo } = require('../utils/utils');
 
 const { RecordMonitoring } = require('../utils/monitoring');
-// const { generateUnifiedFileCurve } = require('./curve.unified.generator');
 const { DATA_DIR } = require('../utils/constants');
 const { getConfTokenBySymbol, normalize } = require('../utils/token.utils');
-const { median } = require('simple-statistics');
 
 dotenv.config();
 const RPC_URL = process.env.RPC_URL;
@@ -142,8 +140,14 @@ async function FetchPriceHistory(fetchConfig, currentBlock, web3Provider) {
                         const baseQuotePrice = tokenBought / tokenSold;
                         const quoteBasePrice = tokenSold / tokenBought;
 
-                        priceData[`${baseToken.symbol}-${quoteToken.symbol}`][e.blockNumber] = baseQuotePrice;
-                        priceData[`${quoteToken.symbol}-${baseToken.symbol}`][e.blockNumber] = quoteBasePrice;
+                        priceData[`${baseToken.symbol}-${quoteToken.symbol}`].push({
+                            block: e.blockNumber,
+                            price: baseQuotePrice
+                        });
+                        priceData[`${quoteToken.symbol}-${baseToken.symbol}`].push({
+                            block: e.blockNumber,
+                            price: quoteBasePrice
+                        });
                     }
                 }
                 
@@ -190,8 +194,8 @@ CurvePriceHistoryFetcher();
 function initPriceData(fetchConfig) {
     const priceData = {};
     for (const pair of fetchConfig.pairs) {
-        priceData[`${pair.token0}-${pair.token1}`] = {};
-        priceData[`${pair.token1}-${pair.token0}`] = {};
+        priceData[`${pair.token0}-${pair.token1}`] = [];
+        priceData[`${pair.token1}-${pair.token0}`] = [];
     }
 
     return priceData;
@@ -206,9 +210,8 @@ function savePriceData(priceData) {
         }
 
         const toWrite = [];
-        for (const blockNumber of Object.keys(priceData[pair])) {
-            const price = priceData[pair][blockNumber];
-            toWrite.push(`${blockNumber},${price}\n`);
+        for (const p of priceData[pair]) {
+            toWrite.push(`${p.block},${p.price}\n`);
         }
 
         fs.appendFileSync(fileName, toWrite.join(''));

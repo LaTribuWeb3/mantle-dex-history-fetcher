@@ -1,31 +1,39 @@
 
 const path = require('path');
 const fs = require('fs');
-const { DATA_DIR, DEFAULT_STEP_BLOCK } = require('../../utils/constants');
+const { DATA_DIR, DEFAULT_STEP_BLOCK, MEDIAN_OVER_BLOCK } = require('../../utils/constants');
 const { fnName, logFnDurationWithLabel } = require('../../utils/utils');
-
 
 /**
  * 
  * @param {string} platform 
  * @param {string} fromSymbol 
  * @param {string} toSymbol 
- * @returns {{block: number, price: number}[]} medianPrices
  */
-function readMedianPricesFile(platform, fromSymbol, toSymbol) {
+function readMedianPricesFile(platform, fromSymbol, toSymbol, fromBlock = undefined, toBlock = undefined) {
     const medianFileName = path.join(DATA_DIR, 'precomputed', 'median', platform, `${fromSymbol}-${toSymbol}-median-prices.csv`);
     if (!fs.existsSync(medianFileName)) {
-        throw new Error(`Could not find median prices file: ${medianFileName}`);
+        return undefined;
     }
 
     const allData = fs.readFileSync(medianFileName, 'utf-8').split('\n');
 
     const medianedPrices = [];
     for (let i = 1; i < allData.length - 1; i++) {
-        const line = allData[i];
+        const lineSplitted = allData[i].split(',');
+        const block = Number(lineSplitted[0]);
+
+        if(fromBlock && block < fromBlock) {
+            continue;
+        }
+
+        if(toBlock && block > toBlock) {
+            break;
+        }
+
         const obj = {
-            block: Number(line.split(',')[0]),
-            price: Number(line.split(',')[1]),
+            block,
+            price: Number(lineSplitted[1]),
         };
 
         medianedPrices.push(obj);
@@ -34,56 +42,43 @@ function readMedianPricesFile(platform, fromSymbol, toSymbol) {
     return medianedPrices;
 }
 
-
 function getPricesAtBlockForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
     const start = Date.now();
-
-    let pricesAtBlock = {};
 
     // specific case for univ3 and stETH/WETH pair
     // because it does not really exists
     if(platform == 'uniswapv3' 
         && ((fromSymbol == 'stETH' && toSymbol == 'WETH') 
             || (fromSymbol == 'WETH' && toSymbol == 'stETH'))) {
-        pricesAtBlock = generateFakePriceForStETHWETHUniswapV3(Math.max(fromBlock, 10_000_000), toBlock);
+        const prices = generateFakePriceForStETHWETHUniswapV3(Math.max(fromBlock, 10_000_000), toBlock);
+        logFnDurationWithLabel(start, `[${fromSymbol}->${toSymbol}] [${fromBlock}-${toBlock}] [${platform}]`);
+        return prices;
     }
     else {
         const filename = `${fromSymbol}-${toSymbol}-unified-data.csv`;
         const fullFilename = path.join(DATA_DIR, 'precomputed', 'price', platform, filename);
-        pricesAtBlock = readAllPricesFromFilename(fullFilename, fromBlock, toBlock);
+        const prices = readAllPricesFromFilename(fullFilename, fromBlock, toBlock);
+        logFnDurationWithLabel(start, `[${fromSymbol}->${toSymbol}] [${fromBlock}-${toBlock}] [${platform}]`);
+        return prices;
     }
-
-    logFnDurationWithLabel(start, `[${fromSymbol}->${toSymbol}] [${fromBlock}-${toBlock}] [${platform}]`);
-    return pricesAtBlock;
 }
 
-function getPricesAtBlockForIntervalOld(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
-    let pricesAtBlock = {};
-    if(platform == 'curve') {
-        pricesAtBlock = getPricesAtBlockForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBlock);
-    } else {
-        if(platform == 'uniswapv3' 
-        && ((fromSymbol == 'stETH' && toSymbol == 'WETH') 
-            || (fromSymbol == 'WETH' && toSymbol == 'stETH'))) {
-            pricesAtBlock = generateFakePriceForStETHWETHUniswapV3(fromBlock, toBlock);
-        } else {
-            const filename = `${fromSymbol}-${toSymbol}-unified-data.csv`;
-            const fullFilename = path.join(DATA_DIR, 'precomputed', platform, filename);
-    
-            pricesAtBlock = readAllPricesFromFilename(fullFilename, fromBlock, toBlock);
-        }
-    }
-    
-    return pricesAtBlock;
-}
-
-
+/**
+ * 
+ * @param {number} fromBlock 
+ * @param {number} toBlock 
+ * @returns 
+ */
 function generateFakePriceForStETHWETHUniswapV3(fromBlock, toBlock) {
-    const pricesAtBlock = {};
+    const pricesAtBlock = [];
     let currBlock = fromBlock;
     while(currBlock <= toBlock) {
-        pricesAtBlock[currBlock] = 1;
-        currBlock += DEFAULT_STEP_BLOCK;
+        pricesAtBlock.push({
+            block: currBlock,
+            price: 1
+        });
+
+        currBlock += MEDIAN_OVER_BLOCK;
     }
 
     return pricesAtBlock;
@@ -111,6 +106,55 @@ function findNearestBlockBefore(targetBlock, blocks, startIndex) {
     return {block, selectedIndex};
 }
 
+/**
+ * Recursive function to add many steps between fromSymbol and toSymbol
+ * @param {string} platform 
+ * @param {string} fromSymbol 
+ * @param {string} toSymbol 
+ * @param {number} fromBlock 
+ * @param {number} toBlock 
+ * @param {string[] | undefined} pivotSymbols 
+ * @returns 
+ */
+function getPricesAtBlockForIntervalViaPivots(platform, fromSymbol, toSymbol, fromBlock, toBlock, pivotSymbols) {
+    const start = Date.now();
+    if(!pivotSymbols || pivotSymbols.length == 0) {
+        return getPricesAtBlockForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock);
+    } else if (pivotSymbols.length == 1) {
+        return getPricesAtBlockForIntervalViaPivot(platform, fromSymbol, toSymbol, fromBlock, toBlock, pivotSymbols[0]);
+    }
+
+    const label = `${fnName()}[${fromSymbol}->${pivotSymbols.join('->')}->${toSymbol}] [${fromBlock}-${toBlock}] [${platform}]`;
+    console.log(label);
+    const dataSegment1 = getPricesAtBlockForIntervalViaPivots(platform, fromSymbol, pivotSymbols.slice(1).at(-1), fromBlock, toBlock, pivotSymbols.slice(0, pivotSymbols.length -1));
+
+    if(!dataSegment1 || dataSegment1.length == 0) {
+        console.log(`${label}: Cannot find data for ${fromSymbol}/${pivotSymbols.join('->')}, returning 0`);
+        return undefined;
+    }
+
+    const dataSegment2 = getPricesAtBlockForInterval(platform, pivotSymbols.at(-1), toSymbol, fromBlock, toBlock);
+
+    if(!dataSegment2 || dataSegment2.length == 0) {
+        console.log(`${label}: Cannot find data for ${pivotSymbols.at(-1)}/${toSymbol}, returning 0`);
+        return undefined;
+    }
+
+    // check whether to compute the price with base data from segment1 or 2
+    // based on the number of prices in each segments
+    // example if the segment1 has 1000 prices and segment2 has 500 prices
+    // we will use segment1 as the base for the blocknumbers in the returned object
+    if(dataSegment1.length > dataSegment2.length) {
+        // compute all the prices with blocks from segment1
+        const pricesAtBlock = ComputePriceViaPivot(dataSegment1, dataSegment2);
+        logFnDurationWithLabel(start, `[${fromSymbol}->${pivotSymbols.join('->')}->${toSymbol}] [${fromBlock}-${toBlock}] [${platform}]`);
+        return pricesAtBlock;
+    } else {
+        const pricesAtBlock = ComputePriceViaPivot(dataSegment2, dataSegment1);
+        logFnDurationWithLabel(start, `[${fromSymbol}->${pivotSymbols.join('->')}->${toSymbol}] [${fromBlock}-${toBlock}] [${platform}]`);
+        return pricesAtBlock;
+    }
+}
 
 function getPricesAtBlockForIntervalViaPivot(platform, fromSymbol, toSymbol, fromBlock, toBlock, pivotSymbol) {
     const start = Date.now();
@@ -122,77 +166,74 @@ function getPricesAtBlockForIntervalViaPivot(platform, fromSymbol, toSymbol, fro
     
     const dataSegment1 = getPricesAtBlockForInterval(platform, fromSymbol, pivotSymbol, fromBlock, toBlock);
 
-    if(!dataSegment1 || Object.keys(dataSegment1).length == 0) {
+    if(!dataSegment1 || dataSegment1.length == 0) {
         console.log(`${label}: Cannot find data for ${fromSymbol}/${pivotSymbol}, returning 0`);
         return undefined;
     }
 
     const dataSegment2 = getPricesAtBlockForInterval(platform, pivotSymbol, toSymbol, fromBlock, toBlock);
 
-    if(!dataSegment2 || Object.keys(dataSegment2).length == 0) {
+    if(!dataSegment2 || dataSegment2.length == 0) {
         console.log(`${label}: Cannot find data for ${pivotSymbol}/${toSymbol}, returning 0`);
         return undefined;
     }
-
-    const keysSegment1 = Object.keys(dataSegment1).map(_ => Number(_));
-    const keysSegment2 = Object.keys(dataSegment2).map(_ => Number(_));
-
-    const priceAtBlock = {};
 
     // check whether to compute the price with base data from segment1 or 2
     // based on the number of prices in each segments
     // example if the segment1 has 1000 prices and segment2 has 500 prices
     // we will use segment1 as the base for the blocknumbers in the returned object
-    let currentBlockOtherSegmentIndex = 0;
-    if(keysSegment1.length > keysSegment2.length) {
-    // compute all the prices with blocks from segment1
-        for(const [blockNumber, priceSegment1] of Object.entries(dataSegment1)) {
-            const nearestBlockDataBefore =  findNearestBlockBefore(Number(blockNumber), keysSegment2, currentBlockOtherSegmentIndex);
-            if(!nearestBlockDataBefore) {
-                // console.log(`ignoring block ${blockNumber}`);
-                continue;
-            }
-
-            currentBlockOtherSegmentIndex = nearestBlockDataBefore.selectedIndex;
-
-            const priceSegment2 = dataSegment2[nearestBlockDataBefore.block];
-            const computedPrice = priceSegment1 * priceSegment2;
-            priceAtBlock[blockNumber] = computedPrice;
-        }
+    if(dataSegment1.length > dataSegment2.length) {
+        // compute all the prices with blocks from segment1
+        const pricesAtBlock = ComputePriceViaPivot(dataSegment1, dataSegment2);
+        logFnDurationWithLabel(start, `[${fromSymbol}->${pivotSymbol}->${toSymbol}] [${fromBlock}-${toBlock}] [${platform}]`);
+        return pricesAtBlock;
     } else {
-        // compute all the prices with blocks from segment2
-        for(const [blockNumber, priceSegment2] of Object.entries(dataSegment2)) {
-            const nearestBlockDataBefore = findNearestBlockBefore(Number(blockNumber), keysSegment1, currentBlockOtherSegmentIndex);
-            if(!nearestBlockDataBefore) {
-                // console.log(`ignoring block ${blockNumber}`);
-                continue;
-            }
+        const pricesAtBlock = ComputePriceViaPivot(dataSegment2, dataSegment1);
+        logFnDurationWithLabel(start, `[${fromSymbol}->${pivotSymbol}->${toSymbol}] [${fromBlock}-${toBlock}] [${platform}]`);
+        return pricesAtBlock;
+    }
+}
 
-            currentBlockOtherSegmentIndex = nearestBlockDataBefore.selectedIndex;
-            
-            const priceSegment1 = dataSegment1[nearestBlockDataBefore.block];
-            const computedPrice = priceSegment1 * priceSegment2;
-            priceAtBlock[blockNumber] = computedPrice;
+function ComputePriceViaPivot(dataSegment1, dataSegment2) {
+    const priceAtBlock = [];
+    const keysSegment2 = dataSegment2.map(_ => _.block);
+    let currentBlockOtherSegmentIndex = 0;
+
+    for (const priceAtBlockData of dataSegment1) {
+        // for(const [blockNumber, priceSegment1] of Object.entries(dataSegment1)) {
+        const blockNumber = priceAtBlockData.block;
+        const priceSegment1 = priceAtBlockData.price;
+        const nearestBlockDataBefore = findNearestBlockBefore(blockNumber, keysSegment2, currentBlockOtherSegmentIndex);
+        if (!nearestBlockDataBefore) {
+            // console.log(`ignoring block ${blockNumber}`);
+            continue;
         }
+
+        currentBlockOtherSegmentIndex = nearestBlockDataBefore.selectedIndex;
+
+        const priceSegment2 = dataSegment2[currentBlockOtherSegmentIndex].price;
+        const computedPrice = priceSegment1 * priceSegment2;
+        priceAtBlock.push({
+            block: blockNumber,
+            price: computedPrice
+        });
     }
 
-    logFnDurationWithLabel(start, `[${fromSymbol}->${pivotSymbol}->${toSymbol}] [${fromBlock}-${toBlock}] [${platform}]`);
     return priceAtBlock;
 }
 
 /**
  * 
- * @param {*} fullFilename 
- * @param {*} fromBlock 
- * @param {*} toBlock 
- * @returns {{[blocknumber: number]: number}}
+ * @param {string} fullFilename 
+ * @param {number} fromBlock 
+ * @param {number} toBlock 
  */
 function readAllPricesFromFilename(fullFilename, fromBlock, toBlock) {
     if(!fs.existsSync(fullFilename)) {
         return undefined;
     }
 
-    const pricesAtBlock = {};
+    const pricesAtBlock = [];
     const fileContent = readDataFromFile(fullFilename);
     for (let i = 1; i < fileContent.length - 1; i++) {
         const lineContent = fileContent[i];
@@ -209,44 +250,13 @@ function readAllPricesFromFilename(fullFilename, fromBlock, toBlock) {
         const splt = lineContent.split(',');
         const price = Number(splt[1]);
 
-        pricesAtBlock[blockNumber] = price;
+        pricesAtBlock.push({
+            block: blockNumber,
+            price: price
+        });
     }
 
     return pricesAtBlock;
-}
-
-function getPricesAtBlockForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBlock) {
-// for curve, find all files in the precomputed/curve directory that math the fromSymbol-toSymbol.*.csv
-    const searchString = `${fromSymbol}-${toSymbol}`;
-    const directory = path.join(DATA_DIR, 'precomputed', 'curve');
-    const matchingFiles = fs.readdirSync(directory).filter(_ => _.startsWith(searchString) && _.endsWith('.csv'));
-    console.log(`found ${matchingFiles.length} matching files for ${searchString}`);
-
-    const allPricesForPools = [];
-    for(const matchingFile of matchingFiles) {
-        const fullFilename = path.join(directory, matchingFile);
-        const pricesAtBlock = readAllPricesFromFilename(fullFilename, fromBlock, toBlock);
-        if(pricesAtBlock) {
-            console.log(`adding price data from file ${matchingFile} to allPricesForPools`);
-            allPricesForPools.push(pricesAtBlock);
-        }
-    }
-
-    if(allPricesForPools.length == 0) {
-        return undefined;
-    }
-
-    // return the one with the most data ?
-    let mostData = allPricesForPools[0];
-    for(let i = 1; i < allPricesForPools.length; i++) {
-        const currentMostKey = Object.keys(mostData).length;
-        const keys = Object.keys(allPricesForPools[i]).length;
-        if(currentMostKey < keys) {
-            mostData = allPricesForPools[i];
-        }
-    }
-
-    return mostData;
 }
 
 /**
@@ -272,8 +282,6 @@ function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, to
 
     return getUnifiedDataForIntervalByFilename(fullFilename, fromBlock, toBlock, stepBlock);
 }
-
-
 
 /**
  * Gets the unified data from csv files
@@ -323,7 +331,7 @@ function getUnifiedDataForIntervalByFilename(fullFilename, fromBlock, toBlock, s
         }
 
         if(nextBlockNumber > blockToFill) {
-            const data = extractDataFromUnifiedLineWithQuote(fileContent[i]);
+            const data = extractDataFromUnifiedLine(fileContent[i]);
 
             while(nextBlockNumber > blockToFill) {
                 unifiedData[blockToFill] = {
@@ -372,7 +380,6 @@ function getUnifiedDataForIntervalByFilename(fullFilename, fromBlock, toBlock, s
 
     return unifiedData;
 }
-
 
 function readDataFromFile(fullFilename) {
     return fs.readFileSync(fullFilename, 'utf-8').split('\n');
@@ -464,7 +471,6 @@ function getDefaultSlippageMap() {
     return slippageMap;
 }
 
-
 /**
  * This function returns an object preinstanciated with all the blocks that will need to be filled
  * @param {number} startBlock 
@@ -488,8 +494,7 @@ function getBlankUnifiedData(startBlock, endBlock, stepBlock= DEFAULT_STEP_BLOCK
 }
 
 /**
- * Read a unified data line and transform it into an object but only keep the slippageMap of the base asset
- * For retrocompatibility
+ * Read a unified data line and transform it into an object
  * @param {string} line 
  * @returns {{blockNumber: number, price: number, slippageMap: {[slippageBps: string]: number}}}
  */
@@ -503,31 +508,8 @@ function extractDataFromUnifiedLine(line) {
     return {
         blockNumber: Number(blockNumber),
         price: Number(price),
-        // return only the base data from the slippage map so that all the data interface works the same as before
-        slippageMap: Object.entries(slippageMap).reduce((d, v) => (d[v[0]] = v[1].base, d), {}),
-    };
-}
-
-/**
- * Read a unified data line and transform it into an object
- * @param {string} line 
- * @returns {{blockNumber: number, price: number, slippageMap: {[slippageBps: string]: number}}}
- */
-function extractDataFromUnifiedLineWithQuote(line) {
-    const splt = line.split(',');
-    const blockNumber = splt[0];
-    const price = splt[1];
-    const slippageMapJson = line.replace(`${blockNumber},${price},`, '');
-    const slippageMap = JSON.parse(slippageMapJson);
-
-    return {
-        blockNumber: Number(blockNumber),
-        price: Number(price),
         slippageMap: slippageMap,
     };
 }
 
-// const toto = getUnifiedDataForIntervalByFilename('./data/precomputed/uniswapv3/USDC-WETH-unified-data.csv', 17_038_000, 17_838_000, 300);
-// console.log(toto);
-
-module.exports = { getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, getPricesAtBlockForInterval, getPricesAtBlockForIntervalViaPivot, readMedianPricesFile };
+module.exports = { getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, getPricesAtBlockForInterval, readMedianPricesFile, getPricesAtBlockForIntervalViaPivots };

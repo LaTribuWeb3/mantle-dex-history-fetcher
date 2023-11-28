@@ -1,16 +1,15 @@
 const { RecordMonitoring } = require('../utils/monitoring');
 const { ethers } = require('ethers');
 const { fnName, roundTo, sleep, logFnDurationWithLabel, logFnDuration } = require('../utils/utils');
-const { dashboardPairsToCompute } = require('./precomputer.config');
 const { DATA_DIR, PLATFORMS } = require('../utils/constants');
 
 const fs = require('fs');
 const path = require('path');
 const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
 const { getLiquidity, getRollingVolatility } = require('../data.interface/data.interface');
-const { computeParkinsonVolatility } = require('../utils/volatility');
-const { getDefaultSlippageMap, getPricesAtBlockForIntervalViaPivot, readMedianPricesFile } = require('../data.interface/internal/data.interface.utils');
+const { getDefaultSlippageMap, readMedianPricesFile } = require('../data.interface/internal/data.interface.utils');
 const { median, average, quantile } = require('simple-statistics');
+const { watchedPairs } = require('../global.config');
 
 const RUN_EVERY_MINUTES = 6 * 60; // in minutes
 const MONITORING_NAME = 'Dashboard Precomputer';
@@ -20,7 +19,6 @@ const NB_DAYS = 180;
 const TARGET_DATA_POINTS = NB_DAYS;
 const NB_DAYS_AVG = 30;
 
-const BIGGEST_DAILY_CHANGE_MEDIAN_OVER_BLOCK = 300; // amount of blocks to median the price over
 const BIGGEST_DAILY_CHANGE_OVER_DAYS = 90; // amount of days to compute the biggest daily change
 let BLOCK_PER_DAY = 0; // 7127
 
@@ -76,7 +74,24 @@ async function PrecomputeDashboardData() {
                 fs.mkdirSync(dirPath, {recursive: true});
             }
 
-            for(const pair of dashboardPairsToCompute) {
+            const pairsToCompute = [];
+            for(const [base, quotes] of Object.entries(watchedPairs)) {
+                for(const quoteConfig of quotes) {
+                    pairsToCompute.push({
+                        base: base,
+                        quote: quoteConfig.quote,
+                        pivots: quoteConfig.pivots
+                    });
+
+                    pairsToCompute.push({
+                        base: quoteConfig.quote,
+                        quote: base,
+                        pivots: quoteConfig.pivots
+                    });
+                }
+            }
+
+            for(const pair of pairsToCompute) {
                 console.log(`${fnName()}: precomputing for pair ${pair.base}/${pair.quote}`);
                 let allPlatformsOutput = undefined;
                 for(const platform of PLATFORMS) {
@@ -89,7 +104,7 @@ async function PrecomputeDashboardData() {
                             throw new Error(`Could not get price at block for ${platform} ${pair.base} ${pair.quote} ${pair.volatilityPivot}`);
                         }
 
-                        const rollingVolatility = await getRollingVolatility(platform, pair.base, pair.quote, currentBlock, web3Provider);
+                        const rollingVolatility = await getRollingVolatility(platform, pair.base, pair.quote, web3Provider);
 
                         const startDate = Date.now();
                         const platformOutput = generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, platform, rollingVolatility);                        
@@ -187,7 +202,7 @@ async function PrecomputeDashboardData() {
                 'lastDuration': runEndDate - Math.round(runStartDate / 1000)
             });
     
-            logFnDuration(runStartDate, dashboardPairsToCompute.length, 'pairs to compute');
+            logFnDuration(runStartDate, pairsToCompute.length, 'pairs to compute');
             const sleepTime = RUN_EVERY_MINUTES * 60 * 1000 - (Date.now() - runStartDate);
             if(sleepTime > 0) {
                 console.log(`${fnName()}: sleeping ${roundTo(sleepTime/1000/60)} minutes`);

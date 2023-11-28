@@ -8,7 +8,6 @@ var path = require('path');
 const { roundTo, getDay } = require('../utils/utils');
 const { DATA_DIR } = require('../utils/constants');
 const { getAvailableForDashboard, getDataForPairAndPlatform, checkPlatform, getFetcherResults } = require('./dashboardUtils');
-const { getPricesAtBlockForInterval } = require('../data.interface/internal/data.interface.utils');
 const app = express();
 
 app.use(cors());
@@ -309,13 +308,13 @@ app.get('/api/dashboard/:platform/:base/:quote', async (req, res, next) => {
 
 app.get('/api/qc/price/:platform/:base/:quote', async (req, res, next) => {
     try {
-        const platform = req.params.platform;
-        checkPlatform(platform);
-        const base = req.params.base;
-        const quote = req.params.quote;
+        throw new Error('NOT IMPLEMENTED');
+        // const platform = req.params.platform;
+        // checkPlatform(platform);
+        // const base = req.params.base;
+        // const quote = req.params.quote;
 
-        const data = getPricesAtBlockForInterval(platform, base, quote, 0, 50_000_000);
-        res.json(data);
+        // res.json(data);
     } catch (error) {
         res.status(400).json({ error: error.message });
         next();

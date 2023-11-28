@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 const { DATA_DIR, PLATFORMS, MEDIAN_OVER_BLOCK } = require('../utils/constants');
-const { getPricesAtBlockForIntervalViaPivot } = require('../data.interface/internal/data.interface.utils');
+const { getPricesAtBlockForIntervalViaPivots } = require('../data.interface/internal/data.interface.utils');
 const { medianPricesOverBlocks } = require('../utils/volatility');
 const { watchedPairs } = require('../global.config');
 dotenv.config();
@@ -47,10 +47,11 @@ async function PrecomputeMedianPrices() {
                     fs.mkdirSync(platformDirectory, {recursive: true});
                 }
 
-                for(const [pairString, pairConfig] of Object.entries(watchedPairs)) {
-                    const base = pairString.split('-')[0];
-                    const quote = pairString.split('-')[1];
-                    await precomputeAndSaveMedianPrices(platformDirectory, platform, base, quote, currentBlock, pairConfig.pivot);
+                for(const [base, quotes] of Object.entries(watchedPairs)) {
+                    for(const quoteConfig of quotes) {
+                        const quote = quoteConfig.quote;
+                        await precomputeAndSaveMedianPrices(platformDirectory, platform, base, quote, currentBlock, quoteConfig.pivots);
+                    }
                 }
             }
 
@@ -80,8 +81,8 @@ async function PrecomputeMedianPrices() {
     }
 }
 
-async function precomputeAndSaveMedianPrices(platformDirectory, platform, base, quote, currentBlock, pivot) {
-    console.log(`${fnName()}[${platform}]: starting for ${base}/${quote} via pivot: ${pivot}`);
+async function precomputeAndSaveMedianPrices(platformDirectory, platform, base, quote, currentBlock, pivots) {
+    console.log(`${fnName()}[${platform}]: starting for ${base}/${quote} via pivot: ${pivots}`);
     const filename = path.join(platformDirectory, `${base}-${quote}-median-prices.csv`);
     const filenameReversed = path.join(platformDirectory, `${quote}-${base}-median-prices.csv`);
 
@@ -96,17 +97,32 @@ async function precomputeAndSaveMedianPrices(platformDirectory, platform, base, 
         }
     }
 
-    const prices = getPricesAtBlockForIntervalViaPivot(platform, base, quote, lastBlock + 1, currentBlock, pivot);
+    // specific case for curve with USDC as the quote or base
+    // add USDT as a step
+    if(pivots && platform == 'curve' && pivots[0] == 'WETH' && quote == 'USDC') {
+        pivots = ['WETH', 'USDT'];
+    }
+    if(pivots && platform == 'curve' && pivots[0] == 'WETH' && base == 'USDC') {
+        pivots = ['USDT', 'WETH'];
+    }
+    
+    const prices = getPricesAtBlockForIntervalViaPivots(platform, base, quote, lastBlock + 1, currentBlock, pivots);
     if(!prices) {
-        console.log(`Cannot find prices for ${base}->${quote}(pivot: ${pivot}) for platform: ${platform}`);
+        console.log(`Cannot find prices for ${base}->${quote}(pivot: ${pivots}) for platform: ${platform}`);
+        return;
+    }
+
+    if(prices.length == 0) {
+        console.log(`${fnName()}[${platform}]: no new data to save for ${base}/${quote} via pivot: ${pivots}`);
         return;
     }
 
     const medianed = medianPricesOverBlocks(prices, fileAlreadyExists ? lastBlock + MEDIAN_OVER_BLOCK : undefined);
     if(medianed.length == 0) {
-        console.log(`${fnName()}[${platform}]: no new data to save for ${base}/${quote} via pivot: ${pivot}`);
+        console.log(`${fnName()}[${platform}]: no new data to save for ${base}/${quote} via pivot: ${pivots}`);
         return;
     }
+    
     const toWrite = [];
     const toWriteReversed = [];
     if(!fs.existsSync(filename)) {
