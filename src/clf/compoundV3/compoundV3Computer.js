@@ -339,7 +339,7 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateral , 
     // for each platform, compute the volatility and the avg liquidity
     // only request one data (the biggest span) and recompute the avg for each spans
     const maxSpan = Math.max(...spans);
-    const rollingVolatility = await getRollingVolatility('uniswapv3', from, baseAsset, web3Provider);
+    const rollingVolatility = await getRollingVolatility('all', from, baseAsset, web3Provider);
     const volatilityAtBlock = rollingVolatility.history.filter(_ => _.blockStart <= endBlock && _.blockEnd >= endBlock)[0];
     
     let volatility = 0;

@@ -16,10 +16,9 @@ async function medianCheck() {
     const toWrite = [];
     const toWriteReversed = [];
 
-    if(!fs.existsSync(filename)) {
-        fs.writeFileSync(filename, 'blocknumber,price\n');
-        fs.writeFileSync(filenameReversed, 'blocknumber,price\n');
-    }
+    
+    fs.writeFileSync(filename, 'blocknumber,price\n');
+    fs.writeFileSync(filenameReversed, 'blocknumber,price\n');
 
     for(const medianedData of medianed) {
         toWrite.push(`${medianedData.block},${medianedData.price}\n`);

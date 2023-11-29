@@ -40,13 +40,13 @@ async function PrecomputeMedianPrices(onlyOnce = false) {
             // this allows to run the computer for only specified platform, like this:
             //      "node .\src\precomputer\median.precomputer.js sushiswapv2"
             //      "node .\src\precomputer\median.precomputer.js sushiswapv2,uniswapv2"
-            let platformsToCompute = PLATFORMS;
+            let platformsToCompute = structuredClone(PLATFORMS);
             if(process.argv[2]) {
                 platformsToCompute = process.argv[2].split(',');
             } 
-            // else {
-            //     platformsToCompute.push('all');
-            // }
+            else {
+                platformsToCompute.push('all');
+            }
 
             console.log(`${fnName()}: starting`);
             const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
@@ -148,18 +148,25 @@ async function precomputeAndSaveMedianPrices(platformDirectory, platform, base, 
 function getMedianPricesAllPlatforms(base, quote, lastBlock, currentBlock, pivots, fileAlreadyExists) {
     let allPrices = [];
     for (const subPlatform of PLATFORMS) {
+        if(subPlatform == 'uniswapv3' && ((base == 'stETH' && quote == 'WETH') || (base == 'WETH' && quote == 'stETH'))) {
+            // stETH/WETH pair for univ3 is fake data
+            // so ignore it
+            continue;
+        }
         const prices = getPricesAtBlockForIntervalViaPivots(subPlatform, base, quote, lastBlock + 1, currentBlock, pivots);
-        if (!prices) {
+        if (!prices || prices.length == 0) {
             console.log(`Cannot find prices for ${base}->${quote}(pivot: ${pivots}) for platform: ${subPlatform}`);
             continue;
         }
 
+        console.log(`Adding ${prices.length} from ${subPlatform}`);
         allPrices = allPrices.concat(prices);
     }
 
     // here we have all the prices data from all platforms, sorting them before calling the median
+    console.log(`sorting ${allPrices.length} prices`);
     allPrices.sort((a, b) => a.block - b.block);
-
+    console.log(`${allPrices.length} prices sorted by blocks, starting median process`);
     const medianed = medianPricesOverBlocks(allPrices, fileAlreadyExists ? lastBlock + MEDIAN_OVER_BLOCK : undefined);
     return medianed;
 }
