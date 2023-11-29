@@ -365,7 +365,10 @@ const watchedPairs = {
         },
         {
             quote: 'sUSD',
-            pivots: undefined
+            pivots: undefined,
+            pivotsSpecific: {
+                'uniswapv2': ['WETH']
+            }
         },
         {
             quote: 'USDT',
