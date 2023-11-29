@@ -7,7 +7,7 @@ dotenv.config();
 const univ3Config = require('./uniswap.v3.config');
 const { GetContractCreationBlockNumber } = require('../utils/web3.utils');
 const { fnName, sleep, roundTo, readLastLine } = require('../utils/utils');
-const { getConfTokenBySymbol } = require('../utils/token.utils');
+const { getConfTokenBySymbol, normalize } = require('../utils/token.utils');
 const { getPriceFromSqrt } = require('./uniswap.v3.utils');
 const { RecordMonitoring } = require('../utils/monitoring');
 const { DATA_DIR } = require('../utils/constants');
@@ -222,7 +222,7 @@ async function FetchUniswapV3PriceHistoryForPair(pairToFetch, pools, web3Provide
         console.log(`${label}: fetching events for blocks [${fromBlock}-${toBlock}]`);
         for(const poolAddress of pools) {
             const contract = contracts[poolAddress];
-            const swaps = await fetchEvents(fromBlock, toBlock, contract, token0Conf.decimals, token1Conf.decimals);
+            const swaps = await fetchEvents(fromBlock, toBlock, contract, token0Conf, token1Conf);
             // const swapCount = swaps.length;
             // console.log(`${label}: found ${swapCount} swap event for pool ${poolAddress}`);
             tradesByPool[poolAddress] = swaps;
@@ -281,7 +281,7 @@ async function FetchUniswapV3PriceHistoryForPair(pairToFetch, pools, web3Provide
     return lastBlockWithData;
 }
 
-async function fetchEvents(startBlock, endBlock, contract, decimals0, decimals1) {
+async function fetchEvents(startBlock, endBlock, contract, token0Conf, token1Conf) {
     const initBlockStep = 50000;
     let blockStep = initBlockStep;
     let fromBlock =  startBlock;
@@ -313,9 +313,18 @@ async function fetchEvents(startBlock, endBlock, contract, decimals0, decimals1)
         
         if(events.length != 0) {
             for(const e of events) {
+
+                const token0Amount = Math.abs(normalize(e.args.amount0, token0Conf.decimals));
+                if(token0Amount < token0Conf.dustAmount) {
+                    continue;
+                }
+                const token1Amount = Math.abs(normalize(e.args.amount1, token1Conf.decimals));
+                if(token1Amount < token1Conf.dustAmount) {
+                    continue;
+                }
                 swapResults.push({
                     block: e.blockNumber,
-                    price: getPriceFromSqrt(e.args.sqrtPriceX96, decimals0, decimals1)
+                    price: token1Amount/token0Amount
                 });
             }
 
@@ -334,4 +343,5 @@ async function fetchEvents(startBlock, endBlock, contract, decimals0, decimals1)
     return swapResults;
 }
 
+UniswapV3PriceHistoryFetcher(true);
 module.exports = { UniswapV3PriceHistoryFetcher };
