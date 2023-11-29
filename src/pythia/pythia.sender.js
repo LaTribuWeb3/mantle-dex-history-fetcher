@@ -57,7 +57,7 @@ async function SendToPythia() {
 
                 
                 for(const base of pythiaConfig.tokensToPush) {
-                    const volatilityData = generateVolatilityData(base, span, startBlock, endBlock);
+                    const volatilityData = await generateVolatilityData(base, span, startBlock, endBlock, web3Provider);
                     console.log(volatilityData);
                     dataToSend.push(volatilityData);
                     
