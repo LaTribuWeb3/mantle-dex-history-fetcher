@@ -172,9 +172,14 @@ async function PrecomputeDashboardData() {
                                 }
                             }
                         }
+                    } else {
+                        console.log(`no liquidity data for ${platform} ${pair.base} ${pair.quote}`);
                     }
                 }
 
+                if(!allPlatformsOutput) {
+                    continue;
+                }
                 // here, need to compute avg price and volatility for each block
                 for(const block of Object.keys(allPlatformsOutput)) {
                     const totalVolatilityWeightForBlock = allPlatformsOutput[block].totalVolatilityWeight || 1;

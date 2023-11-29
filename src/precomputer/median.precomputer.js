@@ -61,7 +61,14 @@ async function PrecomputeMedianPrices(onlyOnce = false) {
                 for(const [base, quotes] of Object.entries(watchedPairs)) {
                     for(const quoteConfig of quotes) {
                         const quote = quoteConfig.quote;
-                        await precomputeAndSaveMedianPrices(platformDirectory, platform, base, quote, currentBlock, quoteConfig.pivots);
+
+                        let pivots = quoteConfig.pivots;
+                        if(quoteConfig.pivotsSpecific && quoteConfig.pivotsSpecific[platform]) {
+                            // overwrite with platform specific pivot
+                            pivots = quoteConfig.pivotsSpecific[platform];
+                        }
+
+                        await precomputeAndSaveMedianPrices(platformDirectory, platform, base, quote, currentBlock, pivots);
                     }
                 }
             }

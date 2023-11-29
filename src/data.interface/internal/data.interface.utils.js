@@ -13,6 +13,7 @@ const { fnName, logFnDurationWithLabel } = require('../../utils/utils');
 function readMedianPricesFile(platform, fromSymbol, toSymbol, fromBlock = undefined, toBlock = undefined) {
     const medianFileName = path.join(DATA_DIR, 'precomputed', 'median', platform, `${fromSymbol}-${toSymbol}-median-prices.csv`);
     if (!fs.existsSync(medianFileName)) {
+        console.warn(`readMedianPricesFile: file ${medianFileName} does not exists`);
         return undefined;
     }
 
@@ -512,4 +513,4 @@ function extractDataFromUnifiedLine(line) {
     };
 }
 
-module.exports = { getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, getPricesAtBlockForInterval, readMedianPricesFile, getPricesAtBlockForIntervalViaPivots };
+module.exports = { getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, readMedianPricesFile, getPricesAtBlockForIntervalViaPivots };

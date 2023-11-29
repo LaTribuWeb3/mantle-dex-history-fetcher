@@ -231,6 +231,7 @@ const tokens = {
     },
 };
 
+// goes both ways
 const watchedPairs = {
     'WETH': [
         {
@@ -349,7 +350,10 @@ const watchedPairs = {
         },
         {
             quote: 'DAI',
-            pivots: undefined
+            pivots: undefined,
+            pivotsSpecific: {
+                'sushiswapv2': ['WETH']
+            }
         },
         {
             quote: 'MANA',
@@ -365,7 +369,10 @@ const watchedPairs = {
         },
         {
             quote: 'USDT',
-            pivots: undefined
+            pivots: undefined,
+            pivotsSpecific: {
+                'sushiswapv2': ['WETH']
+            }
         },
     ],
     'WBTC': [
