@@ -8,7 +8,6 @@ const univ3Config = require('./uniswap.v3.config');
 const { GetContractCreationBlockNumber } = require('../utils/web3.utils');
 const { fnName, sleep, roundTo, readLastLine } = require('../utils/utils');
 const { getConfTokenBySymbol, normalize } = require('../utils/token.utils');
-const { getPriceFromSqrt } = require('./uniswap.v3.utils');
 const { RecordMonitoring } = require('../utils/monitoring');
 const { DATA_DIR } = require('../utils/constants');
 const path = require('path');
@@ -71,10 +70,30 @@ async function UniswapV3PriceHistoryFetcher(onlyOnce = false) {
             }
 
             const stalePairs = [];
+            let promises = [];
             for(const groupedFetchConfig of Object.values(poolsToFetchGroupedByPair)) {
-                const lastBlockWithData = await FetchUniswapV3PriceHistoryForPair(groupedFetchConfig.pairToFetch, groupedFetchConfig.pools, web3Provider, currentBlock);
-                if(currentBlock - lastBlockWithData > 500_000) {
-                    stalePairs.push(`no data since ${currentBlock - lastBlockWithData} blocks for ${groupedFetchConfig.pairToFetch.token0}/${groupedFetchConfig.pairToFetch.token1}`);
+                promises.push(FetchUniswapV3PriceHistoryForPair(groupedFetchConfig.pairToFetch, groupedFetchConfig.pools, web3Provider, currentBlock));
+                // const lastBlockWithData = await FetchUniswapV3PriceHistoryForPair(groupedFetchConfig.pairToFetch, groupedFetchConfig.pools, web3Provider, currentBlock);
+                if(promises.length >= 5) {
+                    const results = await Promise.all(promises);
+                    for(const result of results) {
+                        if(currentBlock - result.lastBlockWithData > 500_000) {
+                            stalePairs.push(`no data since ${currentBlock - result.lastBlockWithData} blocks for ${result.token0}/${result.token1}`);
+                        }
+                    }
+
+                    promises = [];
+                }
+
+                await sleep(1000);                
+            }
+
+            if(promises.length > 0) {
+                const results = await Promise.all(promises);
+                for(const result of results) {
+                    if(currentBlock - result.lastBlockWithData > 500_000) {
+                        stalePairs.push(`no data since ${currentBlock - result.lastBlockWithData} blocks for ${result.token0}/${result.token1}`);
+                    }
                 }
             }
 
@@ -278,11 +297,11 @@ async function FetchUniswapV3PriceHistoryForPair(pairToFetch, pools, web3Provide
         fromBlock = toBlock +1;
     }
 
-    return lastBlockWithData;
+    return {lastBlockWithData, token0: token0Conf.symbol, token1: token1Conf.symbol};
 }
 
 async function fetchEvents(startBlock, endBlock, contract, token0Conf, token1Conf) {
-    const initBlockStep = 50000;
+    const initBlockStep = 100000;
     let blockStep = initBlockStep;
     let fromBlock =  startBlock;
     let toBlock = 0;
@@ -343,5 +362,5 @@ async function fetchEvents(startBlock, endBlock, contract, token0Conf, token1Con
     return swapResults;
 }
 
-UniswapV3PriceHistoryFetcher(true);
+// UniswapV3PriceHistoryFetcher(true);
 module.exports = { UniswapV3PriceHistoryFetcher };

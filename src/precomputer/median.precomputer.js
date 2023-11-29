@@ -182,4 +182,5 @@ function getMedianPricesForPlatform(platform, base, quote, lastBlock, currentBlo
     return medianed;
 }
 
+// PrecomputeMedianPrices(true);
 module.exports = { PrecomputeMedianPrices };
