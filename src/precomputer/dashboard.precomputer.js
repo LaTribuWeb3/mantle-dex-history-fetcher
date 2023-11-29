@@ -7,10 +7,11 @@ const fs = require('fs');
 const path = require('path');
 const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
 const { getLiquidity, getRollingVolatility } = require('../data.interface/data.interface');
-const { getDefaultSlippageMap, readMedianPricesFile } = require('../data.interface/internal/data.interface.utils');
+const { getDefaultSlippageMap } = require('../data.interface/internal/data.interface.utils');
 const { median, average, quantile } = require('simple-statistics');
 const { watchedPairs } = require('../global.config');
 const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
+const { getPrices } = require('../data.interface/internal/data.interface.price');
 
 const RUN_EVERY_MINUTES = 6 * 60; // in minutes
 const MONITORING_NAME = 'Dashboard Precomputer';
@@ -93,7 +94,10 @@ async function PrecomputeDashboardData() {
                 }
             }
 
+            console.log(`Will compute data for ${pairsToCompute.length} pairs`);
+
             for(const pair of pairsToCompute) {
+                await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
                 console.log(`${fnName()}: precomputing for pair ${pair.base}/${pair.quote}`);
                 let allPlatformsOutput = undefined;
                 for(const platform of PLATFORMS) {
@@ -101,7 +105,7 @@ async function PrecomputeDashboardData() {
                     // get the liquidity since startBlock - avgStep because, for the first block (= startBlock), we will compute the avg liquidity and volatility also
                     const platformLiquidity = getLiquidity(platform, pair.base, pair.quote, realStartBlock, currentBlock, true);
                     if(platformLiquidity) {
-                        const pricesAtBlock = readMedianPricesFile(platform, pair.base, pair.quote).filter(_ => _.block >= realStartBlock);
+                        const pricesAtBlock = getPrices(platform, pair.base, pair.quote)?.filter(_ => _.block >= realStartBlock);
                         if(!pricesAtBlock) {
                             throw new Error(`Could not get price at block for ${platform} ${pair.base} ${pair.quote} ${pair.volatilityPivot}`);
                         }

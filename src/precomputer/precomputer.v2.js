@@ -59,6 +59,7 @@ async function precomputeDataV2() {
                     averagesForPlatform[platform] = {};
                     for(const base of Object.keys(pairsToCompute)) {
                         for(const quote of pairsToCompute[base]) {
+                            await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
                             console.log(`${fnName()} [${base}/${quote}] [${span}d] [step: ${blockStep}]: getting data from ${platform}`);
 
                             // for each span for each platform for each pairs, we'll get the volatility, the liquidity and the average liquidity

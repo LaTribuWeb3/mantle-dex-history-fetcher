@@ -57,6 +57,7 @@ async function SendToPythia() {
 
                 
                 for(const base of pythiaConfig.tokensToPush) {
+                    await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
                     const volatilityData = await generateVolatilityData(base, span, startBlock, endBlock, web3Provider);
                     console.log(volatilityData);
                     dataToSend.push(volatilityData);
@@ -126,7 +127,7 @@ async function SendToPythia() {
  * @param {number} span 
  * @param {number} startBlock 
  * @param {number} endBlock 
- * @returns {{asset: string, key: string, value: string, updateTimeSeconds: number}}
+ * @returns {Promise<{asset: string, key: string, value: string, updateTimeSeconds: number}>}
  */
 async function generateVolatilityData(baseSymbol, span, startBlock, endBlock, web3Provider) {
     const tokenConf = getConfTokenBySymbol(baseSymbol);
