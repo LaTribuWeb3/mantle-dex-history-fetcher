@@ -6,8 +6,8 @@ async function compoundV3ComputerDebug() {
     // startDates.push(new Date(2023, 5, 15, 12, 43, 15));
     // startDates.push(new Date(2023, 6, 31, 12, 43, 15));
     // startDates.push(new Date(2023, 7, 1, 12, 43, 15));
-    startDates.push(new Date(2023, 7, 12, 14, 0, 0));
-    startDates.push(new Date(2023, 7, 13, 14, 0, 0));
+    // startDates.push(new Date(2023, 7, 12, 14, 0, 0));
+    startDates.push(new Date(2023, 5, 13, 14, 0, 0));
     // startDates.push(new Date(2023, 7, 28, 14, 0, 0));
 
     try {

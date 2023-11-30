@@ -58,10 +58,20 @@ function computeAverages(protocolData, numberOfDaysAccumulated) {
     averaged['protocolAverageHistory'] = protocolData['protocolAverage'];
     try {
         for (const [market, marketData] of Object.entries(protocolData)) {
+            if(market == 'protocolAverage') {
+                continue;
+            }
             if (!toAverage[market]) {
                 toAverage[market] = {};
             }
             for (const [collateral, collateralValues] of Object.entries(marketData)) {
+                const cptValues = Object.keys(collateralValues).length;
+                console.log(`${market} ${collateral}: values: ${cptValues}`);
+
+                if(cptValues < 180) {
+                    // find discontinuity
+                    checkDataDiscontinuity(collateralValues, cptValues);
+                }
                 if (!toAverage[market][collateral]) {
                     toAverage[market][collateral] = {};
                 }
@@ -104,6 +114,27 @@ function computeAverages(protocolData, numberOfDaysAccumulated) {
         console.log(error);
     }
     return averaged;
+}
+
+function checkDataDiscontinuity(collateralValues, cptValues) {
+    const first = Object.keys(collateralValues)[0];
+    console.log(first);
+    const firstSplitted = first.split('.').map(_ => Number(_));
+    const date = new Date(firstSplitted[2], firstSplitted[1] - 1, firstSplitted[0], 12, 0, 0);
+    console.log(date);
+
+    for (let i = 1; i < cptValues; i++) {
+        const dt = Object.keys(collateralValues)[i];
+        date.setDate(date.getDate() - 1);
+
+        const formatedDate = `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`;
+        console.log(dt, formatedDate);
+        if (formatedDate != dt) {
+            console.error(`Discontinuity error on date ${dt}, should be ${formatedDate}`);
+            throw new Error(`Discontinuity error on date ${dt}, should be ${formatedDate}`);
+        }
+
+    }
 }
 
 function computeAveragesForProtocol(protocol) {
