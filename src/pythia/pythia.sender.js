@@ -58,7 +58,7 @@ async function SendToPythia() {
                 
                 for(const base of pythiaConfig.tokensToPush) {
                     await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
-                    const volatilityData = await generateVolatilityData(base, span, startBlock, endBlock, web3Provider);
+                    const volatilityData = await generateVolatilityData(base, span, web3Provider);
                     console.log(volatilityData);
                     dataToSend.push(volatilityData);
                     
@@ -129,29 +129,17 @@ async function SendToPythia() {
  * @param {number} endBlock 
  * @returns {Promise<{asset: string, key: string, value: string, updateTimeSeconds: number}>}
  */
-async function generateVolatilityData(baseSymbol, span, startBlock, endBlock, web3Provider) {
+async function generateVolatilityData(baseSymbol, span, web3Provider) {
     const tokenConf = getConfTokenBySymbol(baseSymbol);
     const usdcConf = getConfTokenBySymbol('USDC');
 
-    let volatility = 0;
-    let volatilityCpt = 0;
-    for(const platform of PLATFORMS_TO_USE) {
-        const rollingVolatility = await getRollingVolatility(platform, baseSymbol, 'USDC', web3Provider);
-
-        let vol = 0;
-        if(rollingVolatility) {
-            vol = rollingVolatility.latest.current;
-        }
-        
-        if(vol != 0) {
-            volatilityCpt++;
-            volatility += vol;
-        }
+    const rollingVolatility = await getRollingVolatility('all', baseSymbol, 'USDC', web3Provider);
+    let vol = 0;
+    if(rollingVolatility) {
+        vol = rollingVolatility.latest.current;
     }
-
-    volatility = volatilityCpt == 0 ? 0 : volatility  / volatilityCpt;
     
-    const volatility18Decimals = new BigNumber(volatility).times(BN_1e18).toFixed(0);
+    const volatility18Decimals = new BigNumber(vol).times(BN_1e18).toFixed(0);
     const key = encodeVolatilityKey(tokenConf.address, usdcConf.address, 0, span);
 
     return {
