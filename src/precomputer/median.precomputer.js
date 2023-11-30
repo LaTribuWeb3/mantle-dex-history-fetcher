@@ -163,6 +163,10 @@ function getMedianPricesAllPlatforms(base, quote, lastBlock, currentBlock, pivot
         allPrices = allPrices.concat(prices);
     }
 
+    if(allPrices.length == 0) {
+        return [];
+    }
+    
     // here we have all the prices data from all platforms, sorting them before calling the median
     console.log(`sorting ${allPrices.length} prices`);
     allPrices.sort((a, b) => a.block - b.block);
