@@ -271,7 +271,11 @@ function readAllPricesFromFilename(fullFilename, fromBlock, toBlock) {
  */
 function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK) {
     if(fromSymbol == 'stETH' && toSymbol == 'wstETH') {
-        return specificUnifiedDataForIntervalForstETHwstETH(fromBlock, toBlock, stepBlock);
+        return specificUnifiedDataForIntervalForstETHwstETH('WETH','wstETH', fromBlock, toBlock, stepBlock);
+    }
+    
+    if (fromSymbol == 'wstETH' && toSymbol == 'stETH') {
+        return specificUnifiedDataForIntervalForstETHwstETH('wstETH','WETH', fromBlock, toBlock, stepBlock);
     }
 
     if(platform == 'curve') {
@@ -392,8 +396,8 @@ function readDataFromFile(fullFilename) {
  * @param {number} toBlock 
  * @param {number} stepBlock 
  */
-function specificUnifiedDataForIntervalForstETHwstETH(fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK) {
-    const filename = 'WETH-wstETH-unified-data.csv';
+function specificUnifiedDataForIntervalForstETHwstETH(base, quote, fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK) {
+    const filename = `${base}-${quote}-unified-data.csv`;
     const fullFilename = path.join(DATA_DIR, 'precomputed', 'uniswapv3', filename);
 
     const unifiedData = getUnifiedDataForIntervalByFilename(fullFilename, fromBlock, toBlock, stepBlock);

@@ -103,9 +103,8 @@ function getSlippageMapForIntervalWithJumps(fromSymbol, toSymbol, fromBlock, toB
     const liquidityData = {};
     let data = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock);
     
-    const pivots = [];
-    pivots.push(...PIVOTS);
-    if(fromSymbol == 'stETH') {
+    const pivots = structuredClone(PIVOTS);
+    if([fromSymbol, toSymbol].includes('stETH')) {
         pivots.push('wstETH');
     }
 

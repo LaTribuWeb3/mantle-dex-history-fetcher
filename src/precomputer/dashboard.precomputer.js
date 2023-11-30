@@ -99,7 +99,7 @@ async function PrecomputeDashboardData() {
             for(const pair of pairsToCompute) {
                 await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
                 console.log(`${fnName()}: precomputing for pair ${pair.base}/${pair.quote}`);
-                let allPlatformsOutput = undefined;
+                let allPlatformsLiquidity = undefined;
                 for(const platform of PLATFORMS) {
                     console.log(`${fnName()}[${pair.base}/${pair.quote}]: precomputing for platform ${platform}`);
                     // get the liquidity since startBlock - avgStep because, for the first block (= startBlock), we will compute the avg liquidity and volatility also
@@ -107,68 +107,22 @@ async function PrecomputeDashboardData() {
                     if(platformLiquidity) {
                         const pricesAtBlock = getPrices(platform, pair.base, pair.quote)?.filter(_ => _.block >= realStartBlock);
                         if(!pricesAtBlock) {
-                            throw new Error(`Could not get price at block for ${platform} ${pair.base} ${pair.quote} ${pair.volatilityPivot}`);
+                            throw new Error(`Could not get price at block for ${platform} ${pair.base} ${pair.quote}`);
                         }
 
                         const rollingVolatility = await getRollingVolatility(platform, pair.base, pair.quote, web3Provider);
 
                         const startDate = Date.now();
-                        const platformOutput = generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, platform, rollingVolatility);                        
+                        generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, platform, rollingVolatility);                        
                         logFnDurationWithLabel(startDate, 'generateDashboardDataFromLiquidityData');
-                        if(!allPlatformsOutput) {
-                            allPlatformsOutput = platformOutput;
+                        if(!allPlatformsLiquidity) {
+                            allPlatformsLiquidity = platformLiquidity;
                         } else {
-                            // sum price and volatility (will be avg after)
-                            for(const block of Object.keys(allPlatformsOutput)) {
-                                // do this only the first time for allPlatformsOutput
-                                if(!allPlatformsOutput[block].totalVolatilityWeight) {
-                                    const volatilityWeight = allPlatformsOutput[block].slippageMap[500].base;
-                                    allPlatformsOutput[block].totalVolatilityWeight = allPlatformsOutput[block].volatility > 0 ? volatilityWeight : 0;
-                                    allPlatformsOutput[block].volatility *= volatilityWeight;
-                                }
-
-                                if(!allPlatformsOutput[block].totalPriceWeight) {
-                                    const priceWeight = allPlatformsOutput[block].slippageMap[500].base;
-                                    allPlatformsOutput[block].totalPriceWeight = allPlatformsOutput[block].price > 0 ? priceWeight : 0;
-                                    allPlatformsOutput[block].price *= priceWeight;
-                                    allPlatformsOutput[block].priceAvg *= priceWeight;
-                                    allPlatformsOutput[block].priceMedian *= priceWeight;
-                                    allPlatformsOutput[block].priceQ10 *= priceWeight;
-                                    allPlatformsOutput[block].priceQ90 *= priceWeight;
-                                    allPlatformsOutput[block].priceMin *= priceWeight;
-                                    allPlatformsOutput[block].priceMax *= priceWeight;
-                                    allPlatformsOutput[block].biggestDailyChange *= priceWeight;
-                                }
-
-                                // for each new platformOutput, compute the new weight and add price and volatility
-                                // according to the weight
-                                const newWeight = platformOutput[block].slippageMap[500].base;
-
-                                const newVolatility = platformOutput[block].volatility;
-                                if(newVolatility > 0) {
-                                    allPlatformsOutput[block].totalVolatilityWeight += newWeight;
-                                    allPlatformsOutput[block].volatility += (newVolatility * newWeight);
-                                }
-
-                                const newPrice = platformOutput[block].price;
-                                if(newPrice > 0) {
-                                    allPlatformsOutput[block].totalPriceWeight += newWeight;
-                                    allPlatformsOutput[block].price += (newPrice * newWeight);
-                                    allPlatformsOutput[block].biggestDailyChange += (platformOutput[block].biggestDailyChange * newWeight);
-                                    allPlatformsOutput[block].priceAvg += (platformOutput[block].priceAvg * newWeight);
-                                    allPlatformsOutput[block].priceMedian += (platformOutput[block].priceMedian * newWeight);
-                                    allPlatformsOutput[block].priceQ10 += (platformOutput[block].priceQ10 * newWeight);
-                                    allPlatformsOutput[block].priceQ90 += (platformOutput[block].priceQ90 * newWeight);
-                                    allPlatformsOutput[block].priceMin += (platformOutput[block].priceMin * newWeight);
-                                    allPlatformsOutput[block].priceMax += (platformOutput[block].priceMax * newWeight);
-                                }
-
-                                // sum liquidities
-                                for(const slippageBps of Object.keys(allPlatformsOutput[block].slippageMap)) {
-                                    allPlatformsOutput[block].slippageMap[slippageBps].base += platformOutput[block].slippageMap[slippageBps].base;
-                                    allPlatformsOutput[block].slippageMap[slippageBps].quote += platformOutput[block].slippageMap[slippageBps].quote;
-                                    allPlatformsOutput[block].avgSlippageMap[slippageBps].base += platformOutput[block].avgSlippageMap[slippageBps].base;
-                                    allPlatformsOutput[block].avgSlippageMap[slippageBps].quote += platformOutput[block].avgSlippageMap[slippageBps].quote;
+                            // sum liquidity
+                            for(const block of Object.keys(allPlatformsLiquidity)) {
+                                for(const slippageBps of Object.keys(allPlatformsLiquidity[block].slippageMap)) {
+                                    allPlatformsLiquidity[block].slippageMap[slippageBps].base += platformLiquidity[block].slippageMap[slippageBps].base;
+                                    allPlatformsLiquidity[block].slippageMap[slippageBps].quote += platformLiquidity[block].slippageMap[slippageBps].quote;
                                 }
                             }
                         }
@@ -177,32 +131,20 @@ async function PrecomputeDashboardData() {
                     }
                 }
 
-                if(!allPlatformsOutput) {
+                if(!allPlatformsLiquidity) {
                     continue;
                 }
-                // here, need to compute avg price and volatility for each block
-                for(const block of Object.keys(allPlatformsOutput)) {
-                    const totalVolatilityWeightForBlock = allPlatformsOutput[block].totalVolatilityWeight || 1;
-                    const totalPriceWeightForBlock = allPlatformsOutput[block].totalPriceWeight || 1;
 
-                    allPlatformsOutput[block].volatility = allPlatformsOutput[block].volatility / totalVolatilityWeightForBlock;
-                    allPlatformsOutput[block].price = allPlatformsOutput[block].price / totalPriceWeightForBlock;
-                    allPlatformsOutput[block].priceAvg = allPlatformsOutput[block].priceAvg / totalPriceWeightForBlock;
-                    allPlatformsOutput[block].priceMedian = allPlatformsOutput[block].priceMedian / totalPriceWeightForBlock;
-                    allPlatformsOutput[block].priceQ10 = allPlatformsOutput[block].priceQ10 / totalPriceWeightForBlock;
-                    allPlatformsOutput[block].priceQ90 = allPlatformsOutput[block].priceQ90 / totalPriceWeightForBlock;
-                    allPlatformsOutput[block].priceMin = allPlatformsOutput[block].priceMin / totalPriceWeightForBlock;
-                    allPlatformsOutput[block].priceMax = allPlatformsOutput[block].priceMax / totalPriceWeightForBlock;
-                    allPlatformsOutput[block].biggestDailyChange = allPlatformsOutput[block].biggestDailyChange / totalPriceWeightForBlock;
-
-                    // remove from object to use less place in the json
-                    delete allPlatformsOutput[block].totalVolatilityWeight;
-                    delete allPlatformsOutput[block].totalPriceWeight;
+                // here, need to compute avg price and volatility for each block for 'all' platforms
+                const pricesAtBlock = getPrices('all', pair.base, pair.quote)?.filter(_ => _.block >= realStartBlock);
+                if(!pricesAtBlock) {
+                    throw new Error(`Could not get price at block for all ${pair.base} ${pair.quote}`);
                 }
-
-                // then write the data
-                const fullFilename = path.join(dirPath, `${pair.base}-${pair.quote}-all.json`);
-                fs.writeFileSync(fullFilename, JSON.stringify({ updated: Date.now(), liquidity: allPlatformsOutput }));
+                
+                const rollingVolatility = await getRollingVolatility('all', pair.base, pair.quote, web3Provider);
+                const startDate = Date.now();
+                generateDashboardDataFromLiquidityData(allPlatformsLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, 'all', rollingVolatility);                        
+                logFnDurationWithLabel(startDate, 'generateDashboardDataFromLiquidityData');
             }
 
             const runEndDate = Math.round(Date.now() / 1000);
@@ -251,32 +193,20 @@ function generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock
             throw new Error(`Could not find blocks <= ${block} in liquidity data`);
         }
 
-        platformOutputResult[block].slippageMap = platformLiquidity[nearestBlockBefore].slippageMap;
+        // platformOutputResult[block].slippageMap = platformLiquidity[nearestBlockBefore].slippageMap;
         const prices = pricesAtBlock.filter(_ => _.block >= block - BLOCK_PER_DAY && _.block <= block).map(_ => _.price);
         if (prices.length == 0) {
             if(previousBlock) {
-                platformOutputResult[block].price = platformOutputResult[previousBlock].price;
-                platformOutputResult[block].priceAvg = platformOutputResult[previousBlock].priceAvg;
                 platformOutputResult[block].priceMedian = platformOutputResult[previousBlock].priceMedian;
-                platformOutputResult[block].priceQ10 = platformOutputResult[previousBlock].priceQ10;
-                platformOutputResult[block].priceQ90 = platformOutputResult[previousBlock].priceQ90 ;
                 platformOutputResult[block].priceMin = platformOutputResult[previousBlock].priceMin;
                 platformOutputResult[block].priceMax =  platformOutputResult[previousBlock].priceMax;
             } else {
-                platformOutputResult[block].price = 0;
-                platformOutputResult[block].priceAvg = 0;
                 platformOutputResult[block].priceMedian = 0;
-                platformOutputResult[block].priceQ10 = 0;
-                platformOutputResult[block].priceQ90 = 0;
                 platformOutputResult[block].priceMin = 0;
                 platformOutputResult[block].priceMax = 0;
             }
         } else {
-            platformOutputResult[block].price = prices.at(-1);
-            platformOutputResult[block].priceAvg = average(prices);
             platformOutputResult[block].priceMedian = median(prices);
-            platformOutputResult[block].priceQ10 = quantile(prices, 0.1);
-            platformOutputResult[block].priceQ90 = quantile(prices, 0.9);
             platformOutputResult[block].priceMin = Math.min(...prices);
             platformOutputResult[block].priceMax = Math.max(...prices);
         }
@@ -313,7 +243,17 @@ function generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock
         // find the rolling volatility for the block
         const volatilityAtBlock = rollingVolatility.history.filter(_ => _.blockStart <= block && _.blockEnd >= block)[0];
         if(!volatilityAtBlock) {
-            platformOutputResult[block].volatility = 0;
+            if (block < rollingVolatility.latest.blockEnd) {
+                // block too early
+                platformOutputResult[block].volatility = 0;
+            }
+            else if (block - 7200 > rollingVolatility.latest.blockEnd) {
+                console.warn(`last volatility data is more than 1 day older than block ${block}`);
+                platformOutputResult[block].volatility = 0;
+            } else {
+                console.log(`blockdiff: ${block - rollingVolatility.latest.blockEnd}`);
+                platformOutputResult[block].volatility = rollingVolatility.latest.current;
+            }
         } else {
             platformOutputResult[block].volatility = volatilityAtBlock.current;
         }
@@ -324,11 +264,10 @@ function generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock
 
     // compute biggest daily change over the last 3 months
     // for each blocks of the platformOutputResult
-    computeBiggestDailyChange(pricesAtBlock, platformOutputResult);
+    // computeBiggestDailyChange(pricesAtBlock, platformOutputResult);
 
     const fullFilename = path.join(dirPath, `${pair.base}-${pair.quote}-${platform}.json`);
     fs.writeFileSync(fullFilename, JSON.stringify({ updated: Date.now(), liquidity: platformOutputResult }));
-    return platformOutputResult;
 }
 
 function computeBiggestDailyChange(medianPricesAtBlock, platformOutputResult) {

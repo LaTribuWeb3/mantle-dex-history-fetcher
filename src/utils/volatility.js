@@ -182,7 +182,7 @@ function computeBiggestDailyChange(medianPricesAtBlock, currentBlock) {
 async function rollingBiggestDailyChange(medianPricesAtBlock, web3Provider, lambda = LAMBDA) {
     const start = Date.now();
     const fromBlock = medianPricesAtBlock[0].block;
-    const endBlock = medianPricesAtBlock.at(-1).block;
+    const endBlock = await web3Provider.getBlockNumber();
     const oldBlockDateSec = (await retry(() => web3Provider.getBlock(fromBlock), [])).timestamp;
     const currentDateSec = (await retry(() => web3Provider.getBlock(endBlock), [])).timestamp;
     const dayDiff = (currentDateSec - oldBlockDateSec) / (24 * 60 * 60);
@@ -201,7 +201,7 @@ async function rollingBiggestDailyChange(medianPricesAtBlock, web3Provider, lamb
         let stepTargetBlock = currBlock + blockPerDay;
 
         // if the next loop will create a day with too few blocks, create a bigger "last day"
-        if(stepTargetBlock + blockPerDay > endBlock) {
+        if(stepTargetBlock > endBlock) {
             stepTargetBlock = endBlock + 1;
         }
 
@@ -222,7 +222,7 @@ async function rollingBiggestDailyChange(medianPricesAtBlock, web3Provider, lamb
         results.push({
             yesterday: yesterdayRollingDailyChange,
             current: currentRollingDailyChange,
-            blockStart: Math.ceil(currBlock),
+            blockStart: Math.floor(currBlock),
             blockEnd: Math.floor(stepTargetBlock - 1),
             minPrice: lastMinPrice,
             maxPrice: lastMaxPrice,
