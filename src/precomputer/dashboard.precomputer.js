@@ -1,6 +1,6 @@
 const { RecordMonitoring } = require('../utils/monitoring');
 const { ethers } = require('ethers');
-const { fnName, roundTo, sleep, logFnDurationWithLabel, logFnDuration } = require('../utils/utils');
+const { fnName, roundTo, sleep, logFnDurationWithLabel, logFnDuration, retry } = require('../utils/utils');
 const { DATA_DIR, PLATFORMS } = require('../utils/constants');
 
 const fs = require('fs');
@@ -8,10 +8,11 @@ const path = require('path');
 const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
 const { getLiquidity, getRollingVolatility } = require('../data.interface/data.interface');
 const { getDefaultSlippageMap } = require('../data.interface/internal/data.interface.utils');
-const { median, average, quantile } = require('simple-statistics');
+const { median } = require('simple-statistics');
 const { watchedPairs } = require('../global.config');
 const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
 const { getPrices } = require('../data.interface/internal/data.interface.price');
+const { default: axios } = require('axios');
 
 const RUN_EVERY_MINUTES = 6 * 60; // in minutes
 const MONITORING_NAME = 'Dashboard Precomputer';
@@ -20,6 +21,7 @@ const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
 const NB_DAYS = 180;
 const TARGET_DATA_POINTS = NB_DAYS;
 const NB_DAYS_AVG = 30;
+const BLOCKINFO_URL = process.env.BLOCKINFO_URL;
 
 const BIGGEST_DAILY_CHANGE_OVER_DAYS = 90; // amount of days to compute the biggest daily change
 let BLOCK_PER_DAY = 0; // 7127
@@ -65,6 +67,14 @@ async function PrecomputeDashboardData() {
             const displayBlocks = [];
             for(let b = startBlock; b <= currentBlock; b+= blockStep) {
                 displayBlocks.push(b);
+            }
+
+            // find all blocktimes for each display block
+            const blockTimeStamps = {};
+            console.log(`${fnName()}: getting all block timestamps`);
+            for(const blockNumber of displayBlocks) {
+                const blockTimestampResp = await retry(axios.get, [BLOCKINFO_URL + `/api/getblocktimestamp?blocknumber=${blockNumber}`], 0, 100);
+                blockTimeStamps[blockNumber] = blockTimestampResp.data.timestamp;
             }
 
             // AVG step is the amount of blocks to be used when computing average liquidity
@@ -113,7 +123,7 @@ async function PrecomputeDashboardData() {
                         const rollingVolatility = await getRollingVolatility(platform, pair.base, pair.quote, web3Provider);
 
                         const startDate = Date.now();
-                        generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, platform, rollingVolatility);                        
+                        generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, platform, rollingVolatility, blockTimeStamps);                        
                         logFnDurationWithLabel(startDate, 'generateDashboardDataFromLiquidityData');
                         if(!allPlatformsLiquidity) {
                             allPlatformsLiquidity = platformLiquidity;
@@ -143,7 +153,7 @@ async function PrecomputeDashboardData() {
                 
                 const rollingVolatility = await getRollingVolatility('all', pair.base, pair.quote, web3Provider);
                 const startDate = Date.now();
-                generateDashboardDataFromLiquidityData(allPlatformsLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, 'all', rollingVolatility);                        
+                generateDashboardDataFromLiquidityData(allPlatformsLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, 'all', rollingVolatility, blockTimeStamps);                        
                 logFnDurationWithLabel(startDate, 'generateDashboardDataFromLiquidityData');
             }
 
@@ -178,13 +188,14 @@ async function PrecomputeDashboardData() {
 
 }
 
-function generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, platform, rollingVolatility) {
+function generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, platform, rollingVolatility, blockTimeStamps) {
     console.log(`generateDashboardDataFromLiquidityData: starting for ${pair.base}/${pair.quote}`);
     const platformOutputResult = {};
     // compute average liquidity over ~= 30 days for all the display blocks
     const liquidityBlocks = Object.keys(platformLiquidity).map(_ => Number(_));
     // const pricesBlocks = Object.keys(pricesAtBlock).map(_ => Number(_));
 
+    const timeOutputResult = {};
     let previousBlock = undefined;
     for (const block of displayBlocks) {
         platformOutputResult[block] = {};
@@ -260,6 +271,7 @@ function generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock
 
         platformOutputResult[block].avgSlippageMap = avgSlippage;
         previousBlock = block;
+        timeOutputResult[blockTimeStamps[block]] = platformOutputResult[block];
     }
 
     // compute biggest daily change over the last 3 months
@@ -267,7 +279,7 @@ function generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock
     // computeBiggestDailyChange(pricesAtBlock, platformOutputResult);
 
     const fullFilename = path.join(dirPath, `${pair.base}-${pair.quote}-${platform}.json`);
-    fs.writeFileSync(fullFilename, JSON.stringify({ updated: Date.now(), liquidity: platformOutputResult }));
+    fs.writeFileSync(fullFilename, JSON.stringify({ updated: Date.now(), liquidity: timeOutputResult }));
 }
 
 function computeBiggestDailyChange(medianPricesAtBlock, platformOutputResult) {
