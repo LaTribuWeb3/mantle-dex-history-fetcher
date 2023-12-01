@@ -267,23 +267,31 @@ function readAllPricesFromFilename(fullFilename, fromBlock, toBlock) {
  * @param {string} toSymbol
  * @param {number} fromBlock 
  * @param {number} toBlock 
+ * @param {string[]} alreadyUsedPools the pools already used
  * @returns {{[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}}
  */
-function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK) {
+function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK, alreadyUsedPools) {
     if(fromSymbol == 'stETH' && toSymbol == 'wstETH') {
-        return specificUnifiedDataForIntervalForstETHwstETH('WETH','wstETH', fromBlock, toBlock, stepBlock);
+        return specificUnifiedDataForIntervalForstETHwstETH('WETH','wstETH', fromBlock, toBlock, stepBlock, alreadyUsedPools);
     }
     
     if (fromSymbol == 'wstETH' && toSymbol == 'stETH') {
-        return specificUnifiedDataForIntervalForstETHwstETH('wstETH','WETH', fromBlock, toBlock, stepBlock);
+        return specificUnifiedDataForIntervalForstETHwstETH('wstETH','WETH', fromBlock, toBlock, stepBlock, alreadyUsedPools);
     }
 
     if(platform == 'curve') {
-        return getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock);
+        return getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
     }
 
     const filename = `${fromSymbol}-${toSymbol}-unified-data.csv`;
     const fullFilename = path.join(DATA_DIR, 'precomputed', platform, filename);
+
+    if(alreadyUsedPools.includes(filename)) {
+        console.log(`pool ${filename} already used, cannot reuse it`);
+        return undefined;
+    }
+
+    alreadyUsedPools.push(filename);
 
     return getUnifiedDataForIntervalByFilename(fullFilename, fromBlock, toBlock, stepBlock);
 }
@@ -396,7 +404,15 @@ function readDataFromFile(fullFilename) {
  * @param {number} toBlock 
  * @param {number} stepBlock 
  */
-function specificUnifiedDataForIntervalForstETHwstETH(base, quote, fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK) {
+function specificUnifiedDataForIntervalForstETHwstETH(base, quote, fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK, alreadyUsedPools) {
+    const poolName = `${base}-${quote}-fakepool`;
+    if(alreadyUsedPools.includes(poolName)) {
+        console.log(`pool ${poolName} already used, cannot reuse it`);
+        return undefined;
+    }
+
+    alreadyUsedPools.push(poolName);
+
     const filename = `${base}-${quote}-unified-data.csv`;
     const fullFilename = path.join(DATA_DIR, 'precomputed', 'uniswapv3', filename);
 
@@ -412,7 +428,7 @@ function specificUnifiedDataForIntervalForstETHwstETH(base, quote, fromBlock, to
     return unifiedData;
 }
 
-function getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK) {
+function getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK, alreadyUsedPools) {
     // for curve, find all files in the precomputed/curve directory that math the fromSymbol-toSymbol.*.csv
     const searchString = `${fromSymbol}-${toSymbol}`;
     const directory = path.join(DATA_DIR, 'precomputed', 'curve');
@@ -421,11 +437,18 @@ function getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBl
 
     const unifiedDataForPools = [];
     for(const matchingFile of matchingFiles) {
+        const poolName = matchingFile.split('-')[2];
+        if(alreadyUsedPools.includes(poolName)) {
+            console.log(`pool ${poolName} already used, cannot reuse it`);
+            continue;
+        }
         const fullFilename = path.join(directory, matchingFile);
+
         const unifiedDataForFile = getUnifiedDataForIntervalByFilename(fullFilename, fromBlock, toBlock, stepBlock);
         if(unifiedDataForFile) {
-            console.log(`adding unified data from file ${matchingFile} to unifiedDataArray`);
+            console.log(`adding data from pool ${poolName}`);
             unifiedDataForPools.push(unifiedDataForFile);
+            alreadyUsedPools.push(poolName);
         }
     }
 

@@ -37,17 +37,12 @@ function getAverageLiquidityForInterval(fromSymbol, toSymbol, fromBlock, toBlock
  * @param {stepBlock} stepBlock 
  */
 function getSlippageMapForInterval(fromSymbol, toSymbol, fromBlock, toBlock, platform, withJumps, stepBlock=DEFAULT_STEP_BLOCK) {
-    if(platform == 'curve') {
-        console.log('cannot aggregate routes with curve');
-        withJumps = false;
-    }
-
     // with jumps mean that we will try to add pivot routes (with WBTC, WETH and USDC as pivot)
     if(withJumps) {
         const liquidityDataWithJumps = getSlippageMapForIntervalWithJumps(fromSymbol, toSymbol, fromBlock, toBlock, platform, stepBlock);
         return liquidityDataWithJumps;
     } else {
-        const liquidityData = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock);
+        const liquidityData = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, []);
         return liquidityData;
     }
 }
@@ -101,14 +96,18 @@ function computeAverageData(liquidityDataForInterval, fromBlock, toBlock) {
  */
 function getSlippageMapForIntervalWithJumps(fromSymbol, toSymbol, fromBlock, toBlock, platform, stepBlock=DEFAULT_STEP_BLOCK) {
     const liquidityData = {};
-    let data = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock);
+    const alreadyUsedPools = [];
+    let data = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
     
     const pivots = structuredClone(PIVOTS);
     if([fromSymbol, toSymbol].includes('stETH')) {
         pivots.push('wstETH');
     }
+    if([fromSymbol, toSymbol].includes('wstETH')) {
+        pivots.push('stETH');
+    }
 
-    const pivotData = getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock);
+    const pivotData = getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
     if(!data) {
         // if no data and no pivot data, can return undefined: we don't have any liquidity even
         // from jump routes
@@ -196,7 +195,7 @@ function getPivotDataForBlock(pivotData, base, quote, blockNumber) {
     return pivotData[base][quote][blockNumber];
 }
 
-function getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock=DEFAULT_STEP_BLOCK) {
+function getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock=DEFAULT_STEP_BLOCK, alreadyUsedPools) {
     const pivotData = {};
 
     for (const pivot of pivots) {
@@ -207,12 +206,12 @@ function getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, 
             continue;
         }
 
-        const segment1Data = getUnifiedDataForInterval(platform, fromSymbol, pivot, fromBlock, toBlock, stepBlock);
+        const segment1Data = getUnifiedDataForInterval(platform, fromSymbol, pivot, fromBlock, toBlock, stepBlock, alreadyUsedPools);
         if (!segment1Data || Object.keys(segment1Data).length == 0) {
             continue;
         }
 
-        const segment2Data = getUnifiedDataForInterval(platform, pivot, toSymbol, fromBlock, toBlock, stepBlock);
+        const segment2Data = getUnifiedDataForInterval(platform, pivot, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
         if (!segment2Data || Object.keys(segment2Data).length == 0) {
             continue;
         }
