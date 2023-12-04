@@ -284,14 +284,17 @@ function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, to
     }
 
     const filename = `${fromSymbol}-${toSymbol}-unified-data.csv`;
+    // generate pool name using fromsymbol and tosymbol sorted by alphabetical order
+    // so that for example the pair USDC/WETH and WETH/USDC are not used two times (because it would come from the same pool)
+    const poolName = [fromSymbol, toSymbol].sort((a,b) => a.localeCompare(b)).join('-') + '-pool';
     const fullFilename = path.join(DATA_DIR, 'precomputed', platform, filename);
 
-    if(alreadyUsedPools.includes(filename)) {
-        console.log(`pool ${filename} already used, cannot reuse it`);
+    if(alreadyUsedPools.includes(poolName)) {
+        console.log(`pool ${poolName} already used, cannot reuse it`);
         return undefined;
     }
 
-    alreadyUsedPools.push(filename);
+    alreadyUsedPools.push(poolName);
 
     return getUnifiedDataForIntervalByFilename(fullFilename, fromBlock, toBlock, stepBlock);
 }

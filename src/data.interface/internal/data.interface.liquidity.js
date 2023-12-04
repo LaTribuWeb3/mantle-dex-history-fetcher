@@ -1,5 +1,6 @@
 const { computeAggregatedVolumeFromPivot } = require('../../utils/aggregator');
 const { DEFAULT_STEP_BLOCK } = require('../../utils/constants');
+const { fnName } = require('../../utils/utils');
 const { getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap } = require('./data.interface.utils');
 
 const PIVOTS = ['USDC', 'WETH', 'WBTC'];
@@ -172,6 +173,7 @@ function getSlippageMapForIntervalWithJumps(fromSymbol, toSymbol, fromBlock, toB
         }
     }
 
+    console.log(`${fnName()}[${fromSymbol}/${toSymbol}]: used pivots ${pivots} and pools ${alreadyUsedPools}`);
     return liquidityData;
 }
 
