@@ -268,7 +268,7 @@ function readAllPricesFromFilename(fullFilename, fromBlock, toBlock) {
  * @param {number} fromBlock 
  * @param {number} toBlock 
  * @param {string[]} alreadyUsedPools the pools already used
- * @returns {{[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}}
+ * @returns {{unifiedData: {[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}, usedPools: string[]}}
  */
 function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK, alreadyUsedPools) {
     if(fromSymbol == 'stETH' && toSymbol == 'wstETH') {
@@ -294,9 +294,11 @@ function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, to
         return undefined;
     }
 
-    alreadyUsedPools.push(poolName);
 
-    return getUnifiedDataForIntervalByFilename(fullFilename, fromBlock, toBlock, stepBlock);
+    const unifiedData = getUnifiedDataForIntervalByFilename(fullFilename, fromBlock, toBlock, stepBlock);
+
+    const usedPools = unifiedData ? [poolName] : [];
+    return { unifiedData, usedPools};
 }
 
 /**
@@ -411,10 +413,8 @@ function specificUnifiedDataForIntervalForstETHwstETH(base, quote, fromBlock, to
     const poolName = `${base}-${quote}-fakepool`;
     if(alreadyUsedPools.includes(poolName)) {
         console.log(`pool ${poolName} already used, cannot reuse it`);
-        return undefined;
+        return { unifiedData: undefined, usedPools: [] };
     }
-
-    alreadyUsedPools.push(poolName);
 
     const filename = `${base}-${quote}-unified-data.csv`;
     const fullFilename = path.join(DATA_DIR, 'precomputed', 'uniswapv3', filename);
@@ -428,7 +428,7 @@ function specificUnifiedDataForIntervalForstETHwstETH(base, quote, fromBlock, to
         }
     }
 
-    return unifiedData;
+    return  { unifiedData, usedPools: [poolName]};
 }
 
 function getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK, alreadyUsedPools) {
@@ -438,6 +438,7 @@ function getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBl
     const matchingFiles = fs.readdirSync(directory).filter(_ => _.startsWith(searchString) && _.endsWith('.csv'));
     console.log(`found ${matchingFiles.length} matching files for ${searchString}`);
 
+    const usedPools = [];
     const unifiedDataForPools = [];
     for(const matchingFile of matchingFiles) {
         const poolName = matchingFile.split('-')[2];
@@ -451,12 +452,12 @@ function getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBl
         if(unifiedDataForFile) {
             console.log(`adding data from pool ${poolName}`);
             unifiedDataForPools.push(unifiedDataForFile);
-            alreadyUsedPools.push(poolName);
+            usedPools.push(poolName);
         }
     }
 
     if(unifiedDataForPools.length == 0) {
-        return undefined;
+        return { unifiedData: undefined, usedPools: [] };
     }
 
     const unifiedData = unifiedDataForPools[0];
@@ -484,7 +485,7 @@ function getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBl
         }
     }
 
-    return unifiedData;
+    return { unifiedData, usedPools };
 }
 
 /**

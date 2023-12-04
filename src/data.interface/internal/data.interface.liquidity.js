@@ -44,7 +44,7 @@ function getSlippageMapForInterval(fromSymbol, toSymbol, fromBlock, toBlock, pla
         return liquidityDataWithJumps;
     } else {
         const liquidityData = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, []);
-        return liquidityData;
+        return liquidityData.unifiedData;
     }
 }
 
@@ -99,6 +99,9 @@ function getSlippageMapForIntervalWithJumps(fromSymbol, toSymbol, fromBlock, toB
     const liquidityData = {};
     const alreadyUsedPools = [];
     let data = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
+    if(data.unifiedData) {
+        alreadyUsedPools.push(...data.usedPools);
+    }
     
     const pivots = structuredClone(PIVOTS);
     if([fromSymbol, toSymbol].includes('stETH')) {
@@ -109,7 +112,7 @@ function getSlippageMapForIntervalWithJumps(fromSymbol, toSymbol, fromBlock, toB
     }
 
     const pivotData = getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
-    if(!data) {
+    if(!data.unifiedData) {
         // if no data and no pivot data, can return undefined: we don't have any liquidity even
         // from jump routes
         if(Object.keys(pivotData).length == 0) {
@@ -121,11 +124,11 @@ function getSlippageMapForIntervalWithJumps(fromSymbol, toSymbol, fromBlock, toB
         // available. So even if COMP/USDC is empty, we will still use the liquidity from COMP/WETH and WETH/USDC 
         // to get some liquidity for COMP/USDC
         else {
-            data = getBlankUnifiedData(fromBlock, toBlock, stepBlock);
+            data.unifiedData = getBlankUnifiedData(fromBlock, toBlock, stepBlock);
         }
     }
 
-    for(const [blockNumber, platformData] of Object.entries(data)) {
+    for(const [blockNumber, platformData] of Object.entries(data.unifiedData)) {
         liquidityData[blockNumber] = {
             price: platformData.price,
             slippageMap: getDefaultSlippageMap(),
@@ -209,14 +212,20 @@ function getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, 
         }
 
         const segment1Data = getUnifiedDataForInterval(platform, fromSymbol, pivot, fromBlock, toBlock, stepBlock, alreadyUsedPools);
-        if (!segment1Data || Object.keys(segment1Data).length == 0) {
+        if (!segment1Data.unifiedData || Object.keys(segment1Data.unifiedData).length == 0) {
             continue;
         }
 
-        const segment2Data = getUnifiedDataForInterval(platform, pivot, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
-        if (!segment2Data || Object.keys(segment2Data).length == 0) {
+        // add the segment 1 used pools to alreadyUsedPools before checking for segment2 data
+        const stepUsedPools = alreadyUsedPools.concat(segment1Data.usedPools);
+
+        const segment2Data = getUnifiedDataForInterval(platform, pivot, toSymbol, fromBlock, toBlock, stepBlock, stepUsedPools);
+        if (!segment2Data.unifiedData || Object.keys(segment2Data.unifiedData).length == 0) {
             continue;
         }
+
+        alreadyUsedPools.push(...segment1Data.usedPools);
+        alreadyUsedPools.push(...segment2Data.usedPools);
 
         if (!pivotData[fromSymbol]) {
             pivotData[fromSymbol] = {};
@@ -226,8 +235,8 @@ function getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, 
             pivotData[pivot] = {};
         }
 
-        pivotData[fromSymbol][pivot] = segment1Data;
-        pivotData[pivot][toSymbol] = segment2Data;
+        pivotData[fromSymbol][pivot] = segment1Data.unifiedData;
+        pivotData[pivot][toSymbol] = segment2Data.unifiedData;
     }
 
     return pivotData;
