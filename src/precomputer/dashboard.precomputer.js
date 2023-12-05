@@ -20,7 +20,7 @@ const RPC_URL = process.env.RPC_URL;
 const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
 const NB_DAYS = 180;
 const TARGET_DATA_POINTS = NB_DAYS;
-const NB_DAYS_AVG = 30;
+const NB_DAYS_AVG = 1;
 const BLOCKINFO_URL = process.env.BLOCKINFO_URL;
 
 const BIGGEST_DAILY_CHANGE_OVER_DAYS = 90; // amount of days to compute the biggest daily change
