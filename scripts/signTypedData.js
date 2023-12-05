@@ -21,9 +21,9 @@ async function signTypedData() {
     const typedData = generatedTypedData(base, quote, liquidity, 0.12346789554);
 
     const privateKey = '0x0123456789012345678901234561890123456789012345678901234567890123';
-    const walletPrivateKey = new ethers.Wallet(privateKey);
+    const wallet = new ethers.Wallet(privateKey);
 
-    const signature = await walletPrivateKey._signTypedData(typedData.domain, typedData.types, typedData.value);
+    const signature = await wallet._signTypedData(typedData.domain, typedData.types, typedData.value);
     const splitSig = ethers.utils.splitSignature(signature);
     console.log(splitSig);
     // const sigBytes =  joinSignature(splitSig)
@@ -41,6 +41,13 @@ async function signTypedData() {
     );
 
     console.log(signer);
+
+    if(signer != wallet.address) {
+        throw new Error('SIGNER IS NOT WALLET PUBLIC KEY');
+    } else {
+        console.log('Signer is our wallet !');
+    }
+
 }
 
 function generatedTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility) {
@@ -71,7 +78,7 @@ function generatedTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility
             liquidity: liquidity18Decimals,
             volatility: volatility18Decimals,
             lastUpdate: Math.round(Date.now()/1000),
-            chainId: 7
+            chainId: 5
         },
     };
 
