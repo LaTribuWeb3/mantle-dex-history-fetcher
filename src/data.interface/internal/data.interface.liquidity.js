@@ -1,5 +1,6 @@
 const { computeAggregatedVolumeFromPivot } = require('../../utils/aggregator');
 const { DEFAULT_STEP_BLOCK } = require('../../utils/constants');
+const { fnName } = require('../../utils/utils');
 const { getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap } = require('./data.interface.utils');
 
 const PIVOTS = ['USDC', 'WETH', 'WBTC'];
@@ -37,18 +38,13 @@ function getAverageLiquidityForInterval(fromSymbol, toSymbol, fromBlock, toBlock
  * @param {stepBlock} stepBlock 
  */
 function getSlippageMapForInterval(fromSymbol, toSymbol, fromBlock, toBlock, platform, withJumps, stepBlock=DEFAULT_STEP_BLOCK) {
-    if(platform == 'curve') {
-        console.log('cannot aggregate routes with curve');
-        withJumps = false;
-    }
-
     // with jumps mean that we will try to add pivot routes (with WBTC, WETH and USDC as pivot)
     if(withJumps) {
         const liquidityDataWithJumps = getSlippageMapForIntervalWithJumps(fromSymbol, toSymbol, fromBlock, toBlock, platform, stepBlock);
         return liquidityDataWithJumps;
     } else {
-        const liquidityData = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock);
-        return liquidityData;
+        const liquidityData = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, []);
+        return liquidityData.unifiedData;
     }
 }
 
@@ -101,31 +97,37 @@ function computeAverageData(liquidityDataForInterval, fromBlock, toBlock) {
  */
 function getSlippageMapForIntervalWithJumps(fromSymbol, toSymbol, fromBlock, toBlock, platform, stepBlock=DEFAULT_STEP_BLOCK) {
     const liquidityData = {};
-    let data = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock);
+    const alreadyUsedPools = [];
+    let data = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
+    if(data.unifiedData) {
+        alreadyUsedPools.push(...data.usedPools);
+    }
     
     const pivots = structuredClone(PIVOTS);
     if([fromSymbol, toSymbol].includes('stETH')) {
         pivots.push('wstETH');
     }
+    if([fromSymbol, toSymbol].includes('wstETH')) {
+        pivots.push('stETH');
+    }
 
-    const pivotData = getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock);
-    if(!data) {
+    const pivotData = getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
+    if(!data.unifiedData) {
         // if no data and no pivot data, can return undefined: we don't have any liquidity even
         // from jump routes
         if(Object.keys(pivotData).length == 0) {
             return undefined;
-        }
-        // if no data found for fromSymbol/toSymbol but some pivot data are available, consider base data blank 
-        // but we will still try to add "jump routes" to this empty base.
-        // Good example is sushiswap COMP/USDC which is an empty pool but we have COMP/WETH and WETH/USDC
-        // available. So even if COMP/USDC is empty, we will still use the liquidity from COMP/WETH and WETH/USDC 
-        // to get some liquidity for COMP/USDC
-        else {
-            data = getBlankUnifiedData(fromBlock, toBlock, stepBlock);
+        } else {
+            // if no data found for fromSymbol/toSymbol but some pivot data are available, consider base data blank 
+            // but we will still try to add "jump routes" to this empty base.
+            // Good example is sushiswap COMP/USDC which is an empty pool but we have COMP/WETH and WETH/USDC
+            // available. So even if COMP/USDC is empty, we will still use the liquidity from COMP/WETH and WETH/USDC 
+            // to get some liquidity for COMP/USDC
+            data.unifiedData = getBlankUnifiedData(fromBlock, toBlock, stepBlock);
         }
     }
 
-    for(const [blockNumber, platformData] of Object.entries(data)) {
+    for(const [blockNumber, platformData] of Object.entries(data.unifiedData)) {
         liquidityData[blockNumber] = {
             price: platformData.price,
             slippageMap: getDefaultSlippageMap(),
@@ -173,6 +175,7 @@ function getSlippageMapForIntervalWithJumps(fromSymbol, toSymbol, fromBlock, toB
         }
     }
 
+    console.log(`${fnName()}[${fromSymbol}/${toSymbol}]: used pivots ${pivots} and pools ${alreadyUsedPools}`);
     return liquidityData;
 }
 
@@ -196,7 +199,7 @@ function getPivotDataForBlock(pivotData, base, quote, blockNumber) {
     return pivotData[base][quote][blockNumber];
 }
 
-function getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock=DEFAULT_STEP_BLOCK) {
+function getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock=DEFAULT_STEP_BLOCK, alreadyUsedPools) {
     const pivotData = {};
 
     for (const pivot of pivots) {
@@ -207,15 +210,21 @@ function getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, 
             continue;
         }
 
-        const segment1Data = getUnifiedDataForInterval(platform, fromSymbol, pivot, fromBlock, toBlock, stepBlock);
-        if (!segment1Data || Object.keys(segment1Data).length == 0) {
+        const segment1Data = getUnifiedDataForInterval(platform, fromSymbol, pivot, fromBlock, toBlock, stepBlock, alreadyUsedPools);
+        if (!segment1Data.unifiedData || Object.keys(segment1Data.unifiedData).length == 0) {
             continue;
         }
 
-        const segment2Data = getUnifiedDataForInterval(platform, pivot, toSymbol, fromBlock, toBlock, stepBlock);
-        if (!segment2Data || Object.keys(segment2Data).length == 0) {
+        // add the segment 1 used pools to alreadyUsedPools before checking for segment2 data
+        const stepUsedPools = alreadyUsedPools.concat(segment1Data.usedPools);
+
+        const segment2Data = getUnifiedDataForInterval(platform, pivot, toSymbol, fromBlock, toBlock, stepBlock, stepUsedPools);
+        if (!segment2Data.unifiedData || Object.keys(segment2Data.unifiedData).length == 0) {
             continue;
         }
+
+        alreadyUsedPools.push(...segment1Data.usedPools);
+        alreadyUsedPools.push(...segment2Data.usedPools);
 
         if (!pivotData[fromSymbol]) {
             pivotData[fromSymbol] = {};
@@ -225,8 +234,8 @@ function getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, 
             pivotData[pivot] = {};
         }
 
-        pivotData[fromSymbol][pivot] = segment1Data;
-        pivotData[pivot][toSymbol] = segment2Data;
+        pivotData[fromSymbol][pivot] = segment1Data.unifiedData;
+        pivotData[pivot][toSymbol] = segment2Data.unifiedData;
     }
 
     return pivotData;

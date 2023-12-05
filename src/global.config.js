@@ -235,6 +235,10 @@ const tokens = {
 const watchedPairs = {
     'WETH': [
         {
+            quote: 'wstETH',
+            pivots: undefined
+        },
+        {
             quote: 'stETH',
             pivots: undefined
         },
@@ -272,10 +276,6 @@ const watchedPairs = {
         },
         {
             quote: 'DAI',
-            pivots: undefined
-        },
-        {
-            quote: 'wstETH',
             pivots: undefined
         },
         {

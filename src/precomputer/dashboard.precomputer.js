@@ -115,9 +115,10 @@ async function PrecomputeDashboardData() {
                     // get the liquidity since startBlock - avgStep because, for the first block (= startBlock), we will compute the avg liquidity and volatility also
                     const platformLiquidity = getLiquidity(platform, pair.base, pair.quote, realStartBlock, currentBlock, true);
                     if(platformLiquidity) {
-                        const pricesAtBlock = getPrices(platform, pair.base, pair.quote)?.filter(_ => _.block >= realStartBlock);
+                        let pricesAtBlock = getPrices(platform, pair.base, pair.quote)?.filter(_ => _.block >= realStartBlock);
                         if(!pricesAtBlock) {
-                            throw new Error(`Could not get price at block for ${platform} ${pair.base} ${pair.quote}`);
+                            pricesAtBlock = [];
+                            console.warn(`no price at block for for ${platform} ${pair.base} ${pair.quote}`);
                         }
 
                         const rollingVolatility = await getRollingVolatility(platform, pair.base, pair.quote, web3Provider);
@@ -252,21 +253,25 @@ function generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock
         // platformOutputResult[block].parkinsonsVolatility = parkinsonsVolatility;
 
         // find the rolling volatility for the block
-        const volatilityAtBlock = rollingVolatility.history.filter(_ => _.blockStart <= block && _.blockEnd >= block)[0];
-        if(!volatilityAtBlock) {
-            if (block < rollingVolatility.latest.blockEnd) {
-                // block too early
-                platformOutputResult[block].volatility = 0;
-            }
-            else if (block - 7200 > rollingVolatility.latest.blockEnd) {
-                console.warn(`last volatility data is more than 1 day older than block ${block}`);
-                platformOutputResult[block].volatility = 0;
+        if(rollingVolatility) {
+            const volatilityAtBlock = rollingVolatility.history.filter(_ => _.blockStart <= block && _.blockEnd >= block)[0];
+            if(!volatilityAtBlock) {
+                if (block < rollingVolatility.latest.blockEnd) {
+                    // block too early
+                    platformOutputResult[block].volatility = 0;
+                }
+                else if (block - 7200 > rollingVolatility.latest.blockEnd) {
+                    console.warn(`last volatility data is more than 1 day older than block ${block}`);
+                    platformOutputResult[block].volatility = 0;
+                } else {
+                    console.log(`blockdiff: ${block - rollingVolatility.latest.blockEnd}`);
+                    platformOutputResult[block].volatility = rollingVolatility.latest.current;
+                }
             } else {
-                console.log(`blockdiff: ${block - rollingVolatility.latest.blockEnd}`);
-                platformOutputResult[block].volatility = rollingVolatility.latest.current;
+                platformOutputResult[block].volatility = volatilityAtBlock.current;
             }
         } else {
-            platformOutputResult[block].volatility = volatilityAtBlock.current;
+            platformOutputResult[block].volatility = -1;
         }
 
         platformOutputResult[block].avgSlippageMap = avgSlippage;
