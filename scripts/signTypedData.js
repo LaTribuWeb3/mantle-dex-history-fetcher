@@ -23,6 +23,8 @@ async function signTypedData() {
 
     const signature = await wallet._signTypedData(typedData.domain, typedData.types, typedData.value);
     const splitSig = ethers.utils.splitSignature(signature);
+    
+    const dataJson = JSON.stringify({r: splitSig.r, s: splitSig.s, v: splitSig.v, riskData: typedData.value});
     console.log(splitSig);
     /*
         v: 28,
