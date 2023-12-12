@@ -1,5 +1,5 @@
 const { default: BigNumber } = require('bignumber.js');
-const { getRollingVolatility } = require('../src/data.interface/data.interface');
+const { getRollingVolatility, getLiquidity } = require('../src/data.interface/data.interface');
 const { getConfTokenBySymbol } = require('../src/utils/token.utils');
 const { ethers } = require('ethers');
 const { BN_1e18 } = require('../src/utils/constants');
@@ -12,11 +12,14 @@ async function signTypedData() {
     const base = getConfTokenBySymbol('wstETH');
     const quote =  getConfTokenBySymbol('WETH');
 
-    const liquidity = 63456;
+    const start = Date.now();
+    const startBlock = await getBlocknumberForTimestamp(Math.round(startDate/ 1000) - (30 * 24 * 60 * 60));
+    const currentBlock = await web3Provider.getBlockNumber() - 100;
 
-    // const volatilityData = await getRollingVolatility('all', base.symbol, quote.symbol, web3Provider);
-    // const typedData = generatedTypedData(base, quote, liquidity, volatilityData.latest.current);
-    const typedData = generatedTypedData(base, quote, liquidity, 0.12346789554);
+
+    const liquidity = getLiquidity('all', base.symbol, quote.symbol, startBlock, currentBlock, true);
+    const volatilityData = await getRollingVolatility('all', base.symbol, quote.symbol, web3Provider);
+    const typedData = generatedTypedData(base, quote, liquidity, volatilityData.latest.current);
 
     const privateKey = '0x0123456789012345678901234561890123456789012345678901234567890123';
     const wallet = new ethers.Wallet(privateKey);
