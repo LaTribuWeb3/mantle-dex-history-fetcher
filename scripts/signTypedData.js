@@ -6,14 +6,13 @@ const {
 const { getConfTokenBySymbol } = require('../src/utils/token.utils');
 const { ethers } = require('ethers');
 const { BN_1e18 } = require('../src/utils/constants');
-const { DATA_DIR, PLATFORMS } = require('../utils/constants');
+const { DATA_DIR, PLATFORMS } = require('../src/utils/constants');
 const { fnName } = require('../src/utils/utils');
-const { getBlocknumberForTimestamp } = require('../../utils/web3.utils');
+const { getBlocknumberForTimestamp } = require('../src/utils/web3.utils');
 
 // eslint-disable-next-line quotes
 const SPythiaAbi = [
-    { inputs: [], stateMutability: 'nonpayable', type: 'constructor' },
-    {
+    { inputs: [], stateMutability: 'nonpayable', type: 'constructor' }, {
         inputs: [],
         name: 'DOMAIN_SEPARATOR',
         outputs: [{ internalType: 'bytes32', name: '', type: 'bytes32' }],
@@ -111,7 +110,7 @@ const SPythiaAbi = [
     },
 ];
 
-async function signTypedData(baseToken, quoteToken) {
+async function signTypedData(baseToken='WETH', quoteToken='USDC') {
     const web3Provider = new ethers.providers.StaticJsonRpcProvider(
         'https://eth.llamarpc.com'
     );
@@ -194,9 +193,10 @@ async function signTypedData(baseToken, quoteToken) {
         r: splitSig.r,
         s: splitSig.s,
         v: splitSig.v,
+        liquidationBonus: 100,
         riskData: typedData.value,
     });
-    console.log(splitSig);
+    console.log(dataJson);
     /*
         v: 28,
         r: '0xbafb174e0605f88711e19eb6b0c8aff8e18cc503fd23dc2116c1e1c075369348',
@@ -253,6 +253,17 @@ async function signTypedData(baseToken, quoteToken) {
     }
 }
 
+
+// PASSING WRONG LIQUIDITY = MUST CALCULATE 30 DAYS AVERAGE 
+
+/**
+ * 
+ * @param  {{symbol: string, decimals: number, address: string, dustAmount: number}} baseTokenConf 
+ * @param  {{symbol: string, decimals: number, address: string, dustAmount: number}} quoteTokenConf 
+ * @param {number} liquidity 
+ * @param {number} volatility 
+ * @returns 
+ */
 function generatedTypedData(
     baseTokenConf,
     quoteTokenConf,
