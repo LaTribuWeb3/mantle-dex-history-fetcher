@@ -109,6 +109,31 @@ const SPythiaAbi = [
         type: 'function',
     },
 ];
+function calculateSlippageBaseAverages(allPlatformsLiquidity) {
+    const totals = {};
+
+    // Iterate over each block data in the allPlatformsLiquidity object.
+    for (const blockData of Object.values(allPlatformsLiquidity)) {
+        // Iterate over each slippage key-value pair in the slippage map of the current block data.
+        for (const [slippageKey, slippageData] of Object.entries(blockData.slippageMap)) {
+            const key = parseInt(slippageKey, 10);
+
+            if (!totals[key]) {
+                totals[key] = { sum: 0, count: 0 };
+            }
+            totals[key].sum += slippageData.base;
+            totals[key].count++;
+        }
+    }
+
+    // Calculate and return the averages.
+    return Object.keys(totals).reduce((averages, key) => {
+        averages[key] = totals[key].count > 0 ? totals[key].sum / totals[key].count : 0;
+        return averages;
+    }, {});
+}
+
+
 
 async function signTypedData(baseToken='WETH', quoteToken='USDC') {
     const web3Provider = new ethers.providers.StaticJsonRpcProvider(
@@ -164,6 +189,8 @@ async function signTypedData(baseToken='WETH', quoteToken='USDC') {
             );
         }
     }
+
+    const averagedLiquidity = calculateSlippageBaseAverages(allPlatformsLiquidity);
 
     const volatilityData = await getRollingVolatility(
         'all',
