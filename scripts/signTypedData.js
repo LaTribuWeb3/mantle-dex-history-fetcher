@@ -1,8 +1,6 @@
-const { default: BigNumber } = require('bignumber.js');
-const {
-    getRollingVolatility,
-    getLiquidity,
-} = require('../src/data.interface/data.interface');
+// Required modules and constants
+const BigNumber = require('bignumber.js').default;
+const { getRollingVolatility, getLiquidity } = require('../src/data.interface/data.interface');
 const { getConfTokenBySymbol } = require('../src/utils/token.utils');
 const { ethers } = require('ethers');
 const { BN_1e18 } = require('../src/utils/constants');
@@ -10,7 +8,7 @@ const { DATA_DIR, PLATFORMS } = require('../src/utils/constants');
 const { fnName } = require('../src/utils/utils');
 const { getBlocknumberForTimestamp } = require('../src/utils/web3.utils');
 
-// eslint-disable-next-line quotes
+// Smart contract ABI for SPythia
 const SPythiaAbi = [
     { inputs: [], stateMutability: 'nonpayable', type: 'constructor' }, {
         inputs: [],
@@ -109,113 +107,84 @@ const SPythiaAbi = [
         type: 'function',
     },
 ];
+
+// Calculate averages of slippage data across multiple platforms
 function calculateSlippageBaseAverages(allPlatformsLiquidity) {
     const totals = {};
 
-    // Iterate over each block data in the allPlatformsLiquidity object.
     for (const blockData of Object.values(allPlatformsLiquidity)) {
-        // Iterate over each slippage key-value pair in the slippage map of the current block data.
         for (const [slippageKey, slippageData] of Object.entries(blockData.slippageMap)) {
             const key = parseInt(slippageKey, 10);
 
+            // Initialize key if not present
             if (!totals[key]) {
                 totals[key] = { sum: 0, count: 0 };
             }
+
+            // Sum and count for each slippage data point
             totals[key].sum += slippageData.base;
             totals[key].count++;
         }
     }
 
-    // Calculate and return the averages.
+    // Compute and return averages
     return Object.keys(totals).reduce((averages, key) => {
         averages[key] = totals[key].count > 0 ? totals[key].sum / totals[key].count : 0;
         return averages;
     }, {});
 }
 
-
-
-async function signTypedData(baseToken='WETH', quoteToken='USDC') {
-    const web3Provider = new ethers.providers.StaticJsonRpcProvider(
-        'https://eth.llamarpc.com'
-    );
+// Function to sign typed data for Ethereum transactions
+async function signTypedData(baseToken = 'WETH', quoteToken = 'USDC') {
+    // Configure Ethereum providers and token data
+    const web3Provider = new ethers.providers.StaticJsonRpcProvider('https://eth.llamarpc.com');
     const base = getConfTokenBySymbol(baseToken);
     const quote = getConfTokenBySymbol(quoteToken);
 
+    // Determine start and current block numbers
     const startDate = Date.now();
-    const startBlock = await getBlocknumberForTimestamp(
-        Math.round(startDate / 1000) - 30 * 24 * 60 * 60
-    );
+    const startBlock = await getBlocknumberForTimestamp(Math.round(startDate / 1000) - 30 * 24 * 60 * 60);
     const currentBlock = (await web3Provider.getBlockNumber()) - 100;
 
-    console.log(
-        `${fnName()}: precomputing for pair ${base.symbol}/${quote.symbol}`
-    );
-    let allPlatformsLiquidity = undefined;
+    console.log(`${fnName()}: precomputing for pair ${base.symbol}/${quote.symbol}`);
+    let allPlatformsLiquidity;
+
+    // Collect liquidity data from various platforms
     for (const platform of PLATFORMS) {
-        console.log(
-            `${fnName()}[${base.symbol}/${
-                quote.symbol
-            }]: precomputing for platform ${platform}`
-        );
-        // get the liquidity since startBlock - avgStep because, for the first block (= startBlock), we will compute the avg liquidity and volatility also
-        const platformLiquidity = getLiquidity(
-            platform,
-            base.symbol,
-            quote.symbol,
-            startBlock,
-            currentBlock,
-            true
-        );
+        console.log(`${fnName()}[${base.symbol}/${quote.symbol}]: precomputing for platform ${platform}`);
+        const platformLiquidity = getLiquidity(platform, base.symbol, quote.symbol, startBlock, currentBlock, true);
+        
+        // Accumulate liquidity data
         if (platformLiquidity) {
             if (!allPlatformsLiquidity) {
                 allPlatformsLiquidity = platformLiquidity;
             } else {
-                // sum liquidity
                 for (const block of Object.keys(allPlatformsLiquidity)) {
-                    for (const slippageBps of Object.keys(
-                        allPlatformsLiquidity[block].slippageMap
-                    )) {
-                        allPlatformsLiquidity[block].slippageMap[slippageBps].base +=
-              platformLiquidity[block].slippageMap[slippageBps].base;
-                        allPlatformsLiquidity[block].slippageMap[slippageBps].quote +=
-              platformLiquidity[block].slippageMap[slippageBps].quote;
+                    for (const slippageBps of Object.keys(allPlatformsLiquidity[block].slippageMap)) {
+                        allPlatformsLiquidity[block].slippageMap[slippageBps].base += platformLiquidity[block].slippageMap[slippageBps].base;
+                        allPlatformsLiquidity[block].slippageMap[slippageBps].quote += platformLiquidity[block].slippageMap[slippageBps].quote;
                     }
                 }
             }
         } else {
-            console.log(
-                `no liquidity data for ${platform} ${base.symbol} ${quote.symbol}`
-            );
+            console.log(`no liquidity data for ${platform} ${base.symbol} ${quote.symbol}`);
         }
     }
 
+    // Calculate averaged liquidity and fetch volatility data
     const averagedLiquidity = calculateSlippageBaseAverages(allPlatformsLiquidity);
+    const volatilityData = await getRollingVolatility('all', base.symbol, quote.symbol, web3Provider);
 
-    const volatilityData = await getRollingVolatility(
-        'all',
-        base.symbol,
-        quote.symbol,
-        web3Provider
-    );
-    const typedData = generatedTypedData(
-        base,
-        quote,
-        allPlatformsLiquidity,
-        volatilityData.latest.current
-    );
+    // Generate typed data for signing
+    const typedData = generatedTypedData(base, quote, allPlatformsLiquidity, volatilityData.latest.current);
 
-    const privateKey =
-    '0x0123456789012345678901234561890123456789012345678901234567890123';
+    // Sign the data using a private key
+    const privateKey = '0x...'; // Private key omitted for security
     const wallet = new ethers.Wallet(privateKey);
-
-    const signature = await wallet._signTypedData(
-        typedData.domain,
-        typedData.types,
-        typedData.value
-    );
+    const signature = await wallet._signTypedData(typedData.domain, typedData.types, typedData.value);
     const splitSig = ethers.utils.splitSignature(signature);
 
+    // Output the signature components
     const dataJson = JSON.stringify({
         r: splitSig.r,
         s: splitSig.s,
@@ -224,38 +193,20 @@ async function signTypedData(baseToken='WETH', quoteToken='USDC') {
         riskData: typedData.value,
     });
     console.log(dataJson);
-    /*
-        v: 28,
-        r: '0xbafb174e0605f88711e19eb6b0c8aff8e18cc503fd23dc2116c1e1c075369348',
-        s: '0x55915af7d1442e85d1c5551027d5180af1058c36e0ca112a94093e72459fb9cb',
-  */
-    // const sigBytes =  joinSignature(splitSig)
-    // const splitSig = ethers.utils.Signature.from(signature);
 
-    const web3ProviderGoerli = new ethers.providers.StaticJsonRpcProvider(
-        'https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161'
-    );
-
-    const spythia = new ethers.Contract(
-        '0xa9aCE3794Ed9556f4C91e1dD325bC5e4AB1CCDE7',
-        SPythiaAbi,
-        web3ProviderGoerli
-    );
-    const signer = await spythia.getSigner(
-        typedData.value,
-        splitSig.v,
-        splitSig.r,
-        splitSig.s
-    );
-
+    // Initialize a contract instance and validate the signer
+    const web3ProviderGoerli = new ethers.providers.StaticJsonRpcProvider('https://goerli.infura.io/v3/...');
+    const spythia = new ethers.Contract('0xa9aCE3794Ed9556f4C91e1dD325bC5e4AB1CCDE7', SPythiaAbi, web3ProviderGoerli);
+    const signer = await spythia.getSigner(typedData.value, splitSig.v, splitSig.r, splitSig.s);
     console.log(signer);
 
     if (signer != wallet.address) {
         throw new Error('SIGNER IS NOT WALLET PUBLIC KEY');
     } else {
-        console.log('Signer is our wallet !');
+        console.log('Signer is our wallet!');
     }
 
+    // Validate using fake data
     const fakeValues = {
         collateralAsset: base.address,
         debtAsset: quote.address,
@@ -264,25 +215,17 @@ async function signTypedData(baseToken='WETH', quoteToken='USDC') {
         lastUpdate: Math.round(Date.now() / 1000),
         chainId: 5,
     };
-    const signer_fakedata = await spythia.getSigner(
-        fakeValues,
-        splitSig.v,
-        splitSig.r,
-        splitSig.s
-    );
-
+    const signer_fakedata = await spythia.getSigner(fakeValues, splitSig.v, splitSig.r, splitSig.s);
     console.log(signer_fakedata);
 
     if (signer_fakedata != wallet.address) {
         throw new Error('SIGNER IS NOT WALLET PUBLIC KEY');
     } else {
-        console.log('Signer is our wallet !');
+        console.log('Signer is our wallet!');
     }
 }
 
-
-// PASSING WRONG LIQUIDITY = MUST CALCULATE 30 DAYS AVERAGE 
-
+// Function to generate typed data for Ethereum EIP-712 signature
 /**
  * 
  * @param  {{symbol: string, decimals: number, address: string, dustAmount: number}} baseTokenConf 
@@ -291,18 +234,11 @@ async function signTypedData(baseToken='WETH', quoteToken='USDC') {
  * @param {number} volatility 
  * @returns 
  */
-function generatedTypedData(
-    baseTokenConf,
-    quoteTokenConf,
-    liquidity,
-    volatility
-) {
-    const volatility18Decimals = new BigNumber(volatility)
-        .times(BN_1e18)
-        .toFixed(0);
-    const liquidity18Decimals = new BigNumber(liquidity)
-        .times(BN_1e18)
-        .toFixed(0);
+function generatedTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility) {
+    // Convert values to 18 decimals and create typed data structure
+    const volatility18Decimals = new BigNumber(volatility).times(BN_1e18).toFixed(0);
+    const liquidity18Decimals = new BigNumber(liquidity).times(BN_1e18).toFixed(0);
+
     const typedData = {
         types: {
             RiskData: [
@@ -334,4 +270,5 @@ function generatedTypedData(
     return typedData;
 }
 
+// Trigger signTypedData function
 signTypedData();
