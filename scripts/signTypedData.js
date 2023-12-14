@@ -3,7 +3,7 @@ const BigNumber = require('bignumber.js').default;
 const { getRollingVolatility, getLiquidity } = require('../src/data.interface/data.interface');
 const { getConfTokenBySymbol } = require('../src/utils/token.utils');
 const { ethers } = require('ethers');
-const { BN_1e18 } = require('../src/utils/constants');
+const { BN_1e18, MORPHO_RISK_PARAMETERS_ARRAY } = require('../src/utils/constants');
 const { DATA_DIR, PLATFORMS } = require('../src/utils/constants');
 const { fnName } = require('../src/utils/utils');
 const { getBlocknumberForTimestamp } = require('../src/utils/web3.utils');
@@ -153,7 +153,7 @@ async function signTypedData(baseToken = 'WETH', quoteToken = 'USDC') {
     for (const platform of PLATFORMS) {
         console.log(`${fnName()}[${base.symbol}/${quote.symbol}]: precomputing for platform ${platform}`);
         const platformLiquidity = getLiquidity(platform, base.symbol, quote.symbol, startBlock, currentBlock, true);
-        
+
         // Accumulate liquidity data
         if (platformLiquidity) {
             if (!allPlatformsLiquidity) {
@@ -175,54 +175,30 @@ async function signTypedData(baseToken = 'WETH', quoteToken = 'USDC') {
     const averagedLiquidity = calculateSlippageBaseAverages(allPlatformsLiquidity);
     const volatilityData = await getRollingVolatility('all', base.symbol, quote.symbol, web3Provider);
 
-    // Generate typed data for signing
-    const typedData = generatedTypedData(base, quote, allPlatformsLiquidity, volatilityData.latest.current);
+    const finalArray = [];
+    for (const parameter of MORPHO_RISK_PARAMETERS_ARRAY) {
+        const liquidity = averagedLiquidity[parameter.bonus];
+        const volatility = volatilityData.latest.current;
+        // Generate typed data for signing
+        const typedData = generatedTypedData(base, quote, liquidity, volatility);
+        // Sign the data using a private key
+        const privateKey = '0x0123456789012345678901234561890123456789012345678901234567890123';
+        const wallet = new ethers.Wallet(privateKey);
+        const signature = await wallet._signTypedData(typedData.domain, typedData.types, typedData.value);
+        const splitSig = ethers.utils.splitSignature(signature);
 
-    // Sign the data using a private key
-    const privateKey = '0x...'; // Private key omitted for security
-    const wallet = new ethers.Wallet(privateKey);
-    const signature = await wallet._signTypedData(typedData.domain, typedData.types, typedData.value);
-    const splitSig = ethers.utils.splitSignature(signature);
+        // Output the signature components
+        const toPush = {
+            r: splitSig.r,
+            s: splitSig.s,
+            v: splitSig.v,
+            liquidationBonus: parameter.bonus,
+            riskData: typedData.value,
+        };
 
-    // Output the signature components
-    const dataJson = JSON.stringify({
-        r: splitSig.r,
-        s: splitSig.s,
-        v: splitSig.v,
-        liquidationBonus: 100,
-        riskData: typedData.value,
-    });
-    console.log(dataJson);
-
-    // Initialize a contract instance and validate the signer
-    const web3ProviderGoerli = new ethers.providers.StaticJsonRpcProvider('https://goerli.infura.io/v3/...');
-    const spythia = new ethers.Contract('0xa9aCE3794Ed9556f4C91e1dD325bC5e4AB1CCDE7', SPythiaAbi, web3ProviderGoerli);
-    const signer = await spythia.getSigner(typedData.value, splitSig.v, splitSig.r, splitSig.s);
-    console.log(signer);
-
-    if (signer != wallet.address) {
-        throw new Error('SIGNER IS NOT WALLET PUBLIC KEY');
-    } else {
-        console.log('Signer is our wallet!');
+        finalArray.push(toPush);
     }
-
-    // Validate using fake data
-    const fakeValues = {
-        collateralAsset: base.address,
-        debtAsset: quote.address,
-        liquidity: '10000000000000000000000000000000000000',
-        volatility: '0',
-        lastUpdate: Math.round(Date.now() / 1000),
-        chainId: 5,
-    };
-    const signer_fakedata = await spythia.getSigner(fakeValues, splitSig.v, splitSig.r, splitSig.s);
-    console.log(signer_fakedata);
-
-    if (signer_fakedata != wallet.address) {
-        throw new Error('SIGNER IS NOT WALLET PUBLIC KEY');
-    } else {
-        console.log('Signer is our wallet!');
-    }
+    return finalArray;
 }
 
 // Function to generate typed data for Ethereum EIP-712 signature
@@ -269,6 +245,3 @@ function generatedTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility
 
     return typedData;
 }
-
-// Trigger signTypedData function
-signTypedData();
