@@ -42,7 +42,7 @@ const uploadJsonFile = async (jsonString, fileName, day) => {
             owner: 'LaTribuWeb3',
             repo: 'risk-data-repo',
             path: `${fileName}`,
-            message: `bad-debt push ${new Date().toString()}`,
+            message: `risk data push ${new Date().toString()}`,
             sha,
             committer: {
                 name: process.env.GH_HANDLE,
