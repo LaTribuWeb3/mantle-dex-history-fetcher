@@ -5,7 +5,7 @@ const { default: axios } = require('axios');
 const { retry } = require('./utils');
 
 const IS_STAGING = process.env.STAGING_ENV && process.env.STAGING_ENV.toLowerCase() == 'true';
-const REPO_PATH = IS_STAGING ? 'bad-debt-staging' : 'bad-debt';
+const REPO_PATH = IS_STAGING ? 'staging' : 'live';
 
 const octokit = new Octokit({
     auth: process.env.GH_TOKEN

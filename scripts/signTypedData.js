@@ -147,3 +147,7 @@ function generatedTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility
 
     return typedData;
 }
+
+module.exports = {
+    signTypedData
+};

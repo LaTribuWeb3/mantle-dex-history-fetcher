@@ -2,6 +2,8 @@ const { RecordMonitoring } = require('../utils/monitoring');
 const { fnName, roundTo, sleep } = require('../utils/utils');
 
 const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
+const { signTypedData } = require('../../scripts/signTypedData');
+const { uploadJsonFile } = require('../utils/githubPusher');
 
 
 const RUN_EVERY_MINUTES = 6 * 60; // in minutes
@@ -27,6 +29,9 @@ async function ExportRiskData() {
             // FOR EACH PAIR 
             // COMPUTE LIQUIDITY AND VOLATILITY
             // STORE FILE TO GITHUB
+            const results = signTypedData();
+
+            uploadJsonFile(results, 'tryNumber1');
 
             const runEndDate = Math.round(Date.now() / 1000);
             await RecordMonitoring({
