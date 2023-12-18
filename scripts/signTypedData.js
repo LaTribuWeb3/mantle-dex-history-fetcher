@@ -4,109 +4,11 @@ const { getRollingVolatility, getLiquidity } = require('../src/data.interface/da
 const { getConfTokenBySymbol } = require('../src/utils/token.utils');
 const { ethers } = require('ethers');
 const { BN_1e18, MORPHO_RISK_PARAMETERS_ARRAY } = require('../src/utils/constants');
-const { DATA_DIR, PLATFORMS } = require('../src/utils/constants');
+const { PLATFORMS } = require('../src/utils/constants');
 const { fnName } = require('../src/utils/utils');
 const { getBlocknumberForTimestamp } = require('../src/utils/web3.utils');
 
-// Smart contract ABI for SPythia
-const SPythiaAbi = [
-    { inputs: [], stateMutability: 'nonpayable', type: 'constructor' }, {
-        inputs: [],
-        name: 'DOMAIN_SEPARATOR',
-        outputs: [{ internalType: 'bytes32', name: '', type: 'bytes32' }],
-        stateMutability: 'view',
-        type: 'function',
-    },
-    {
-        inputs: [],
-        name: 'EIP712DOMAIN_TYPEHASH',
-        outputs: [{ internalType: 'bytes32', name: '', type: 'bytes32' }],
-        stateMutability: 'view',
-        type: 'function',
-    },
-    {
-        inputs: [],
-        name: 'RISKDATA_TYPEHASH',
-        outputs: [{ internalType: 'bytes32', name: '', type: 'bytes32' }],
-        stateMutability: 'view',
-        type: 'function',
-    },
-    {
-        inputs: [],
-        name: 'chainId',
-        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
-        stateMutability: 'view',
-        type: 'function',
-    },
-    {
-        inputs: [
-            {
-                components: [
-                    { internalType: 'address', name: 'collateralAsset', type: 'address' },
-                    { internalType: 'address', name: 'debtAsset', type: 'address' },
-                    { internalType: 'uint256', name: 'liquidity', type: 'uint256' },
-                    { internalType: 'uint256', name: 'volatility', type: 'uint256' },
-                    { internalType: 'uint256', name: 'lastUpdate', type: 'uint256' },
-                    { internalType: 'uint256', name: 'chainId', type: 'uint256' },
-                ],
-                internalType: 'struct SPythia.RiskData',
-                name: 'data',
-                type: 'tuple',
-            },
-            { internalType: 'uint8', name: 'v', type: 'uint8' },
-            { internalType: 'bytes32', name: 'r', type: 'bytes32' },
-            { internalType: 'bytes32', name: 's', type: 'bytes32' },
-        ],
-        name: 'getSigner',
-        outputs: [{ internalType: 'address', name: '', type: 'address' }],
-        stateMutability: 'view',
-        type: 'function',
-    },
-    {
-        inputs: [
-            {
-                components: [
-                    { internalType: 'address', name: 'collateralAsset', type: 'address' },
-                    { internalType: 'address', name: 'debtAsset', type: 'address' },
-                    { internalType: 'uint256', name: 'liquidity', type: 'uint256' },
-                    { internalType: 'uint256', name: 'volatility', type: 'uint256' },
-                    { internalType: 'uint256', name: 'lastUpdate', type: 'uint256' },
-                    { internalType: 'uint256', name: 'chainId', type: 'uint256' },
-                ],
-                internalType: 'struct SPythia.RiskData',
-                name: 'data',
-                type: 'tuple',
-            },
-        ],
-        name: 'hashStruct',
-        outputs: [{ internalType: 'bytes32', name: '', type: 'bytes32' }],
-        stateMutability: 'pure',
-        type: 'function',
-    },
-    {
-        inputs: [
-            {
-                components: [
-                    { internalType: 'string', name: 'name', type: 'string' },
-                    { internalType: 'string', name: 'version', type: 'string' },
-                    { internalType: 'uint256', name: 'chainId', type: 'uint256' },
-                    {
-                        internalType: 'address',
-                        name: 'verifyingContract',
-                        type: 'address',
-                    },
-                ],
-                internalType: 'struct SPythia.EIP712Domain',
-                name: 'eip712Domain',
-                type: 'tuple',
-            },
-        ],
-        name: 'hashStruct',
-        outputs: [{ internalType: 'bytes32', name: '', type: 'bytes32' }],
-        stateMutability: 'pure',
-        type: 'function',
-    },
-];
+
 
 // Calculate averages of slippage data across multiple platforms
 function calculateSlippageBaseAverages(allPlatformsLiquidity) {
