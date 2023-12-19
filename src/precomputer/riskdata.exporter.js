@@ -1,13 +1,16 @@
 const { RecordMonitoring } = require('../utils/monitoring');
 const { fnName, roundTo, sleep } = require('../utils/utils');
+require('dotenv').config();
 
 const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
 const { signTypedData } = require('../../scripts/signTypedData');
 const { uploadJsonFile } = require('../utils/githubPusher');
+const { riskDataConfig } = require('../utils/dataSigner.config');
 
 
 const RUN_EVERY_MINUTES = 6 * 60; // in minutes
 const MONITORING_NAME = 'Risk Data Exporter';
+const IS_STAGING = process.env.STAGING_ENV && process.env.STAGING_ENV.toLowerCase() == 'true';
 
 
 async function ExportRiskData() {
@@ -23,16 +26,11 @@ async function ExportRiskData() {
                 'runEvery': RUN_EVERY_MINUTES * 60
             });
 
-
-            // TODO
-            // GET CONFIG
-            // FOR EACH PAIR 
-            // COMPUTE LIQUIDITY AND VOLATILITY
-            // STORE FILE TO GITHUB
-            const results = await signTypedData();
-            const toUpload = JSON.stringify(results);
-
-            uploadJsonFile(toUpload, 'tryNumber1');
+            for (const pair of riskDataConfig) {
+                const results = await signTypedData(pair.base, pair.quote, IS_STAGING);
+                const toUpload = JSON.stringify(results);
+                uploadJsonFile(toUpload, `${pair.base}_${pair.quote}`);
+            }
 
             const runEndDate = Math.round(Date.now() / 1000);
             await RecordMonitoring({

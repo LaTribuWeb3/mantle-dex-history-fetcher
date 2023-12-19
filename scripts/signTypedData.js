@@ -37,7 +37,7 @@ function calculateSlippageBaseAverages(allPlatformsLiquidity) {
 }
 
 // Function to sign typed data for Ethereum transactions
-async function signTypedData(baseToken = 'WETH', quoteToken = 'USDC') {
+async function signTypedData(baseToken = 'WETH', quoteToken = 'USDC', IS_STAGING= false) {
     // Configure Ethereum providers and token data
     const web3Provider = new ethers.providers.StaticJsonRpcProvider('https://eth.llamarpc.com');
     const base = getConfTokenBySymbol(baseToken);
