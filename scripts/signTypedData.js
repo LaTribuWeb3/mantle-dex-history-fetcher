@@ -7,7 +7,9 @@ const { BN_1e18, MORPHO_RISK_PARAMETERS_ARRAY } = require('../src/utils/constant
 const { PLATFORMS } = require('../src/utils/constants');
 const { fnName } = require('../src/utils/utils');
 const { getBlocknumberForTimestamp } = require('../src/utils/web3.utils');
+const { getStagingConfTokenBySymbol } = require('../src/utils/dataSigner.config');
 
+const IS_STAGING = process.env.STAGING_ENV && process.env.STAGING_ENV.toLowerCase() == 'true';
 
 
 // Calculate averages of slippage data across multiple platforms
@@ -40,8 +42,8 @@ function calculateSlippageBaseAverages(allPlatformsLiquidity) {
 async function signTypedData(baseToken = 'WETH', quoteToken = 'USDC', IS_STAGING= false) {
     // Configure Ethereum providers and token data
     const web3Provider = new ethers.providers.StaticJsonRpcProvider('https://eth.llamarpc.com');
-    const base = getConfTokenBySymbol(baseToken);
-    const quote = getConfTokenBySymbol(quoteToken);
+    const base = IS_STAGING ? getStagingConfTokenBySymbol(baseToken) : getConfTokenBySymbol(baseToken);
+    const quote = IS_STAGING ? getStagingConfTokenBySymbol(quoteToken) : getConfTokenBySymbol(quoteToken);
 
     // Determine start and current block numbers
     const startDate = Date.now();

@@ -5,7 +5,7 @@ require('dotenv').config();
 const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
 const { signTypedData } = require('../../scripts/signTypedData');
 const { uploadJsonFile } = require('../utils/githubPusher');
-const { riskDataConfig } = require('../utils/dataSigner.config');
+const { riskDataConfig, getStagingConfTokenBySymbol, riskDataTestNetConfig } = require('../utils/dataSigner.config');
 
 
 const RUN_EVERY_MINUTES = 6 * 60; // in minutes
@@ -29,8 +29,9 @@ async function ExportRiskData() {
             for (const pair of riskDataConfig) {
                 const results = await signTypedData(pair.base, pair.quote, IS_STAGING);
                 const toUpload = JSON.stringify(results);
-                uploadJsonFile(toUpload, `${pair.base}_${pair.quote}`);
+                IS_STAGING ? uploadJsonFile(toUpload, `${riskDataTestNetConfig[pair.base].substitute}_${riskDataTestNetConfig[pair.quote].substitute}`) : uploadJsonFile(toUpload, `${pair.base}_${pair.quote}`);
             }
+
 
             const runEndDate = Math.round(Date.now() / 1000);
             await RecordMonitoring({
