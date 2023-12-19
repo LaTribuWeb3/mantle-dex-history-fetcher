@@ -29,9 +29,10 @@ async function ExportRiskData() {
             // FOR EACH PAIR 
             // COMPUTE LIQUIDITY AND VOLATILITY
             // STORE FILE TO GITHUB
-            const results = signTypedData();
+            const results = await signTypedData();
+            const toUpload = JSON.stringify(results);
 
-            uploadJsonFile(results, 'tryNumber1');
+            uploadJsonFile(toUpload, 'tryNumber1');
 
             const runEndDate = Math.round(Date.now() / 1000);
             await RecordMonitoring({
