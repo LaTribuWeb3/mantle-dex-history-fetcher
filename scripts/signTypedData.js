@@ -9,9 +9,6 @@ const { fnName } = require('../src/utils/utils');
 const { getBlocknumberForTimestamp } = require('../src/utils/web3.utils');
 const { getStagingConfTokenBySymbol } = require('../src/utils/dataSigner.config');
 
-const IS_STAGING = process.env.STAGING_ENV && process.env.STAGING_ENV.toLowerCase() == 'true';
-
-
 // Calculate averages of slippage data across multiple platforms
 function calculateSlippageBaseAverages(allPlatformsLiquidity) {
     const totals = {};
