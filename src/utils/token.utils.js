@@ -39,21 +39,6 @@ function getConfTokenBySymbol(symbol) {
 }
 
 /**
- * get a token configuration object searching by symbol but for the risk data testnet.
- * @param {string} symbol 
- * @returns {{symbol: string, decimals: number, address: string, dustAmount: number}} token configuration
- */
-function getStagingConfTokenBySymbol(symbol) {
-    const tokenConf = riskDataTestNetConfig[symbol];
-    if (!tokenConf) {
-        throw new Error(`Cannot find token with symbol ${symbol}`);
-    }
-    // add symbol to config
-    tokenConf.symbol = symbol;
-    return tokenConf;
-}
-
-/**
  * Get a token symbol from the configuration, searching by address
  * @param {string} address 
  * @returns {string} token symbol
