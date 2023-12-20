@@ -1,7 +1,6 @@
 require('dotenv').config();
 const { Octokit } = require('octokit');
 const base64 = require('base-64');
-const { default: axios } = require('axios');
 const { retry } = require('./utils');
 
 const IS_STAGING = process.env.STAGING_ENV && process.env.STAGING_ENV.toLowerCase() == 'true';
@@ -56,30 +55,6 @@ const uploadJsonFile = async (jsonString, fileName, day) => {
     }
 };
 
-const listJsonFiles = async () => {
-    try {
-        const res = await octokit.request(`Get /repos/{owner}/{repo}/contents/${REPO_PATH}/latest`, {
-            owner: 'LaTribuWeb3',
-            repo: 'risk-data-repo',
-        });
-        return res.data.map(o => o.name);
-    } catch (err) {
-        return [];
-    }
-};
-
-const getJsonFile = async (fileName) => {
-    try {
-        const { data } = await axios.get(`https://raw.githubusercontent.com/LaTribuWeb3/risk-data-repo/main/${REPO_PATH}/latest/${encodeURIComponent(fileName)}`);
-        return data;
-    } catch (err) {
-        console.error(err);
-        return null;
-    }
-};
-
 module.exports = {
     uploadJsonFile: (file, filename) => retry(uploadJsonFile, [file, filename]),
-    listJsonFiles: () => retry(listJsonFiles, []),
-    getJsonFile: (filename) => retry(getJsonFile, [filename]),
 };
