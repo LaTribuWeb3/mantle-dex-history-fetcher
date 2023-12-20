@@ -105,7 +105,16 @@ async function handleError(error) {
 
 
 
-// Function to calculate averages of slippage data across multiple platforms
+/**
+ * Calculates the average base slippage for each slippage point across multiple platforms.
+ * 
+ * @param {Object} allPlatformsLiquidity - Object with liquidity data from various platforms.
+ *                                         Each key represents a block, and its value is an object
+ *                                         containing a 'slippageMap' with slippage points and their
+ *                                         respective base slippage data.
+ * @returns {Object} Averages of base slippage for each slippage point. Keys are slippage points
+ *                   (parsed as integers), and values are the average base slippage for those points.
+ */
 function calculateSlippageBaseAverages(allPlatformsLiquidity) {
     const totals = {};
 
