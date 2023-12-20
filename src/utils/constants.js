@@ -73,7 +73,7 @@ const MORPHO_RISK_PARAMETERS_ARRAY = [
         ltv: 0.625,
         bonus: 1250
     }
-]
+];
 
 
 
