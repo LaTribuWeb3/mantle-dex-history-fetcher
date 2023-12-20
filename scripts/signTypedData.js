@@ -1,7 +1,7 @@
 // Import necessary modules and constants
 const BigNumber = require('bignumber.js').default;
 const { getRollingVolatility, getLiquidity } = require('../src/data.interface/data.interface');
-const { getConfTokenBySymbol, getStagingConfTokenBySymbol } = require('../src/utils/token.utils');
+const { getConfTokenBySymbol, getStagingConfTokenBySymbol, getDecimalsAsBN, getDecimalFactorAsBN } = require('../src/utils/token.utils');
 const { ethers } = require('ethers');
 const { BN_1e18, MORPHO_RISK_PARAMETERS_ARRAY, PLATFORMS } = require('../src/utils/constants');
 const { fnName } = require('../src/utils/utils');
@@ -117,7 +117,7 @@ async function signData(typedData) {
 function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility) {
     // Convert values to 18 decimals and create typed data structure
     const volatility18Decimals = new BigNumber(volatility).times(BN_1e18).toFixed(0);
-    const liquidity18Decimals = new BigNumber(liquidity).times(BN_1e18).toFixed(0);
+    const liquidityAdjustedToDecimalsFactor = new BigNumber(liquidity).times(getDecimalFactorAsBN(quoteTokenConf.decimals)).toFixed(0);
 
     return {
         types: {
@@ -140,7 +140,7 @@ function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility)
         value: {
             collateralAsset: baseTokenConf.address,
             debtAsset: quoteTokenConf.address,
-            liquidity: liquidity18Decimals,
+            liquidity: liquidityAdjustedToDecimalsFactor,
             volatility: volatility18Decimals,
             lastUpdate: Math.round(Date.now() / 1000),
             chainId: 5,
