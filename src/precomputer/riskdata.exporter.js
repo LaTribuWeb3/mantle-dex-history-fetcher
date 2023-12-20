@@ -1,20 +1,26 @@
+// Node.js modules
+require('dotenv').config();
+
+// Ethereum and Web3 utilities
+const { ethers } = require('ethers');
+
+// Local utility imports
 const { RecordMonitoring } = require('../utils/monitoring');
 const { fnName, roundTo, sleep } = require('../utils/utils');
-require('dotenv').config();
-const { ethers } = require('ethers');
 const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
 const { uploadJsonFile } = require('../utils/githubPusher');
 const { riskDataConfig, riskDataTestNetConfig } = require('../utils/dataSigner.config');
 const { PLATFORMS, MORPHO_RISK_PARAMETERS_ARRAY } = require('../utils/constants');
 const { getBlocknumberForTimestamp } = require('../src/utils/web3.utils');
-const { getConfTokenBySymbol } = require('../src/utils/token.utils');
+const { getConfTokenBySymbol, getStagingConfTokenBySymbol } = require('../src/utils/token.utils');
 const { getRollingVolatility, getLiquidity } = require('../src/data.interface/data.interface');
-const { getStagingConfTokenBySymbol } = require('./precomputer.config');
 const { signData, generateTypedData } = require('../../scripts/signTypedData');
 
+// Constants
 const RUN_EVERY_MINUTES = 6 * 60; // 6 hours in minutes
 const MONITORING_NAME = 'Risk Data Exporter';
-const IS_STAGING = process.env.STAGING_ENV && process.env.STAGING_ENV.toLowerCase() == 'true';
+const IS_STAGING = process.env.STAGING_ENV && process.env.STAGING_ENV.toLowerCase() === 'true';
+
 
 async function exportRiskData() {
     // eslint-disable-next-line no-constant-condition
