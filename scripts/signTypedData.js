@@ -62,7 +62,7 @@ async function signTypedData(baseToken = 'WETH', quoteToken = 'USDC', isStaging 
     const averagedLiquidity = calculateSlippageBaseAverages(allPlatformsLiquidity);
     const volatilityData = await getRollingVolatility('all', base.symbol, quote.symbol, web3Provider);
 
-    return generateAndSignRiskData(averagedLiquidity, volatilityData, base, quote);
+    return generateAndSignRiskData(averagedLiquidity, volatilityData, base, quote, isStaging);
 }
 
 // Function to merge platform liquidity into the allPlatformsLiquidity object
@@ -84,7 +84,7 @@ function mergePlatformLiquidity(allPlatformsLiquidity, platformLiquidity) {
 }
 
 // Function to generate and sign risk data
-async function generateAndSignRiskData(averagedLiquidity, volatilityData, baseTokenConf, quoteTokenConf) {
+async function generateAndSignRiskData(averagedLiquidity, volatilityData, baseTokenConf, quoteTokenConf, isStaging) {
     const finalArray = [];
 
     for (const parameter of MORPHO_RISK_PARAMETERS_ARRAY) {
@@ -92,7 +92,7 @@ async function generateAndSignRiskData(averagedLiquidity, volatilityData, baseTo
         const volatility = volatilityData.latest.current;
 
         // Generate typed data for signing
-        const typedData = generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility);
+        const typedData = generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility, isStaging);
         const signature = await signData(typedData);
 
         // Output the signature components
@@ -108,15 +108,22 @@ async function generateAndSignRiskData(averagedLiquidity, volatilityData, baseTo
 
 // Function to sign data using a private key
 async function signData(typedData) {
-    const privateKey = '0x0123456789012345678901234567890123456789012345678901234567890123';
+    const privateKey = process.env.ETH_PRIVATE_KEY;
+    if(!privateKey){
+        throw new Error('No private key in env config');
+    }
     const wallet = new ethers.Wallet(privateKey);
     return wallet._signTypedData(typedData.domain, typedData.types, typedData.value);
 }
 
 // Function to generate typed data for Ethereum EIP-712 signature
-function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility) {
+function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility, isStaging) {
     // Convert values to 18 decimals and create typed data structure
     const volatility18Decimals = new BigNumber(volatility).times(BN_1e18).toFixed(0);
+    const pythiaAddress = process.env.PYTHIA_ADDRESS;
+    if(!pythiaAddress){
+        throw new Error('No pythia address in env config');
+    }
     const liquidityAdjustedToDecimalsFactor = new BigNumber(liquidity).times(getDecimalFactorAsBN(quoteTokenConf.decimals)).toFixed(0);
 
     return {
@@ -134,8 +141,8 @@ function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility)
         domain: {
             name: 'SPythia',
             version: '0.0.1',
-            chainId: 5,
-            verifyingContract: '0xa9aCE3794Ed9556f4C91e1dD325bC5e4AB1CCDE7',
+            chainId: isStaging ? 5 : 1,
+            verifyingContract: pythiaAddress,
         },
         value: {
             collateralAsset: baseTokenConf.address,
@@ -143,7 +150,7 @@ function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility)
             liquidity: liquidityAdjustedToDecimalsFactor,
             volatility: volatility18Decimals,
             lastUpdate: Math.round(Date.now() / 1000),
-            chainId: 5,
+            chainId: isStaging ? 5 : 1,
         },
     };
 }
