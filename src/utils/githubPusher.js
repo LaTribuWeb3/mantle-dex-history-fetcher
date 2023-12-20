@@ -14,7 +14,7 @@ const octokit = new Octokit({
 });
 
 // Function to acquire the SHA - the unique identifier of data in the GitHub repository.
-const getSha = async (fileName, day) => {
+const getSha = async (fileName) => {
     try {
         const res = await octokit.request(`Get /repos/{owner}/{repo}/contents/${REPO_PATH}/latest/{path}`, {
             owner: 'LaTribuWeb3',
@@ -28,23 +28,10 @@ const getSha = async (fileName, day) => {
     }
 };
 
-// A ritual to determine the current day in the format of year.month.day.
-const getDay = () => {
-    const dateObj = new Date();
-    const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0'); // Convert month to 2 digits
-    const day = String(dateObj.getUTCDate()).padStart(2, '0');        // Convert day to 2 digits
-    const year = dateObj.getUTCFullYear();
-    return `${year}.${month}.${day}`;  // Format: YYYY.MM.DD
-};
-
 // Function to upload a JSON file to the GitHub repository.
-const uploadJsonFile = async (jsonString, fileName, day) => {
+const uploadJsonFile = async (jsonString, fileName) => {
     try {
-        const sha = await getSha(fileName, day);
-        if (!day) {
-            await uploadJsonFile(jsonString, fileName, getDay());
-            return;
-        }
+        const sha = await getSha(fileName);
         return octokit.request(`PUT /repos/{owner}/{repo}/contents/${REPO_PATH}/latest/{path}`, {
             owner: 'LaTribuWeb3',
             repo: 'risk-data-repo',

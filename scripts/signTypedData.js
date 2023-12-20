@@ -1,15 +1,13 @@
-// Required modules and constants
+// Import necessary modules and constants
 const BigNumber = require('bignumber.js').default;
 const { getRollingVolatility, getLiquidity } = require('../src/data.interface/data.interface');
-const { getConfTokenBySymbol } = require('../src/utils/token.utils');
+const { getConfTokenBySymbol, getStagingConfTokenBySymbol } = require('../src/utils/token.utils');
 const { ethers } = require('ethers');
-const { BN_1e18, MORPHO_RISK_PARAMETERS_ARRAY } = require('../src/utils/constants');
-const { PLATFORMS } = require('../src/utils/constants');
+const { BN_1e18, MORPHO_RISK_PARAMETERS_ARRAY, PLATFORMS } = require('../src/utils/constants');
 const { fnName } = require('../src/utils/utils');
 const { getBlocknumberForTimestamp } = require('../src/utils/web3.utils');
-const { getStagingConfTokenBySymbol } = require('../src/utils/dataSigner.config');
 
-// Calculate averages of slippage data across multiple platforms
+// Function to calculate averages of slippage data across multiple platforms
 function calculateSlippageBaseAverages(allPlatformsLiquidity) {
     const totals = {};
 
@@ -36,11 +34,11 @@ function calculateSlippageBaseAverages(allPlatformsLiquidity) {
 }
 
 // Function to sign typed data for Ethereum transactions
-async function signTypedData(baseToken = 'WETH', quoteToken = 'USDC', IS_STAGING= false) {
+async function signTypedData(baseToken = 'WETH', quoteToken = 'USDC', isStaging = false) {
     // Configure Ethereum providers and token data
     const web3Provider = new ethers.providers.StaticJsonRpcProvider('https://eth.llamarpc.com');
-    const base = IS_STAGING ? getStagingConfTokenBySymbol(baseToken) : getConfTokenBySymbol(baseToken);
-    const quote = IS_STAGING ? getStagingConfTokenBySymbol(quoteToken) : getConfTokenBySymbol(quoteToken);
+    const base = isStaging ? getStagingConfTokenBySymbol(baseToken) : getConfTokenBySymbol(baseToken);
+    const quote = isStaging ? getStagingConfTokenBySymbol(quoteToken) : getConfTokenBySymbol(quoteToken);
 
     // Determine start and current block numbers
     const startDate = Date.now();
@@ -48,27 +46,15 @@ async function signTypedData(baseToken = 'WETH', quoteToken = 'USDC', IS_STAGING
     const currentBlock = (await web3Provider.getBlockNumber()) - 100;
 
     console.log(`${fnName()}: precomputing for pair ${base.symbol}/${quote.symbol}`);
-    let allPlatformsLiquidity;
+    let allPlatformsLiquidity = {};
 
     // Collect liquidity data from various platforms
     for (const platform of PLATFORMS) {
-        console.log(`${fnName()}[${base.symbol}/${quote.symbol}]: precomputing for platform ${platform}`);
-        const platformLiquidity = getLiquidity(platform, base.symbol, quote.symbol, startBlock, currentBlock, true);
-
-        // Accumulate liquidity data
+        const platformLiquidity = await getLiquidity(platform, base.symbol, quote.symbol, startBlock, currentBlock, true);
         if (platformLiquidity) {
-            if (!allPlatformsLiquidity) {
-                allPlatformsLiquidity = platformLiquidity;
-            } else {
-                for (const block of Object.keys(allPlatformsLiquidity)) {
-                    for (const slippageBps of Object.keys(allPlatformsLiquidity[block].slippageMap)) {
-                        allPlatformsLiquidity[block].slippageMap[slippageBps].base += platformLiquidity[block].slippageMap[slippageBps].base;
-                        allPlatformsLiquidity[block].slippageMap[slippageBps].quote += platformLiquidity[block].slippageMap[slippageBps].quote;
-                    }
-                }
-            }
+            mergePlatformLiquidity(allPlatformsLiquidity, platformLiquidity);
         } else {
-            console.log(`no liquidity data for ${platform} ${base.symbol} ${quote.symbol}`);
+            console.log(`No liquidity data for ${platform} ${base.symbol} ${quote.symbol}`);
         }
     }
 
@@ -76,47 +62,64 @@ async function signTypedData(baseToken = 'WETH', quoteToken = 'USDC', IS_STAGING
     const averagedLiquidity = calculateSlippageBaseAverages(allPlatformsLiquidity);
     const volatilityData = await getRollingVolatility('all', base.symbol, quote.symbol, web3Provider);
 
+    return generateAndSignRiskData(averagedLiquidity, volatilityData, base, quote);
+}
+
+// Function to merge platform liquidity into the allPlatformsLiquidity object
+function mergePlatformLiquidity(allPlatformsLiquidity, platformLiquidity) {
+    for (const block of Object.keys(platformLiquidity)) {
+        if (!allPlatformsLiquidity[block]) {
+            allPlatformsLiquidity[block] = platformLiquidity[block];
+        } else {
+            for (const slippageBps of Object.keys(platformLiquidity[block].slippageMap)) {
+                if (!allPlatformsLiquidity[block].slippageMap[slippageBps]) {
+                    allPlatformsLiquidity[block].slippageMap[slippageBps] = platformLiquidity[block].slippageMap[slippageBps];
+                } else {
+                    allPlatformsLiquidity[block].slippageMap[slippageBps].base += platformLiquidity[block].slippageMap[slippageBps].base;
+                    allPlatformsLiquidity[block].slippageMap[slippageBps].quote += platformLiquidity[block].slippageMap[slippageBps].quote;
+                }
+            }
+        }
+    }
+}
+
+// Function to generate and sign risk data
+async function generateAndSignRiskData(averagedLiquidity, volatilityData, baseTokenConf, quoteTokenConf) {
     const finalArray = [];
+
     for (const parameter of MORPHO_RISK_PARAMETERS_ARRAY) {
         const liquidity = averagedLiquidity[parameter.bonus];
         const volatility = volatilityData.latest.current;
+
         // Generate typed data for signing
-        const typedData = generatedTypedData(base, quote, liquidity, volatility);
-        // Sign the data using a private key
-        const privateKey = '0x0123456789012345678901234561890123456789012345678901234567890123';
-        const wallet = new ethers.Wallet(privateKey);
-        const signature = await wallet._signTypedData(typedData.domain, typedData.types, typedData.value);
-        const splitSig = ethers.utils.splitSignature(signature);
+        const typedData = generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility);
+        const signature = await signData(typedData);
 
         // Output the signature components
-        const toPush = {
-            r: splitSig.r,
-            s: splitSig.s,
-            v: splitSig.v,
+        finalArray.push({
+            ...ethers.utils.splitSignature(signature),
             liquidationBonus: parameter.bonus,
             riskData: typedData.value,
-        };
-
-        finalArray.push(toPush);
+        });
     }
+
     return finalArray;
 }
 
+// Function to sign data using a private key
+async function signData(typedData) {
+    const privateKey = '0x0123456789012345678901234567890123456789012345678901234567890123';
+    const wallet = new ethers.Wallet(privateKey);
+    return wallet._signTypedData(typedData.domain, typedData.types, typedData.value);
+}
+
 // Function to generate typed data for Ethereum EIP-712 signature
-/**
- * 
- * @param  {{symbol: string, decimals: number, address: string, dustAmount: number}} baseTokenConf 
- * @param  {{symbol: string, decimals: number, address: string, dustAmount: number}} quoteTokenConf 
- * @param {number} liquidity 
- * @param {number} volatility 
- * @returns 
- */
-function generatedTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility) {
+function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility) {
     // Convert values to 18 decimals and create typed data structure
     const volatility18Decimals = new BigNumber(volatility).times(BN_1e18).toFixed(0);
     const liquidity18Decimals = new BigNumber(liquidity).times(BN_1e18).toFixed(0);
 
-    const typedData = {
+    return {
         types: {
             RiskData: [
                 { name: 'collateralAsset', type: 'address' },
@@ -143,8 +146,6 @@ function generatedTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility
             chainId: 5,
         },
     };
-
-    return typedData;
 }
 
 module.exports = {

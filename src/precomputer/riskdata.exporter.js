@@ -15,7 +15,7 @@ async function exportRiskData() {
     // eslint-disable-next-line no-constant-condition
     while (true) {
         // Wait for fetchers to complete
-        // await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
+        await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
         const runStartDate = Date.now();
 
         try {
