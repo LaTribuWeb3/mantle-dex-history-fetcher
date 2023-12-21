@@ -1,6 +1,5 @@
 const { BigNumber, utils } = require('ethers');
 const { tokens } = require('../global.config');
-const { riskDataTestNetConfig } = require('./dataSigner.config');
 
 /**
  * Normalize a integer value to a number
@@ -61,10 +60,7 @@ function getDecimalFactorAsBN(decimals) {
     if (typeof (decimals) === Number) {
         return new BigNumber(10).pow(decimals);
     }
-    throw(error){
-        console.log('get Decimals as BN only accepts numbers as parameter')
-    }
-
+    throw new Error('get Decimals as BN only accepts numbers as parameter');
 }
 
-module.exports = { normalize, getTokenSymbolByAddress, getDecimalFactorAsBN, getConfTokenBySymbol, getStagingConfTokenBySymbol };
+module.exports = { normalize, getTokenSymbolByAddress, getDecimalFactorAsBN, getConfTokenBySymbol };
