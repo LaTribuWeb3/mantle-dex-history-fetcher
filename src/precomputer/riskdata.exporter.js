@@ -204,7 +204,6 @@ function mergePlatformLiquidity(allPlatformsLiquidity, platformLiquidity) {
 
 /**
  * Generates and signs risk data based on liquidity and volatility.
- * 
  * @param {{[slippageKey: number]: number}} averagedLiquidity Averaged liquidity data.
  * @param {number} volatilityValue Volatility value 3% = 0.03
  * @param {{symbol: string, decimals: number, address: string, dustAmount: number}} baseTokenConf Configuration for the base token.
@@ -213,7 +212,7 @@ function mergePlatformLiquidity(allPlatformsLiquidity, platformLiquidity) {
  * @returns An array of objects containing signed risk data.
  */
 async function generateAndSignRiskData(averagedLiquidity, volatilityValue, baseTokenConf, quoteTokenConf, isStaging) {
-    const finalArray = [];
+    const signedRiskDatas = [];
 
     for (const parameter of MORPHO_RISK_PARAMETERS_ARRAY) {
         const liquidity = averagedLiquidity[parameter.bonus];
@@ -225,7 +224,7 @@ async function generateAndSignRiskData(averagedLiquidity, volatilityValue, baseT
 
         const splitSign = ethers.utils.splitSignature(signature);
         // Append signature and related data to the final array
-        finalArray.push({
+        signedRiskDatas.push({
             r: splitSign.r,
             s: splitSign.s,
             v: splitSign.v,
@@ -234,7 +233,7 @@ async function generateAndSignRiskData(averagedLiquidity, volatilityValue, baseT
         });
     }
 
-    return finalArray;
+    return signedRiskDatas;
 }
 
 // Start the export process
