@@ -1,5 +1,5 @@
 const { BigNumber, utils } = require('ethers');
-const {tokens} = require('../global.config');
+const { tokens } = require('../global.config');
 
 /**
  * Normalize a integer value to a number
@@ -8,10 +8,10 @@ const {tokens} = require('../global.config');
  * @returns {number} normalized number for the decimals in inputs
  */
 function normalize(amount, decimals) {
-    if(decimals === 18) {
+    if (decimals === 18) {
         return Number(utils.formatEther(amount));
     }
-    else if(decimals > 18) {
+    else if (decimals > 18) {
         const factor = BigNumber.from('10').pow(BigNumber.from(decimals - 18));
         const norm = BigNumber.from(amount.toString()).div(factor);
         return Number(utils.formatEther(norm));
@@ -29,7 +29,7 @@ function normalize(amount, decimals) {
  */
 function getConfTokenBySymbol(symbol) {
     const tokenConf = tokens[symbol];
-    if(!tokenConf) {
+    if (!tokenConf) {
         throw new Error(`Cannot find token with symbol ${symbol}`);
     }
     // add symbol to config
@@ -43,14 +43,24 @@ function getConfTokenBySymbol(symbol) {
  * @returns {string} token symbol
  */
 function getTokenSymbolByAddress(address) {
-    for(let [tokenSymbol, tokenConf] of Object.entries(tokens)) {
-        if(tokenConf.address.toLowerCase() == address.toLowerCase()) {
+    for (let [tokenSymbol, tokenConf] of Object.entries(tokens)) {
+        if (tokenConf.address.toLowerCase() == address.toLowerCase()) {
             return tokenSymbol;
         }
     }
 
     return null;
 }
+/**
+ * Return the big number appropriate for the number of decimals
+ * @param {number} decimals 
+ * @returns big number
+ * */
+function getDecimalFactorAsBN(decimals) {
+    if (typeof (decimals) === Number) {
+        return new BigNumber(10).pow(decimals);
+    }
+    throw new Error('get Decimals as BN only accepts numbers as parameter');
+}
 
-
-module.exports = { normalize, getTokenSymbolByAddress, getConfTokenBySymbol };
+module.exports = { normalize, getTokenSymbolByAddress, getDecimalFactorAsBN, getConfTokenBySymbol };

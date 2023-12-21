@@ -14,12 +14,14 @@
     "dependencies": {
         "@0xsequence/multicall": "0.43.34",
         "axios": "^1.6.2",
+        "base-64": "^1.0.0",
         "bignumber.js": "^9.1.2",
         "compression": "^1.7.4",
         "cors": "^2.8.5",
         "dotenv": "^16.3.1",
         "ethers": "^5.7.2",
         "express": "^4.18.2",
+        "octokit": "^3.1.2",
         "simple-statistics": "^7.8.3"
     }
 }
