@@ -23,7 +23,6 @@ const IS_STAGING = process.env.STAGING_ENV && process.env.STAGING_ENV.toLowerCas
 const RPC_URL = process.env.RPC_URL;
 const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
 
-
 async function exportRiskData() {
     // eslint-disable-next-line no-constant-condition
     while (true) {
