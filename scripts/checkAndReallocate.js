@@ -35,6 +35,7 @@ async function checkAndReallocate() {
     // await checkAndReallocateWithdraw10k10k();
     // await checkAndReallocateSupply5kEachMarket();
     await checkAndReallocateSupplyTarget20KUSDT();
+    // await checkAndReallocateSupplyTarget10KUSDT();
     // const web3ProviderGoerli = new ethers.providers.StaticJsonRpcProvider('https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161');
     // const tx = await web3ProviderGoerli.getTransaction('0x735f3451a2e24689b590a3d2f3ad1bc91e0dd67b18ada642844f2a69585ddf25');
     // const allocatorContract = new Contract(allocatorAddress, allocatorAbi, web3ProviderGoerli);
@@ -144,6 +145,31 @@ async function checkAndReallocateSupplyTarget20KUSDT() {
 
     // set USDT market to 20k
     await generateCheckAndReallocateData(wallet, morphoContract, allocations, riskDatas, signatures, USDTAddress, USDCAddress, 20_000e6, 92_000_000,  9.66 / 100, marketIdUSDT);
+
+    // remaining to idle market
+    await generateCheckAndReallocateData(wallet, morphoContract, allocations, riskDatas, signatures, ethers.constants.AddressZero, USDCAddress, ethers.constants.MaxUint256, 0,  0, marketIdIdle);
+
+    console.log(allocations.length);
+    console.log(riskDatas.length);
+    console.log(signatures.length);
+
+    await allocatorContract.checkAndReallocate(allocations, riskDatas, signatures, {gasLimit: 500_000});
+
+}
+
+
+async function checkAndReallocateSupplyTarget10KUSDT() {
+    const web3ProviderGoerli = new ethers.providers.StaticJsonRpcProvider('https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161');
+    const wallet = new ethers.Wallet(privateKey, web3ProviderGoerli);
+    const morphoContract = new Contract(morphoAddress, morphoAbi, web3ProviderGoerli);
+    const allocatorContract = new Contract(allocatorAddress, allocatorAbi, wallet);
+    
+    const allocations = [];
+    const riskDatas = [];
+    const signatures = [];
+
+    // set USDT market to 20k
+    await generateCheckAndReallocateData(wallet, morphoContract, allocations, riskDatas, signatures, USDTAddress, USDCAddress, 10_000e6, 92_000_000,  9.66 / 100, marketIdUSDT);
 
     // remaining to idle market
     await generateCheckAndReallocateData(wallet, morphoContract, allocations, riskDatas, signatures, ethers.constants.AddressZero, USDCAddress, ethers.constants.MaxUint256, 0,  0, marketIdIdle);
