@@ -14,7 +14,17 @@ function signData(typedData) {
     return wallet._signTypedData(typedData.domain, typedData.types, typedData.value);
 }
 
-// Function to generate typed data for Ethereum EIP-712 signature
+
+
+/**
+ * Function to generate typed data for Ethereum EIP-712 signature
+ * @param {{symbol: string, decimals: number, address: string, dustAmount: number}} baseTokenConf 
+ * @param {{symbol: string, decimals: number, address: string, dustAmount: number}} quoteTokenConf 
+ * @param {number} liquidity 
+ * @param {number} volatility 
+ * @param {boolean} isStaging 
+ * @returns typed data
+ */
 function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility, isStaging) {
     // Convert values to 18 decimals and create typed data structure
     const volatility18Decimals = new BigNumber(volatility).times(BN_1e18).toFixed(0);
@@ -45,8 +55,8 @@ function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility,
         value: {
             collateralAsset: baseTokenConf.address,
             debtAsset: quoteTokenConf.address,
-            liquidity: liquidityAdjustedToDecimalsFactor,
-            volatility: volatility18Decimals,
+            liquidity: String(liquidityAdjustedToDecimalsFactor), // cast just for typing
+            volatility: String(volatility18Decimals), // cast just for typing
             lastUpdate: Math.round(Date.now() / 1000),
             chainId: isStaging ? 5 : 1,
         },

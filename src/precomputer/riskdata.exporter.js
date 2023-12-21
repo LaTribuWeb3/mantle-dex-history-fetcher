@@ -118,11 +118,11 @@ async function handleError(error) {
 /**
  * Calculates the average base slippage for each slippage point across multiple platforms.
  * 
- * @param {Object} allPlatformsLiquidity - Object with liquidity data from various platforms.
+ * @param {{{[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}}} allPlatformsLiquidity - Object with liquidity data from various platforms.
  *                                         Each key represents a block, and its value is an object
  *                                         containing a 'slippageMap' with slippage points and their
  *                                         respective base slippage data.
- * @returns {Object} Averages of base slippage for each slippage point. Keys are slippage points
+ * @returns {{[slippageKey: number]: number}} Averages of base slippage for each slippage point. Keys are slippage points
  *                   (parsed as integers), and values are the average base slippage for those points.
  */
 function calculateSlippageBaseAverages(allPlatformsLiquidity) {
@@ -150,6 +150,12 @@ function calculateSlippageBaseAverages(allPlatformsLiquidity) {
     }, {});
 }
 
+/**
+ * 
+ * @param {{symbol: string, decimals: number, address: string, dustAmount: number}} base 
+ * @param {{symbol: string, decimals: number, address: string, dustAmount: number}} quote 
+ * @returns 
+ */
 async function fetchLiquidity(base, quote) {
     const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
     const startBlock = await getBlocknumberForTimestamp(Math.round(thirtyDaysAgo / 1000));
@@ -176,8 +182,8 @@ async function fetchLiquidity(base, quote) {
 /**
  * Merges liquidity data from a single platform into a consolidated object.
  * 
- * @param {Object} allPlatformsLiquidity The consolidated liquidity object.
- * @param {Object} platformLiquidity Liquidity data from a single platform.
+ * @param {{[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}} allPlatformsLiquidity The consolidated liquidity object.
+ * @param {{[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}} platformLiquidity Liquidity data from a single platform.
  */
 function mergePlatformLiquidity(allPlatformsLiquidity, platformLiquidity) {
     for (const block in platformLiquidity) {
@@ -199,12 +205,12 @@ function mergePlatformLiquidity(allPlatformsLiquidity, platformLiquidity) {
 /**
  * Generates and signs risk data based on liquidity and volatility.
  * 
- * @param {Object} averagedLiquidity Averaged liquidity data.
+ * @param {{[slippageKey: number]: number}} averagedLiquidity Averaged liquidity data.
  * @param {number} volatilityValue Volatility value 3% = 0.03
- * @param {Object} baseTokenConf Configuration for the base token.
- * @param {Object} quoteTokenConf Configuration for the quote token.
+ * @param {{symbol: string, decimals: number, address: string, dustAmount: number}} baseTokenConf Configuration for the base token.
+ * @param {{symbol: string, decimals: number, address: string, dustAmount: number}} quoteTokenConf Configuration for the quote token.
  * @param {boolean} isStaging Flag for staging environment.
- * @returns {Promise<Array>} An array of objects containing signed risk data.
+ * @returns An array of objects containing signed risk data.
  */
 async function generateAndSignRiskData(averagedLiquidity, volatilityValue, baseTokenConf, quoteTokenConf, isStaging) {
     const finalArray = [];
@@ -217,9 +223,12 @@ async function generateAndSignRiskData(averagedLiquidity, volatilityValue, baseT
         const typedData = generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility, isStaging);
         const signature = signData(typedData);
 
+        const splitSign = ethers.utils.splitSignature(signature);
         // Append signature and related data to the final array
         finalArray.push({
-            ...ethers.utils.splitSignature(signature),
+            r: splitSign.r,
+            s: splitSign.s,
+            v: splitSign.v,
             liquidationBonus: parameter.bonus,
             riskData: typedData.value,
         });
@@ -227,7 +236,6 @@ async function generateAndSignRiskData(averagedLiquidity, volatilityValue, baseT
 
     return finalArray;
 }
-
 
 // Start the export process
 exportRiskData();
