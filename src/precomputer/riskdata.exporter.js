@@ -9,17 +9,19 @@ const { RecordMonitoring } = require('../utils/monitoring');
 const { fnName, roundTo, sleep } = require('../utils/utils');
 const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
 const { uploadJsonFile } = require('../utils/githubPusher');
-const { riskDataConfig, riskDataTestNetConfig } = require('../utils/dataSigner.config');
 const { PLATFORMS, MORPHO_RISK_PARAMETERS_ARRAY } = require('../utils/constants');
-const { getBlocknumberForTimestamp } = require('../src/utils/web3.utils');
-const { getConfTokenBySymbol, getStagingConfTokenBySymbol } = require('../src/utils/token.utils');
-const { getRollingVolatility, getLiquidity } = require('../src/data.interface/data.interface');
 const { signData, generateTypedData } = require('../../scripts/signTypedData');
+const { getRollingVolatility, getLiquidity } = require('../data.interface/data.interface');
+const {  getConfTokenBySymbol } = require('../utils/token.utils');
+const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
+const { getStagingConfTokenBySymbol, riskDataTestNetConfig, riskDataConfig } = require('./precomputer.config');
 
 // Constants
 const RUN_EVERY_MINUTES = 6 * 60; // 6 hours in minutes
 const MONITORING_NAME = 'Risk Data Exporter';
 const IS_STAGING = process.env.STAGING_ENV && process.env.STAGING_ENV.toLowerCase() === 'true';
+const RPC_URL = process.env.RPC_URL;
+const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
 
 
 async function exportRiskData() {
@@ -73,7 +75,16 @@ async function recordMonitoring(runStartDate, isStart) {
 
 // Function to process and upload data for each configuration pair
 async function processAndUploadPair(pair) {
-    const results = await signTypedData(pair.base, pair.quote, IS_STAGING);
+    // Retrieve token configuration based on environment (staging/production)
+    const base = IS_STAGING ? getStagingConfTokenBySymbol(pair.base) : getConfTokenBySymbol(pair.base);
+    const quote = IS_STAGING ? getStagingConfTokenBySymbol(pair.quote) : getConfTokenBySymbol(pair.quote);
+
+    // fetch liquidity across all dexes
+    const averagedLiquidity = await fetchLiquidity(base, quote);
+    // fetch volatility accros all dexes
+    const volatilityData = await getRollingVolatility('all', base.symbol, quote.symbol, web3Provider);
+
+    const results = await generateAndSignRiskData(averagedLiquidity, volatilityData.latest.current, base, quote, IS_STAGING);
     const toUpload = JSON.stringify(results);
     const fileName = IS_STAGING 
         ? `${riskDataTestNetConfig[pair.base].substitute}_${riskDataTestNetConfig[pair.quote].substitute}`
@@ -140,24 +151,7 @@ function calculateSlippageBaseAverages(allPlatformsLiquidity) {
     }, {});
 }
 
-/**
- * Function to sign typed data for Ethereum transactions.
- * It calculates risk data based on liquidity and volatility for a given token pair.
- * 
- * @param {string} baseToken The symbol of the base token, default 'WETH'.
- * @param {string} quoteToken The symbol of the quote token, default 'USDC'.
- * @param {boolean} isStaging Flag to determine if staging configuration should be used.
- * @returns {Promise<Array>} An array of signed risk data objects.
- */
-async function signTypedData(baseToken = 'WETH', quoteToken = 'USDC', isStaging = false) {
-    // Configure Ethereum provider
-    const web3Provider = new ethers.providers.StaticJsonRpcProvider('https://eth.llamarpc.com');
-
-    // Retrieve token configuration based on environment (staging/production)
-    const base = isStaging ? getStagingConfTokenBySymbol(baseToken) : getConfTokenBySymbol(baseToken);
-    const quote = isStaging ? getStagingConfTokenBySymbol(quoteToken) : getConfTokenBySymbol(quoteToken);
-
-    // Calculate start and current block numbers for data analysis
+async function fetchLiquidity(base, quote) {
     const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
     const startBlock = await getBlocknumberForTimestamp(Math.round(thirtyDaysAgo / 1000));
     const currentBlock = (await web3Provider.getBlockNumber()) - 100;
@@ -167,7 +161,7 @@ async function signTypedData(baseToken = 'WETH', quoteToken = 'USDC', isStaging 
 
     // Aggregate liquidity data from various platforms
     for (const platform of PLATFORMS) {
-        const platformLiquidity = await getLiquidity(platform, base.symbol, quote.symbol, startBlock, currentBlock, true);
+        const platformLiquidity = getLiquidity(platform, base.symbol, quote.symbol, startBlock, currentBlock, true);
         if (platformLiquidity) {
             mergePlatformLiquidity(allPlatformsLiquidity, platformLiquidity);
         } else {
@@ -177,10 +171,7 @@ async function signTypedData(baseToken = 'WETH', quoteToken = 'USDC', isStaging 
 
     // Calculate averaged liquidity and fetch volatility data
     const averagedLiquidity = calculateSlippageBaseAverages(allPlatformsLiquidity);
-    const volatilityData = await getRollingVolatility('all', base.symbol, quote.symbol, web3Provider);
-
-    // Generate and sign risk data
-    return generateAndSignRiskData(averagedLiquidity, volatilityData, base, quote, isStaging);
+    return averagedLiquidity;
 }
 
 /**
@@ -210,22 +201,22 @@ function mergePlatformLiquidity(allPlatformsLiquidity, platformLiquidity) {
  * Generates and signs risk data based on liquidity and volatility.
  * 
  * @param {Object} averagedLiquidity Averaged liquidity data.
- * @param {Object} volatilityData Volatility data.
+ * @param {number} volatilityValue Volatility value 3% = 0.03
  * @param {Object} baseTokenConf Configuration for the base token.
  * @param {Object} quoteTokenConf Configuration for the quote token.
  * @param {boolean} isStaging Flag for staging environment.
  * @returns {Promise<Array>} An array of objects containing signed risk data.
  */
-async function generateAndSignRiskData(averagedLiquidity, volatilityData, baseTokenConf, quoteTokenConf, isStaging) {
+async function generateAndSignRiskData(averagedLiquidity, volatilityValue, baseTokenConf, quoteTokenConf, isStaging) {
     const finalArray = [];
 
     for (const parameter of MORPHO_RISK_PARAMETERS_ARRAY) {
         const liquidity = averagedLiquidity[parameter.bonus];
-        const volatility = volatilityData.latest.current;
+        const volatility = volatilityValue;
 
         // Generate typed data structure for signing
         const typedData = generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility, isStaging);
-        const signature = await signData(typedData);
+        const signature = signData(typedData);
 
         // Append signature and related data to the final array
         finalArray.push({
