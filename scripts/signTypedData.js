@@ -4,10 +4,8 @@ const { getDecimalFactorAsBN } = require('../src/utils/token.utils');
 const { ethers } = require('ethers');
 const { BN_1e18 } = require('../src/utils/constants');
 
-
-
 // Function to sign data using a private key
-async function signData(typedData) {
+function signData(typedData) {
     const privateKey = process.env.ETH_PRIVATE_KEY;
     if(!privateKey){
         throw new Error('No private key in env config');
