@@ -32,7 +32,7 @@ function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility,
     if(!pythiaAddress){
         throw new Error('No pythia address in env config');
     }
-    const liquidityAdjustedToDecimalsFactor = new BigNumber(liquidity).times(getDecimalFactorAsBN(quoteTokenConf.decimals)).toFixed(0);
+    const liquidityAdjustedToDecimalsFactor = new BigNumber(liquidity).times(new BigNumber(10).pow(quoteTokenConf.decimals)).toFixed(0);
 
     return {
         types: {

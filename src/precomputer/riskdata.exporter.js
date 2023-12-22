@@ -220,7 +220,7 @@ async function generateAndSignRiskData(averagedLiquidity, volatilityValue, baseT
 
         // Generate typed data structure for signing
         const typedData = generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility, isStaging);
-        const signature = signData(typedData);
+        const signature = await signData(typedData);
 
         const splitSign = ethers.utils.splitSignature(signature);
         // Append signature and related data to the final array

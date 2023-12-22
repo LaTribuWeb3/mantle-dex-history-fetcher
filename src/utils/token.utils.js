@@ -51,16 +51,5 @@ function getTokenSymbolByAddress(address) {
 
     return null;
 }
-/**
- * Return the big number appropriate for the number of decimals
- * @param {number} decimals 
- * @returns big number
- * */
-function getDecimalFactorAsBN(decimals) {
-    if (typeof (decimals) === Number) {
-        return new BigNumber(10).pow(decimals);
-    }
-    throw new Error('get Decimals as BN only accepts numbers as parameter');
-}
 
-module.exports = { normalize, getTokenSymbolByAddress, getDecimalFactorAsBN, getConfTokenBySymbol };
+module.exports = { normalize, getTokenSymbolByAddress, getConfTokenBySymbol };
