@@ -5,13 +5,13 @@ const { ethers } = require('ethers');
 const { BN_1e18 } = require('../src/utils/constants');
 
 // Function to sign data using a private key
-function signData(typedData) {
+async function signData(typedData) {
     const privateKey = process.env.ETH_PRIVATE_KEY;
     if(!privateKey){
         throw new Error('No private key in env config');
     }
     const wallet = new ethers.Wallet(privateKey);
-    return wallet._signTypedData(typedData.domain, typedData.types, typedData.value);
+    return await wallet._signTypedData(typedData.domain, typedData.types, typedData.value);
 }
 
 
