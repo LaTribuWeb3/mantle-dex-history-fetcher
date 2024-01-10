@@ -142,7 +142,11 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
     for(const marketId of marketIds) {
         const marketParams = await morphoBlue.idToMarketParams(marketId, {blockTag: endBlock});
         if(marketParams.collateralToken != ethers.constants.AddressZero) {
-            const collateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
+            const realCollateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
+            let collateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
+            if(collateralTokenSymbol == 'wstETH') {
+                collateralTokenSymbol = 'stETH';
+            }
             console.log(`market collateral is ${collateralTokenSymbol}`);
             const collateralToken = getConfTokenBySymbol(collateralTokenSymbol);
             const marketConfig = await metamorphoVault.config(marketId, {blockTag: endBlock});
@@ -160,15 +164,15 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
                 LTV
             };
 
-            resultsData.collateralsData[collateralToken.symbol] = {};
+            resultsData.collateralsData[realCollateralTokenSymbol] = {};
             // collateral data { inKindSupply: 899999.9260625947, usdSupply: 45764996.240282945 }
             const basePrice = await getHistoricalPrice(baseToken.address, startDateUnixSec);
-            resultsData.collateralsData[collateralToken.symbol].collateral = {
+            resultsData.collateralsData[realCollateralTokenSymbol].collateral = {
                 inKindSupply: currentSupply,
                 usdSupply: currentSupply * basePrice
             };
 
-            resultsData.collateralsData[collateralToken.symbol].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateralToken.symbol, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider, vaultName);
+            resultsData.collateralsData[realCollateralTokenSymbol].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateralToken.symbol, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider, vaultName);
         }
     }
 
@@ -444,7 +448,8 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateralSym
 
     console.log('parameters', parameters);
 
-    recordParameters(`${from}-${baseAsset}`, { parameters, assetParameters }, startDate, vaultname);
+
+    recordParameters(`${from == 'stETH' ? 'wstETH': from}-${baseAsset}`, { parameters, assetParameters }, startDate, vaultname);
     /// compute CLFs for all spans and all volatilities
     const results = {};
     for(const volatilitySpan of spans) {
