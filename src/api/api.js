@@ -185,31 +185,7 @@ app.get('/api/getclfs', async (req, res, next) => {
     }
 });
 
-app.get('/api/getaveragerisklevels', async (req, res, next) => {
-    try {
-        const folder = 'latest';
-        const protocolsAvg = {};
-        for(const subDir of fs.readdirSync(`${DATA_DIR}/clf/`)) {
-            if(subDir == 'latest') {
-                continue;
-            }
 
-            const fullFileName = `${DATA_DIR}/clf/${subDir}/${folder}/${subDir}_CLFs.json`;
-            if(!fs.existsSync(fullFileName)) {
-                continue;
-            }
-
-            const protocolValue = JSON.parse(fs.readFileSync(fullFileName));
-            protocolsAvg[subDir] = protocolValue.weightedCLF;
-        }
-
-        res.json(protocolsAvg);
-    } catch (error) {
-        next(error);
-    }
-});
-
-// getcurrentclfgraphdata?platform=compoundV3&date=18.2.2023 (date optional)
 app.get('/api/getcurrentclfgraphdata', async (req, res, next) => {
     try {
         const platform = req.query.platform;
@@ -291,6 +267,111 @@ app.get('/api/getcurrentaverageclfs', async (req, res, next) => {
     }
 });
 
+// NEW CLF API
+app.get('/api/clf/getaveragerisklevels', async (req, res, next) => {
+    try {
+        const folder = 'latest';
+        const protocolsAvg = {};
+        for(const subDir of fs.readdirSync(`${DATA_DIR}/clf/`)) {
+            if(subDir == 'latest') {
+                continue;
+            }
+
+            const fullFileName = `${DATA_DIR}/clf/${subDir}/${folder}/${subDir}_CLFs.json`;
+            if(!fs.existsSync(fullFileName)) {
+                continue;
+            }
+
+            const protocolValue = JSON.parse(fs.readFileSync(fullFileName));
+            protocolsAvg[subDir] = protocolValue.weightedCLF;
+        }
+
+        res.json(protocolsAvg);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// getcurrentclfgraphdata?platform=compoundV3&date=18.2.2023 (date optional)
+app.get('/api/clf/getcurrentclfgraphdata', async (req, res, next) => {
+    try {
+        const platform = req.query.platform;
+        const date = req.query.date ? req.query.date : getDay();
+        const folder = req.query.latest === undefined ? 'latest' : req.query.latest === false ? date : 'latest';
+
+
+        if (!platform) {
+            res.status(400).json({ error: 'platform required' });
+            next();
+        }
+        const fileName = req.query.latest ? `${platform}_graphData.json` : `${date}_${platform}_graphData.json`;
+        const cacheKey = req.query.latest ? `${platform}_graphData.json` : `${date}_${platform}_graphData.json`;
+        if (!cache[cacheKey]
+            || cache[cacheKey].cachedDate < Date.now() - cacheDuration) {
+            const filePath = path.join(DATA_DIR, 'clf', platform, folder, fileName);
+            console.log(`try reading file ${filePath}`);
+            if (!fs.existsSync(filePath)) {
+                console.log(`${filePath} does not exists`);
+                res.status(404).json({ error: 'file does not exist' });
+                return;
+            }
+            else {
+                console.log(`${filePath} exists, saving data to cache`);
+                cache[cacheKey] = {
+                    data: JSON.parse(fs.readFileSync(filePath)),
+                    cachedDate: Date.now(),
+                };
+            }
+        } else {
+            const cacheRemaining = cacheDuration - (Date.now() - cache[cacheKey].cachedDate);
+            console.log(`returning key ${cacheKey} from cache. Cache remaining duration ${roundTo(cacheRemaining/1000, 2)} seconds`);
+        }
+
+        res.json(cache[cacheKey].data);
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.get('/api/clf/getcurrentaverageclfs', async (req, res, next) => {
+    try {
+        const platform = req.query.platform;
+        const date = req.query.date ? req.query.date : getDay();
+        const folder = req.query.latest === undefined ? 'latest' : req.query.latest === false ? date : 'latest';
+
+
+        if (!platform) {
+            res.status(400).json({ error: 'platform required' });
+            next();
+        }
+        const fileName = req.query.latest ? `${platform}_average_CLFs.json` : `${date}_${platform}_average_CLFs.json`;
+        const cacheKey = req.query.latest ? `${platform}_average_CLFs.json` : `${date}_${platform}_average_CLFs.json`;
+        if (!cache[cacheKey]
+            || cache[cacheKey].cachedDate < Date.now() - cacheDuration) {
+            const filePath = path.join(DATA_DIR, 'clf', platform, folder, fileName);
+            console.log(`try reading file ${filePath}`);
+            if (!fs.existsSync(filePath)) {
+                console.log(`${filePath} does not exists`);
+                res.status(404).json({ error: 'file does not exist' });
+                return;
+            }
+            else {
+                console.log(`${filePath} exists, saving data to cache`);
+                cache[cacheKey] = {
+                    data: JSON.parse(fs.readFileSync(filePath)),
+                    cachedDate: Date.now(),
+                };
+            }
+        } else {
+            const cacheRemaining = cacheDuration - (Date.now() - cache[cacheKey].cachedDate);
+            console.log(`returning key ${cacheKey} from cache. Cache remaining duration ${roundTo(cacheRemaining/1000, 2)} seconds`);
+        }
+
+        res.json(cache[cacheKey].data);
+    } catch (error) {
+        next(error);
+    }
+});
 
 app.get('/api/dashboard/overview', async (req, res, next) => {
     try {
