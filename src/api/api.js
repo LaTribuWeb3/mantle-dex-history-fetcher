@@ -185,6 +185,30 @@ app.get('/api/getclfs', async (req, res, next) => {
     }
 });
 
+app.get('/api/getaveragerisklevels', async (req, res, next) => {
+    try {
+        const folder = 'latest';
+        const protocolsAvg = {};
+        for(const subDir of fs.readdirSync(`${DATA_DIR}/clf/`)) {
+            if(subDir == 'latest') {
+                continue;
+            }
+
+            const fullFileName = `${DATA_DIR}/clf/${subDir}/${folder}/${subDir}_CLFs.json`;
+            if(!fs.existsSync(fullFileName)) {
+                continue;
+            }
+
+            const protocolValue = JSON.parse(fs.readFileSync(fullFileName));
+            protocolsAvg[subDir] = protocolValue.weightedCLF;
+        }
+
+        res.json(protocolsAvg);
+    } catch (error) {
+        next(error);
+    }
+});
+
 // getcurrentclfgraphdata?platform=compoundV3&date=18.2.2023 (date optional)
 app.get('/api/getcurrentclfgraphdata', async (req, res, next) => {
     try {
