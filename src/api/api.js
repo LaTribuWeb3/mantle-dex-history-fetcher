@@ -305,7 +305,7 @@ app.get('/api/clf/getcurrentclfgraphdata', async (req, res, next) => {
             next();
         }
         const fileName = req.query.latest ? `${platform}_graphData.json` : `${date}_${platform}_graphData.json`;
-        const cacheKey = req.query.latest ? `${platform}_graphData.json` : `${date}_${platform}_graphData.json`;
+        const cacheKey = req.query.latest ? `new_${platform}_graphData.json` : `new_${date}_${platform}_graphData.json`;
         if (!cache[cacheKey]
             || cache[cacheKey].cachedDate < Date.now() - cacheDuration) {
             const filePath = path.join(DATA_DIR, 'clf', platform, folder, fileName);
@@ -345,7 +345,7 @@ app.get('/api/clf/getcurrentaverageclfs', async (req, res, next) => {
             next();
         }
         const fileName = req.query.latest ? `${platform}_average_CLFs.json` : `${date}_${platform}_average_CLFs.json`;
-        const cacheKey = req.query.latest ? `${platform}_average_CLFs.json` : `${date}_${platform}_average_CLFs.json`;
+        const cacheKey = req.query.latest ? `new_${platform}_average_CLFs.json` : `new_${date}_${platform}_average_CLFs.json`;
         if (!cache[cacheKey]
             || cache[cacheKey].cachedDate < Date.now() - cacheDuration) {
             const filePath = path.join(DATA_DIR, 'clf', platform, folder, fileName);
