@@ -282,11 +282,11 @@ function computeProtocolWeightedCLF(protocolData) {
 
 function recordParameters(pair, data, timestamp) {
     const date = getDay(timestamp);
-    if (!fs.existsSync(`${DATA_DIR}/clf/${date}`)) {
-        fs.mkdirSync(`${DATA_DIR}/clf/${date}`);
+    if (!fs.existsSync(`${DATA_DIR}/clf/compoundv3/${date}`)) {
+        fs.mkdirSync(`${DATA_DIR}/clf/compoundv3/${date}`, {recursive: true});
     }
 
-    const datedProtocolFilename = path.join(DATA_DIR, `clf/${date}/${date}_${pair}_compoundv3_CLFs.json`);
+    const datedProtocolFilename = path.join(DATA_DIR, `clf/compoundv3/${date}/${date}_${pair}_compoundv3_CLFs.json`);
     const objectToWrite = JSON.stringify(data, null, 2);
     console.log('recording results');
     try {
@@ -300,14 +300,14 @@ function recordParameters(pair, data, timestamp) {
 
 function recordResults(results, timestamp) {
     const date = getDay(timestamp);
-    if (!fs.existsSync(`${DATA_DIR}/clf/${date}`)) {
-        fs.mkdirSync(`${DATA_DIR}/clf/${date}`);
+    if (!fs.existsSync(`${DATA_DIR}/clf/compoundv3/${date}`)) {
+        fs.mkdirSync(`${DATA_DIR}/clf/compoundv3/${date}`, {recursive: true});
     }
-    if (!fs.existsSync(`${DATA_DIR}/clf/latest`)) {
-        fs.mkdirSync(`${DATA_DIR}/clf/latest`);
+    if (!fs.existsSync(`${DATA_DIR}/clf/compoundv3/latest`)) {
+        fs.mkdirSync(`${DATA_DIR}/clf/compoundv3/latest`, {recursive: true});
     }
-    const datedProtocolFilename = path.join(DATA_DIR, `clf/${date}/${date}_compoundv3_CLFs.json`);
-    const latestFullFilename = path.join(DATA_DIR, 'clf/latest/compoundv3_CLFs.json');
+    const datedProtocolFilename = path.join(DATA_DIR, `clf/compoundv3/${date}/${date}_compoundv3_CLFs.json`);
+    const latestFullFilename = path.join(DATA_DIR, 'clf/compoundv3/latest/compoundv3_CLFs.json');
     const objectToWrite = JSON.stringify(results, null, 2);
     console.log('recording results');
     try {

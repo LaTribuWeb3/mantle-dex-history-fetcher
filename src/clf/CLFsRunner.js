@@ -21,17 +21,17 @@ async function main() {
             console.log(`computing averages data for ${protocol.name}`);
             const averagesData = computeAveragesForProtocol(protocol.name);
             console.log('writing average data file');
-            recordResults(averagesData, `${protocol.name}_average_CLFs`);
+            recordResults(protocol.name, averagesData, `${protocol.name}_average_CLFs`);
             console.log('organizing graph data');
             const graphData = computeCLFHistoryForProtocol(protocol.name);
             console.log('writing graphData file');
-            recordResults(graphData, `${protocol.name}_graphData`);
+            recordResults(protocol.name, graphData, `${protocol.name}_graphData`);
         }
-        console.log('unifying all the protocols files');
-        const toWrite = unifyFiles();
-        console.log('writing global file');
-        recordResults(toWrite, 'all_CLFs');
-        console.log('global file written, CLF runner stopping.');
+        // console.log('unifying all the protocols files');
+        // const toWrite = unifyFiles();
+        // console.log('writing global file');
+        // recordResults('', toWrite, 'all_CLFs');
+        // console.log('global file written, CLF runner stopping.');
         const sleepTime = fetchEveryMinutes * 60 * 1000 - (Date.now() - start);
         if (sleepTime > 0) {
             console.log(`${fnName()}: sleeping ${roundTo(sleepTime / 1000 / 60)} minutes`);
@@ -62,16 +62,16 @@ function unifyFiles() {
 
 }
 
-function recordResults(results, name) {
+function recordResults(protocolName, results, name) {
     const date = getDay();
-    if (!fs.existsSync(`${DATA_DIR}/clf/${date}`)) {
-        fs.mkdirSync(`${DATA_DIR}/clf/${date}`);
+    if (!fs.existsSync(`${DATA_DIR}/clf/${protocolName}/${date}`)) {
+        fs.mkdirSync(`${DATA_DIR}/clf/${protocolName}/${date}`, {recursive: true});
     }
-    if (!fs.existsSync(`${DATA_DIR}/clf/latest`)) {
-        fs.mkdirSync(`${DATA_DIR}/clf/latest`);
+    if (!fs.existsSync(`${DATA_DIR}/clf/${protocolName}/latest`)) {
+        fs.mkdirSync(`${DATA_DIR}/clf/${protocolName}/latest`, {recursive: true});
     }
-    const unifiedFullFilename = path.join(DATA_DIR, `clf/${date}/${date}_${name}.json`);
-    const latestUnifiedFullFilename = path.join(DATA_DIR, `clf/latest/${name}.json`);
+    const unifiedFullFilename = path.join(DATA_DIR, `clf/${protocolName}/${date}/${date}_${name}.json`);
+    const latestUnifiedFullFilename = path.join(DATA_DIR, `clf/${protocolName}/latest/${name}.json`);
     const objectToWrite = JSON.stringify(results, null, 2);
     try {
         fs.writeFileSync(unifiedFullFilename, objectToWrite, 'utf8');

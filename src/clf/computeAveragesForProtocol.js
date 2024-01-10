@@ -19,7 +19,7 @@ function unifyProtocolData(protocol) {
     while (numberOfDaysAccumulated < 180) {
         //opening latest protocol file
         const day = jsDateToString(currentDay);
-        const folderPath = DATA_DIR + '/clf/' + day;
+        const folderPath = DATA_DIR + `/clf/${protocol}/` + day;
         const fileName = `${day}_${protocol}_CLFs.json`;
         const filePath = path.join(folderPath, fileName);
         try {
