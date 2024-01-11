@@ -15,6 +15,7 @@ const { getRollingVolatility, getLiquidity } = require('../data.interface/data.i
 const {  getConfTokenBySymbol } = require('../utils/token.utils');
 const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
 const { getStagingConfTokenBySymbol, riskDataTestNetConfig, riskDataConfig } = require('./precomputer.config');
+const { default: axios } = require('axios');
 
 // Constants
 const RUN_EVERY_MINUTES = 6 * 60; // 6 hours in minutes
@@ -38,6 +39,8 @@ async function exportRiskData() {
             for (const pair of riskDataConfig) {
                 await processAndUploadPair(pair);
             }
+
+            await uploadRiskIndexLevelToGithub();
 
             // Record the monitoring end
             await recordMonitoring(runStartDate, false);
@@ -88,7 +91,7 @@ async function processAndUploadPair(pair) {
     const fileName = IS_STAGING 
         ? `${riskDataTestNetConfig[pair.base].substitute}_${riskDataTestNetConfig[pair.quote].substitute}`
         : `${pair.base}_${pair.quote}`;
-    await uploadJsonFile(toUpload, fileName);
+    await uploadJsonFile(toUpload, fileName, 'LaTribuWeb3', 'risk-data-repo');
 }
 
 // Function to sleep for the remaining time of the cycle
@@ -234,6 +237,17 @@ async function generateAndSignRiskData(averagedLiquidity, volatilityValue, baseT
     }
 
     return signedRiskDatas;
+}
+
+async function uploadRiskIndexLevelToGithub(){
+    const protocolsCall = await axios.get(`${process.env.RISK_API}/getaveragerisklevels`);
+    await uploadJsonFile(JSON.stringify(protocolsCall.data), 'protocols_day_averages', 'Risk-DAO', 'simulation-results', 'risk-level-data');
+
+    for(const k of Object.keys(protocolsCall.data)){
+
+        const dataCall = await axios.get(`${process.env.RISK_API}/getcurrentaverageclfs?latest=true&platform=${k}`);
+        await uploadJsonFile(JSON.stringify(dataCall.data), k, 'Risk-DAO', 'simulation-results', 'risk-level-data');
+    }
 }
 
 // Start the export process
