@@ -143,6 +143,7 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
         const marketParams = await morphoBlue.idToMarketParams(marketId, {blockTag: endBlock});
         if(marketParams.collateralToken != ethers.constants.AddressZero) {
             const realCollateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
+            const uniqueId = `${realCollateralTokenSymbol}_${marketId}`;
             let collateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
             if(collateralTokenSymbol == 'wstETH') {
                 collateralTokenSymbol = 'stETH';
@@ -164,15 +165,15 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
                 LTV
             };
 
-            resultsData.collateralsData[realCollateralTokenSymbol] = {};
+            resultsData.collateralsData[uniqueId] = {};
             // collateral data { inKindSupply: 899999.9260625947, usdSupply: 45764996.240282945 }
             const basePrice = await getHistoricalPrice(baseToken.address, startDateUnixSec);
-            resultsData.collateralsData[realCollateralTokenSymbol].collateral = {
+            resultsData.collateralsData[uniqueId].collateral = {
                 inKindSupply: currentSupply,
                 usdSupply: currentSupply * basePrice
             };
 
-            resultsData.collateralsData[realCollateralTokenSymbol].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateralToken.symbol, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider, vaultName);
+            resultsData.collateralsData[uniqueId].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateralToken.symbol, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider, vaultName);
         }
     }
 
