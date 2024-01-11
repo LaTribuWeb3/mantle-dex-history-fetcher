@@ -8,17 +8,12 @@ const { retry } = require('./utils');  // Import the retry ritual for resilience
 const IS_STAGING = process.env.STAGING_ENV && process.env.STAGING_ENV.toLowerCase() == 'true';
 const REPO_PATH = IS_STAGING ? 'goerli' : 'mainnet';
 
-// Summoning the Octokit with the authentication token, a key to the GitHub sanctum.
-const octokit = new Octokit({
-    auth: process.env.GH_TOKEN
-});
-
 // Function to acquire the SHA - the unique identifier of data in the GitHub repository.
-const getSha = async (fileName) => {
+const getSha = async (octokit, fileName, owner, repo, folderPath) => {
     try {
-        const res = await octokit.request(`Get /repos/{owner}/{repo}/contents/${REPO_PATH}/latest/{path}`, {
-            owner: 'LaTribuWeb3',
-            repo: 'risk-data-repo',
+        const res = await octokit.request(`Get /repos/{owner}/{repo}/contents/${folderPath}/latest/{path}`, {
+            owner: owner,
+            repo: repo,
             path: `${fileName}`,
         });
         return res.data.sha;
@@ -29,12 +24,18 @@ const getSha = async (fileName) => {
 };
 
 // Function to upload a JSON file to the GitHub repository.
-const uploadJsonFile = async (jsonString, fileName) => {
+const uploadJsonFile = async (jsonString, fileName, owner, repo, folder) => {
     try {
-        const sha = await getSha(fileName);
-        return octokit.request(`PUT /repos/{owner}/{repo}/contents/${REPO_PATH}/latest/{path}`, {
-            owner: 'LaTribuWeb3',
-            repo: 'risk-data-repo',
+        // Summoning the Octokit for each specific owner
+        
+        let octokit = new Octokit({
+            auth: owner === 'Risk-DAO' ? process.env.GH_TOKEN_RISKDAO : process.env.GH_TOKEN_TRIBU
+        });
+        const folderPath = folder ? folder + '/' + REPO_PATH : REPO_PATH;
+        const sha = await getSha(octokit, fileName, owner, repo, folderPath);
+        return octokit.request(`PUT /repos/{owner}/{repo}/contents/${folderPath}/latest/{path}`, {
+            owner: owner,
+            repo: repo,
             path: `${fileName}`,
             message: `risk data push ${new Date().toString()}`,
             sha,
@@ -51,5 +52,5 @@ const uploadJsonFile = async (jsonString, fileName) => {
 
 // Exporting the uploadJsonFile function, wrapped in the retry ritual for resilience.
 module.exports = {
-    uploadJsonFile: (file, filename) => retry(uploadJsonFile, [file, filename]),
+    uploadJsonFile: (file, filename, owner, repo, folder) => retry(uploadJsonFile, [file, filename, owner, repo, folder]),
 };
