@@ -256,7 +256,6 @@ async function uploadRiskIndexLevelToGithub() {
                 }
                 const extractedMarket = Object.keys(market)[0];
                 const marketToWrite = extractedMarket.split('_')[1];
-                console.log(marketToWrite);
                 objectToWrite[marketToWrite] = market[extractedMarket];
             }
             await uploadJsonFile(JSON.stringify(objectToWrite), k, 'Risk-DAO', 'simulation-results', 'risk-level-data');
