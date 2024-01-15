@@ -1,6 +1,7 @@
 const DATA_DIR = process.cwd() + '/data';
 const path = require('path');
 const fs = require('fs');
+const { average } = require('simple-statistics');
 
 function jsDateToString(date) {
     const dateObj = date;
@@ -58,7 +59,7 @@ function computeAverages(protocolData, numberOfDaysAccumulated) {
     averaged['protocolAverageHistory'] = protocolData['protocolAverage'];
     try {
         for (const [market, marketData] of Object.entries(protocolData)) {
-            if(market == 'protocolAverage') {
+            if (market == 'protocolAverage') {
                 continue;
             }
             if (!toAverage[market]) {
@@ -68,7 +69,7 @@ function computeAverages(protocolData, numberOfDaysAccumulated) {
                 const cptValues = Object.keys(collateralValues).length;
                 console.log(`${market} ${collateral}: values: ${cptValues}`);
 
-                if(cptValues < 180) {
+                if (cptValues < 180) {
                     // find discontinuity
                     checkDataDiscontinuity(collateralValues, cptValues);
                 }
@@ -83,6 +84,10 @@ function computeAverages(protocolData, numberOfDaysAccumulated) {
                             toAverage[market][collateral][volSpan] = {};
                         }
                         for (const [liqSpan, liquidityValue] of Object.entries(liquiditySpan)) {
+                            if (!toAverage[market][collateral][volSpan][liqSpan]) {
+                                toAverage[market][collateral][volSpan][liqSpan] = 0;
+                            }
+                            toAverage[market][collateral][volSpan][liqSpan] += liquidityValue;
                             if (daysAveraged === 7 || daysAveraged === 30 || daysAveraged === 180 || daysAveraged === numberOfDaysAccumulated) {
                                 if (!averaged[market]) {
                                     averaged[market] = {};
@@ -100,10 +105,7 @@ function computeAverages(protocolData, numberOfDaysAccumulated) {
                                     averaged[market][collateral][`${daysAveraged}D_averageSpan`][volSpan][liqSpan] = toAverage[market][collateral][volSpan][liqSpan] / daysAveraged;
                                 }
                             }
-                            if (!toAverage[market][collateral][volSpan][liqSpan]) {
-                                toAverage[market][collateral][volSpan][liqSpan] = 0;
-                            }
-                            toAverage[market][collateral][volSpan][liqSpan] += liquidityValue;
+                            
                         }
                     }
                 }
@@ -118,22 +120,21 @@ function computeAverages(protocolData, numberOfDaysAccumulated) {
 
 function checkDataDiscontinuity(collateralValues, cptValues) {
     const first = Object.keys(collateralValues)[0];
-    console.log(first);
+    // console.log(first);
     const firstSplitted = first.split('.').map(_ => Number(_));
     const date = new Date(firstSplitted[2], firstSplitted[1] - 1, firstSplitted[0], 12, 0, 0);
-    console.log(date);
+    // console.log(date);
 
     for (let i = 1; i < cptValues; i++) {
         const dt = Object.keys(collateralValues)[i];
         date.setDate(date.getDate() - 1);
 
         const formatedDate = `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`;
-        console.log(dt, formatedDate);
+        // console.log(dt, formatedDate);
         if (formatedDate != dt) {
             console.error(`Discontinuity error on date ${dt}, should be ${formatedDate}`);
             throw new Error(`Discontinuity error on date ${dt}, should be ${formatedDate}`);
         }
-
     }
 }
 
