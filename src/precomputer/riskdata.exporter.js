@@ -12,10 +12,11 @@ const { uploadJsonFile } = require('../utils/githubPusher');
 const { PLATFORMS, MORPHO_RISK_PARAMETERS_ARRAY } = require('../utils/constants');
 const { signData, generateTypedData } = require('../../scripts/signTypedData');
 const { getRollingVolatility, getLiquidity } = require('../data.interface/data.interface');
-const {  getConfTokenBySymbol } = require('../utils/token.utils');
+const { getConfTokenBySymbol } = require('../utils/token.utils');
 const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
 const { getStagingConfTokenBySymbol, riskDataTestNetConfig, riskDataConfig } = require('./precomputer.config');
 const { default: axios } = require('axios');
+const { morphoMarketTranslator } = require('../utils/morpho.utils');
 
 // Constants
 const RUN_EVERY_MINUTES = 6 * 60; // 6 hours in minutes
@@ -88,7 +89,7 @@ async function processAndUploadPair(pair) {
 
     const results = await generateAndSignRiskData(averagedLiquidity, volatilityData.latest.current, base, quote, IS_STAGING);
     const toUpload = JSON.stringify(results);
-    const fileName = IS_STAGING 
+    const fileName = IS_STAGING
         ? `${riskDataTestNetConfig[pair.base].substitute}_${riskDataTestNetConfig[pair.quote].substitute}`
         : `${pair.base}_${pair.quote}`;
     await uploadJsonFile(toUpload, fileName, 'LaTribuWeb3', 'risk-data-repo');
@@ -239,14 +240,31 @@ async function generateAndSignRiskData(averagedLiquidity, volatilityValue, baseT
     return signedRiskDatas;
 }
 
-async function uploadRiskIndexLevelToGithub(){
+async function uploadRiskIndexLevelToGithub() {
     const protocolsCall = await axios.get(`${process.env.RISK_API}/getaveragerisklevels`);
     await uploadJsonFile(JSON.stringify(protocolsCall.data), 'protocols_day_averages', 'Risk-DAO', 'simulation-results', 'risk-level-data');
 
-    for(const k of Object.keys(protocolsCall.data)){
-
+    for (const k of Object.keys(protocolsCall.data)) {
         const dataCall = await axios.get(`${process.env.RISK_API}/getcurrentaverageclfs?latest=true&platform=${k}`);
-        await uploadJsonFile(JSON.stringify(dataCall.data), k, 'Risk-DAO', 'simulation-results', 'risk-level-data');
+
+        if (k === 'morpho') {
+            const objectToWrite = {};
+            objectToWrite['protocolAverageHistory'] = dataCall.data['protocolAverageHistory'];
+            for (const [vault, market] of Object.entries(dataCall.data)) {
+                if (vault === 'protocolAverageHistory') {
+                    continue;
+                }
+                const extractedMarket = Object.keys(market)[0];
+                const marketToWrite = extractedMarket.split('_')[1];
+                console.log(marketToWrite);
+                objectToWrite[marketToWrite] = market[extractedMarket];
+            }
+            await uploadJsonFile(JSON.stringify(objectToWrite), k, 'Risk-DAO', 'simulation-results', 'risk-level-data');
+
+        }
+        else {
+            await uploadJsonFile(JSON.stringify(dataCall.data), k, 'Risk-DAO', 'simulation-results', 'risk-level-data');
+        }
     }
 }
 
