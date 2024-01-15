@@ -267,10 +267,6 @@ const watchedPairs = {
             pivots: undefined
         },
         {
-            quote: 'wstETH',
-            pivots: undefined
-        },
-        {
             quote: 'WBTC',
             pivots: undefined
         },
@@ -376,6 +372,10 @@ const watchedPairs = {
             pivotsSpecific: {
                 'sushiswapv2': ['WETH']
             }
+        },
+        {
+            quote: 'wstETH',
+            pivots: undefined,
         },
     ],
     'WBTC': [
