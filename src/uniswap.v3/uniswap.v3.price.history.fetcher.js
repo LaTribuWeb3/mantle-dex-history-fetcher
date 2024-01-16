@@ -333,6 +333,11 @@ async function fetchEvents(startBlock, endBlock, contract, token0Conf, token1Con
         if(events.length != 0) {
             for(const e of events) {
 
+                // for the wstETH/WETH pool, ignore block 15952167 because of 1.28 price that is an outlier
+                if(e.blockNumber == 15952167 && token0Conf.symbol == 'wstETH' && token1Conf.symbol == 'WETH') {
+                    continue;
+                }
+
                 const token0Amount = Math.abs(normalize(e.args.amount0, token0Conf.decimals));
                 if(token0Amount < token0Conf.dustAmount) {
                     continue;
@@ -341,6 +346,7 @@ async function fetchEvents(startBlock, endBlock, contract, token0Conf, token1Con
                 if(token1Amount < token1Conf.dustAmount) {
                     continue;
                 }
+
                 swapResults.push({
                     block: e.blockNumber,
                     price: token1Amount/token0Amount
