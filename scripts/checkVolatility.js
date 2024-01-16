@@ -1,4 +1,4 @@
-const { getPricesAtBlockForIntervalViaPivot } = require('../src/data.interface/internal/data.interface.utils');
+const { getPricesAtBlockForIntervalViaPivot, getPricesAtBlockForIntervalViaPivots } = require('../src/data.interface/internal/data.interface.utils');
 const { medianPricesOverBlocks, computeBiggestDailyChange, rollingBiggestDailyChange } = require('../src/utils/volatility');
 const { ethers } = require('ethers');
 const fs = require('fs');
@@ -8,22 +8,17 @@ const { getRollingVolatility } = require('../src/data.interface/data.interface')
 
 async function checkVolatility() {
 
+    const base = 'wstETH';
+    const quote = 'WETH';
+    const prices = getPricesAtBlockForIntervalViaPivots('uniswapv3', base, quote, 0, 19_000_000);
+    const medianed = medianPricesOverBlocks(prices, undefined);
+
     const web3Provider = new ethers.providers.StaticJsonRpcProvider('https://eth.llamarpc.com');
+    const volatility_all= await rollingBiggestDailyChange(medianed, web3Provider);
+    fs.writeFileSync('volatility.json', JSON.stringify(volatility_all, null, 2));
 
-    const base = 'DAI';
-    const quote = 'USDC';
-    const volatility_univ3 = await getRollingVolatility('uniswapv3', base, quote, web3Provider);
-    const volatility_all = await getRollingVolatility('all', base, quote, web3Provider);
-    const volatility_curve = await getRollingVolatility('curve', base, quote, web3Provider);
-    const volatility_univ2 = await getRollingVolatility('uniswapv2', base, quote, web3Provider);
-    const volatility_sushiv2 = await getRollingVolatility('sushiswapv2', base, quote, web3Provider);
-
-    console.log(volatility_all.latest.current);
-    console.log(volatility_univ3.latest.current);
-    console.log(volatility_curve.latest.current);
-    console.log(volatility_univ2.latest.current);
-    console.log(volatility_sushiv2.latest.current);
-
+    // const volatility_all = await getRollingVolatility('all', base, quote, web3Provider);
+    // fs.writeFileSync('volatility.json', JSON.stringify(volatility_all, null, 2));
 
     // const volatility_1y = await getRollingVolatility('uniswapv3', 'wstETH', 'WETH', web3Provider);
     // fs.writeFileSync('volatility.json', JSON.stringify(volatility_1y, null, 2));
