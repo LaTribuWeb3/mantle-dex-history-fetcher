@@ -5,10 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 const { additionalLiquidityConfig } = require('./precomputer.config');
-const { utils } = require('ethers');
-const { getAverageLiquidity } = require('../data.interface/data.interface');
 const { DATA_DIR } = require('../utils/constants');
-const { getUnifiedDataForIntervalByFilename, extractDataFromUnifiedLine } = require('../data.interface/internal/data.interface.utils');
+const { extractDataFromUnifiedLine } = require('../data.interface/internal/data.interface.utils');
 const { getPrices } = require('../data.interface/internal/data.interface.price');
 dotenv.config();
 
@@ -18,7 +16,7 @@ const WORKER_NAME = 'Additional Liquidity Computer';
 
 async function AdditionalLiquidityComputer(onlyOnce = false) {
     // eslint-disable-next-line no-constant-condition
-    console.log('Starting additional liquidity computer')
+    console.log('Starting additional liquidity computer');
     // eslint-disable-next-line no-constant-condition
     while(true) {
         const start = Date.now();
