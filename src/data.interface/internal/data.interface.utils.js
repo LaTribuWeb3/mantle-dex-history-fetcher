@@ -2,7 +2,7 @@
 const path = require('path');
 const fs = require('fs');
 const { DATA_DIR, DEFAULT_STEP_BLOCK, MEDIAN_OVER_BLOCK } = require('../../utils/constants');
-const { fnName, logFnDurationWithLabel, getDataFileNameFromToForPlatform } = require('../../utils/utils');
+const { fnName, logFnDurationWithLabel } = require('../../utils/utils');
 
 /**
  * 
@@ -283,11 +283,11 @@ function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, to
         return getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
     }
 
-    const fullFilename = getDataFileNameFromToForPlatform(fromSymbol, toSymbol, platform);
-
+    const filename = `${fromSymbol}-${toSymbol}-unified-data.csv`;
     // generate pool name using fromsymbol and tosymbol sorted by alphabetical order
     // so that for example the pair USDC/WETH and WETH/USDC are not used two times (because it would come from the same pool)
     const poolName = [fromSymbol, toSymbol].sort((a,b) => a.localeCompare(b)).join('-') + '-pool';
+    const fullFilename = path.join(DATA_DIR, 'precomputed', platform, filename);
 
     if(alreadyUsedPools.includes(poolName)) {
         console.log(`pool ${poolName} already used, cannot reuse it`);

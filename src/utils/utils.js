@@ -1,9 +1,6 @@
 const fs = require('fs');
 const dotenv = require('dotenv');
-const path = require('path');
 dotenv.config();
-
-const { DATA_DIR } = require('../utils/constants');
 
 // various utils fct
 
@@ -190,9 +187,4 @@ function arrayAverage(array) {
     return array.reduce((a, b) => a + b, 0) / array.length;
 }
 
-function getDataFileNameFromToForPlatform(fromSymbol, toSymbol, platform) {
-    const filename = `${fromSymbol}-${toSymbol}-unified-data.csv`;
-    return path.join(DATA_DIR, 'precomputed', platform, filename);
-}
-
-module.exports = { getDataFileNameFromToForPlatform, retry, sleep, fnName, roundTo, getDay, logFnDuration, logFnDurationWithLabel, readLastLine, arrayAverage, retrySync };
+module.exports = { retry, sleep, fnName, roundTo, getDay, logFnDuration, logFnDurationWithLabel, readLastLine, arrayAverage, retrySync };
