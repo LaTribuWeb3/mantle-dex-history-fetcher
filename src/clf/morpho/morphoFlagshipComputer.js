@@ -11,6 +11,7 @@ const { config, morphoBlueAbi, metamorphoAbi } = require('./morphoFlagshipComput
 const { RecordMonitoring } = require('../../utils/monitoring');
 const { DATA_DIR, PLATFORMS } = require('../../utils/constants');
 const { getLiquidity, getRollingVolatility } = require('../../data.interface/data.interface');
+const { morphoMarketTranslator } = require('../../utils/morpho.utils');
 const spans = [7, 30, 180];
 
 // morphoFlagshipComputer(60);
@@ -142,8 +143,9 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
     for(const marketId of marketIds) {
         const marketParams = await morphoBlue.idToMarketParams(marketId, {blockTag: endBlock});
         if(marketParams.collateralToken != ethers.constants.AddressZero) {
-            const realCollateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
             let collateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
+            const realCollateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
+            const uniqueId = `${realCollateralTokenSymbol}_${marketId}`;
             if(collateralTokenSymbol == 'wstETH') {
                 collateralTokenSymbol = 'stETH';
             }
@@ -164,15 +166,15 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
                 LTV
             };
 
-            resultsData.collateralsData[realCollateralTokenSymbol] = {};
+            resultsData.collateralsData[uniqueId] = {};
             // collateral data { inKindSupply: 899999.9260625947, usdSupply: 45764996.240282945 }
             const basePrice = await getHistoricalPrice(baseToken.address, startDateUnixSec);
-            resultsData.collateralsData[realCollateralTokenSymbol].collateral = {
+            resultsData.collateralsData[uniqueId].collateral = {
                 inKindSupply: currentSupply,
                 usdSupply: currentSupply * basePrice
             };
 
-            resultsData.collateralsData[realCollateralTokenSymbol].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateralToken.symbol, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider, vaultName);
+            resultsData.collateralsData[uniqueId].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateralToken.symbol, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider, vaultName);
         }
     }
 
@@ -342,8 +344,9 @@ function recordParameters(pair, data, timestamp) {
     if (!fs.existsSync(`${DATA_DIR}/clf/morpho/${date}`)) {
         fs.mkdirSync(`${DATA_DIR}/clf/morpho/${date}`, {recursive: true});
     }
+    const withUniqueId = pair.split('-')[0] + '_' + morphoMarketTranslator(pair) + ('-') + pair.split('-')[1];
 
-    const datedProtocolFilename = path.join(DATA_DIR, `clf/morpho/${date}/${date}_${pair}_morpho_CLFs.json`);
+    const datedProtocolFilename = path.join(DATA_DIR, `clf/morpho/${date}/${date}_${withUniqueId}_morpho_CLFs.json`);
     const objectToWrite = JSON.stringify(data, null, 2);
     console.log('recording results');
     try {
