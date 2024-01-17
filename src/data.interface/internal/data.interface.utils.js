@@ -271,14 +271,6 @@ function readAllPricesFromFilename(fullFilename, fromBlock, toBlock) {
  * @returns {{unifiedData: {[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}, usedPools: string[]}}
  */
 function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK, alreadyUsedPools) {
-    if(fromSymbol == 'stETH' && toSymbol == 'wstETH') {
-        return specificUnifiedDataForIntervalForstETHwstETH('WETH','wstETH', fromBlock, toBlock, stepBlock, alreadyUsedPools);
-    }
-    
-    if (fromSymbol == 'wstETH' && toSymbol == 'stETH') {
-        return specificUnifiedDataForIntervalForstETHwstETH('wstETH','WETH', fromBlock, toBlock, stepBlock, alreadyUsedPools);
-    }
-
     if(platform == 'curve') {
         return getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
     }
@@ -401,34 +393,6 @@ function getUnifiedDataForIntervalByFilename(fullFilename, fromBlock, toBlock, s
 
 function readDataFromFile(fullFilename) {
     return fs.readFileSync(fullFilename, 'utf-8').split('\n');
-}
-
-/**
- * specific case for stETH/wstETH = always return infinite liquidity based on WETH/wstETH from uniswapv3
- * @param {number} fromBlock 
- * @param {number} toBlock 
- * @param {number} stepBlock 
- */
-function specificUnifiedDataForIntervalForstETHwstETH(base, quote, fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK, alreadyUsedPools) {
-    const poolName = `${base}-${quote}-fakepool`;
-    if(alreadyUsedPools.includes(poolName)) {
-        console.log(`pool ${poolName} already used, cannot reuse it`);
-        return { unifiedData: undefined, usedPools: [] };
-    }
-
-    const filename = `${base}-${quote}-unified-data.csv`;
-    const fullFilename = path.join(DATA_DIR, 'precomputed', 'uniswapv3', filename);
-
-    const unifiedData = getUnifiedDataForIntervalByFilename(fullFilename, fromBlock, toBlock, stepBlock);
-
-    for(const data of Object.values(unifiedData)) {
-        for(const slippageBps of Object.keys(data.slippageMap)) {
-            data.slippageMap[slippageBps].base = 1e9 * data.slippageMap[slippageBps].base;
-            data.slippageMap[slippageBps].quote = 1e9 * data.slippageMap[slippageBps].quote;
-        }
-    }
-
-    return  { unifiedData, usedPools: [poolName]};
 }
 
 function getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK, alreadyUsedPools) {
