@@ -20,7 +20,8 @@ const fetchersToStart = [
     CurvePriceHistoryFetcher,
     UniswapV3HistoryFetcher,
     UniswapV3PriceHistoryFetcher,
-    PrecomputeMedianPrices
+    PrecomputeMedianPrices,
+    AdditionalLiquidityComputer,
 ];
 
 async function LaunchFetchers() {
