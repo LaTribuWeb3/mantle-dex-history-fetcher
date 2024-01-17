@@ -544,4 +544,4 @@ function extractDataFromUnifiedLine(line) {
     };
 }
 
-module.exports = { getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, readMedianPricesFile, getPricesAtBlockForIntervalViaPivots };
+module.exports = { getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, readMedianPricesFile, getPricesAtBlockForIntervalViaPivots, getUnifiedDataForIntervalByFilename, extractDataFromUnifiedLine };

@@ -97,17 +97,21 @@ const additionalLiquidityConfig = {
     curve: [
         {
             from: 'stETH',
+            pivot: 'WETH',
             to: 'wstETH',
             priceSource: 'uniswapv3',
-            priceCurrency: 'WETH',
+            priceFrom: 'wstETH',
+            priceTo: 'WETH',
         }
     ],
     uniswapv3: [
         {
             from: 'wstETH',
+            pivot: 'WETH',
             to: 'stETH',
             priceSource: 'uniswapv3',
-            priceCurrency: 'WETH',
+            priceFrom: 'WETH',
+            priceTo: 'wstETH',
         }
     ]
 };
