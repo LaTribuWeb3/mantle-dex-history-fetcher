@@ -241,6 +241,9 @@ async function generateAndSignRiskData(averagedLiquidity, volatilityValue, baseT
 }
 
 async function uploadRiskIndexLevelToGithub() {
+    const IS_STAGING = process.env.RISK_STAGING_ENV && process.env.RISK_STAGING_ENV.toLowerCase() === 'true';
+    const repoPath = IS_STAGING ? 'goerli' : 'mainnet';
+
     const protocolsCall = await axios.get(`${process.env.RISK_API}/getaveragerisklevels`);
     await uploadJsonFile(JSON.stringify(protocolsCall.data), 'protocols_day_averages', 'Risk-DAO', 'simulation-results', 'risk-level-data');
 
@@ -258,11 +261,10 @@ async function uploadRiskIndexLevelToGithub() {
                 const marketToWrite = extractedMarket.split('_')[1];
                 objectToWrite[marketToWrite] = market[extractedMarket];
             }
-            await uploadJsonFile(JSON.stringify(objectToWrite), k, 'Risk-DAO', 'simulation-results', 'risk-level-data');
-
+            await uploadJsonFile(JSON.stringify(objectToWrite), k, 'Risk-DAO', 'simulation-results', 'risk-level-data', repoPath);
         }
         else {
-            await uploadJsonFile(JSON.stringify(dataCall.data), k, 'Risk-DAO', 'simulation-results', 'risk-level-data');
+            await uploadJsonFile(JSON.stringify(dataCall.data), k, 'Risk-DAO', 'simulation-results', 'risk-level-data', repoPath);
         }
     }
 }

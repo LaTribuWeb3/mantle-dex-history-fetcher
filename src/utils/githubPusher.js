@@ -24,14 +24,14 @@ const getSha = async (octokit, fileName, owner, repo, folderPath) => {
 };
 
 // Function to upload a JSON file to the GitHub repository.
-const uploadJsonFile = async (jsonString, fileName, owner, repo, folder) => {
+const uploadJsonFile = async (jsonString, fileName, owner, repo, folder, repoPath=REPO_PATH) => {
     try {
         // Summoning the Octokit for each specific owner
         
         let octokit = new Octokit({
             auth: owner === 'Risk-DAO' ? process.env.GH_TOKEN_RISKDAO : process.env.GH_TOKEN_TRIBU
         });
-        const folderPath = folder ? folder + '/' + REPO_PATH : REPO_PATH;
+        const folderPath = folder ? folder + '/' + repoPath : repoPath;
         const sha = await getSha(octokit, fileName, owner, repo, folderPath);
         return octokit.request(`PUT /repos/{owner}/{repo}/contents/${folderPath}/latest/{path}`, {
             owner: owner,
@@ -52,5 +52,5 @@ const uploadJsonFile = async (jsonString, fileName, owner, repo, folder) => {
 
 // Exporting the uploadJsonFile function, wrapped in the retry ritual for resilience.
 module.exports = {
-    uploadJsonFile: (file, filename, owner, repo, folder) => retry(uploadJsonFile, [file, filename, owner, repo, folder]),
+    uploadJsonFile: (file, filename, owner, repo, folder, repoPath) => retry(uploadJsonFile, [file, filename, owner, repo, folder, repoPath]),
 };
