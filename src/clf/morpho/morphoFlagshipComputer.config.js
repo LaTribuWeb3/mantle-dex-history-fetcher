@@ -14,7 +14,7 @@ const config = {
         {   
             name: 'Flagship-USDC',
             baseAsset: 'USDC',
-            address: '0x186514400e52270cef3d80e1c6f8d10a75d47344'
+            address: '0x186514400e52270cef3D80e1c6F8d10A75d47344'
         }
         ],
     blueAddress: '0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb',
