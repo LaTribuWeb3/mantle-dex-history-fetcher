@@ -112,6 +112,22 @@ const additionalLiquidityConfig = {
             priceSource: 'uniswapv3',
             priceFrom: 'WETH',
             priceTo: 'wstETH',
+        },
+        {
+            from: 'wstETH',
+            pivot: 'USDC',
+            to: 'stETH',
+            priceSource: 'uniswapv3',
+            priceFrom: 'WETH',
+            priceTo: 'wstETH',
+        },
+        {
+            from: 'wstETH',
+            pivot: 'WBTC',
+            to: 'stETH',
+            priceSource: 'uniswapv3',
+            priceFrom: 'WETH',
+            priceTo: 'wstETH',
         }
     ]
 };
