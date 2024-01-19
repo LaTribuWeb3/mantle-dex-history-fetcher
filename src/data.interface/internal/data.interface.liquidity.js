@@ -104,13 +104,6 @@ function getSlippageMapForIntervalWithJumps(fromSymbol, toSymbol, fromBlock, toB
     }
     
     const pivots = structuredClone(PIVOTS);
-    if([fromSymbol, toSymbol].includes('stETH')) {
-        pivots.push('wstETH');
-    }
-    if([fromSymbol, toSymbol].includes('wstETH')) {
-        pivots.push('stETH');
-    }
-
     const pivotData = getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
     if(!data.unifiedData) {
         // if no data and no pivot data, can return undefined: we don't have any liquidity even
