@@ -56,6 +56,7 @@ function unifyProtocolData(protocol) {
 function computeAverages(protocolData, numberOfDaysAccumulated) {
     const toAverage = {};
     const averaged = {};
+    const minimumDataPoints = [];
     averaged['protocolAverageHistory'] = protocolData['protocolAverage'];
     try {
         for (const [market, marketData] of Object.entries(protocolData)) {
@@ -67,6 +68,7 @@ function computeAverages(protocolData, numberOfDaysAccumulated) {
             }
             for (const [collateral, collateralValues] of Object.entries(marketData)) {
                 const cptValues = Object.keys(collateralValues).length;
+                minimumDataPoints.push(Object.keys(collateralValues).length);
                 console.log(`${market} ${collateral}: values: ${cptValues}`);
 
                 if (cptValues < 180) {
@@ -88,7 +90,7 @@ function computeAverages(protocolData, numberOfDaysAccumulated) {
                                 toAverage[market][collateral][volSpan][liqSpan] = 0;
                             }
                             toAverage[market][collateral][volSpan][liqSpan] += liquidityValue;
-                            if (daysAveraged === 7 || daysAveraged === 30 || daysAveraged === 180 || daysAveraged === numberOfDaysAccumulated) {
+                            if (daysAveraged === 7 || daysAveraged === 30 || daysAveraged === 180 || (minimumDataPoints.includes(daysAveraged) && daysAveraged < 7) || daysAveraged === numberOfDaysAccumulated) {
                                 if (!averaged[market]) {
                                     averaged[market] = {};
                                 }
