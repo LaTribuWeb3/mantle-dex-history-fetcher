@@ -11,7 +11,6 @@ const { config, morphoBlueAbi, metamorphoAbi } = require('./morphoFlagshipComput
 const { RecordMonitoring } = require('../../utils/monitoring');
 const { DATA_DIR, PLATFORMS } = require('../../utils/constants');
 const { getLiquidity, getRollingVolatility } = require('../../data.interface/data.interface');
-const { morphoMarketTranslator } = require('../../utils/morpho.utils');
 const spans = [7, 30, 180];
 
 // morphoFlagshipComputer(60);
