@@ -6,10 +6,11 @@
 //////////// THE FETCHERS //////////////
 
 const { getPrices } = require('./internal/data.interface.price');
-const { getAverageLiquidityForInterval, getSlippageMapForInterval } = require('./internal/data.interface.liquidity');
+const { getAverageLiquidityForInterval, getSlippageMapForInterval, getLiquidityAccrossDexes } = require('./internal/data.interface.liquidity');
 const { logFnDurationWithLabel } = require('../utils/utils');
 const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA } = require('../utils/constants');
 const { rollingBiggestDailyChange } = require('../utils/volatility');
+const { getBlankUnifiedData, getUnifiedDataForInterval, getDefaultSlippageMap } = require('./internal/data.interface.utils');
 
 
 //    _____  _   _  _______  ______  _____   ______        _____  ______     ______  _    _  _   _   _____  _______  _____  ____   _   _   _____ 
@@ -58,6 +59,12 @@ function getLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJu
     return liquidity;
 }
 
+function getLiquidityV2(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock = DEFAULT_STEP_BLOCK) {
+    return getLiquidityAccrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock);
+}
+
+
+
 async function getRollingVolatility(platform, fromSymbol, toSymbol, web3Provider, lambda = LAMBDA) {
     // find the median file
     const medianPrices = getPrices(platform, fromSymbol, toSymbol);
@@ -88,4 +95,4 @@ function checkPlatform(platform) {
     }
 }
 
-module.exports = { getAverageLiquidity, getLiquidity, getRollingVolatility };
+module.exports = { getAverageLiquidity, getLiquidity, getRollingVolatility, getLiquidityV2};
