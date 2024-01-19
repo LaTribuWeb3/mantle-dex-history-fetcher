@@ -10,6 +10,7 @@ const { CurvePriceHistoryFetcher } = require('../curve/curve.price.history.fetch
 const { UniswapV3PriceHistoryFetcher } = require('../uniswap.v3/uniswap.v3.price.history.fetcher');
 const { PrecomputeMedianPrices } = require('../precomputer/median.precomputer');
 const { UpdateSyncFile, SYNC_FILENAMES } = require('../utils/sync');
+const { AdditionalLiquidityComputer } = require('../precomputer/additional.liquidity.postcomputer');
 
 const RUN_EVERY_MINUTES = 60;
 

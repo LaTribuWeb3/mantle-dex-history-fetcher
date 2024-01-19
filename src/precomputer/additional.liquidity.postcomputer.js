@@ -149,5 +149,5 @@ function getClosestPrice(prices, blocknumber) {
     return eligiblePrices[0].price;
 }
 
-AdditionalLiquidityComputer(true);
+// AdditionalLiquidityComputer(true);
 module.exports = { AdditionalLiquidityComputer };
