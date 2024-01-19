@@ -448,7 +448,11 @@ async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, col
     console.log('parameters', parameters);
 
 
+<<<<<<< Updated upstream
     recordParameters(marketId, `${from}-${baseAsset}`, { parameters, assetParameters }, startDate, vaultname);
+=======
+    recordParameters(marketId, `${from == 'stETH' ? 'wstETH': from}-${baseAsset}`, { parameters, assetParameters }, startDate, vaultname);
+>>>>>>> Stashed changes
     /// compute CLFs for all spans and all volatilities
     const results = {};
     for(const volatilitySpan of spans) {
