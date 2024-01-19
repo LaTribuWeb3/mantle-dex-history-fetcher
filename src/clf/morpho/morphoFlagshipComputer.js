@@ -462,6 +462,5 @@ async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, col
     return results;
 }
 
-morphoFlagshipComputer(0);
 
 module.exports = { morphoFlagshipComputer };
