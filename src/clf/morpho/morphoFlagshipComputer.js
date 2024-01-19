@@ -16,7 +16,7 @@ const spans = [7, 30, 180];
 
 // morphoFlagshipComputer(60);
 /**
- * Compute the CLFs values for compound v3
+ * Compute the CLFs values for Morpho
  * @param {number} fetchEveryMinutes 
  */
 async function morphoFlagshipComputer(fetchEveryMinutes, startDate=Date.now()) {
@@ -59,7 +59,7 @@ async function morphoFlagshipComputer(fetchEveryMinutes, startDate=Date.now()) {
         const averagePerAsset = {};
         const startDateUnixSecond = Math.round(startDate/1000);
 
-        /// for all pools in compound v3
+        /// for all vaults in morpho config
         for (const vault of Object.values(config.vaults)) {
             const clfValue = await computeCLFForVault(config.blueAddress, vault.address, vault.name, vault.baseAsset, web3Provider, fromBlocks, currentBlock, startDateUnixSecond);
             if(clfValue) {
@@ -90,7 +90,7 @@ async function morphoFlagshipComputer(fetchEveryMinutes, startDate=Date.now()) {
         console.log('firing record function');
         recordResults(toRecord, startDate);
 
-        console.log('CompoundV3 CLF Computer: ending');
+        console.log('Morpho CLF Computer: ending');
 
         const runEndDate = Math.round(Date.now() / 1000);
         await RecordMonitoring({
@@ -143,12 +143,8 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
     for(const marketId of marketIds) {
         const marketParams = await morphoBlue.idToMarketParams(marketId, {blockTag: endBlock});
         if(marketParams.collateralToken != ethers.constants.AddressZero) {
-            let collateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
-            const realCollateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
-            const uniqueId = `${realCollateralTokenSymbol}_${marketId}`;
-            if(collateralTokenSymbol == 'wstETH') {
-                collateralTokenSymbol = 'stETH';
-            }
+            const collateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
+            const uniqueId = `${collateralTokenSymbol}_${marketId}`;
             console.log(`market collateral is ${collateralTokenSymbol}`);
             const collateralToken = getConfTokenBySymbol(collateralTokenSymbol);
             const marketConfig = await metamorphoVault.config(marketId, {blockTag: endBlock});
@@ -174,7 +170,7 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
                 usdSupply: currentSupply * basePrice
             };
 
-            resultsData.collateralsData[uniqueId].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateralToken.symbol, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider, vaultName);
+            resultsData.collateralsData[uniqueId].clfs = await computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralToken.symbol, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider, vaultName);
         }
     }
 
@@ -339,12 +335,12 @@ function computeProtocolWeightedCLF(protocolData) {
     return weightedCLF;
 }
 
-function recordParameters(pair, data, timestamp) {
+function recordParameters(marketId, pair, data, timestamp) {
     const date = getDay(timestamp);
     if (!fs.existsSync(`${DATA_DIR}/clf/morpho/${date}`)) {
         fs.mkdirSync(`${DATA_DIR}/clf/morpho/${date}`, {recursive: true});
     }
-    const withUniqueId = pair.split('-')[0] + '_' + morphoMarketTranslator(pair) + ('-') + pair.split('-')[1];
+    const withUniqueId = pair.split('-')[0] + '_' + marketId + ('-') + pair.split('-')[1];
 
     const datedProtocolFilename = path.join(DATA_DIR, `clf/morpho/${date}/${date}_${withUniqueId}_morpho_CLFs.json`);
     const objectToWrite = JSON.stringify(data, null, 2);
@@ -354,7 +350,7 @@ function recordParameters(pair, data, timestamp) {
     }
     catch (error) {
         console.error(error);
-        console.log('Compound Computer failed to write files');
+        console.log('Morpho Computer failed to write files');
     }
 }
 
@@ -376,7 +372,7 @@ function recordResults(results, timestamp) {
     }
     catch (error) {
         console.error(error);
-        console.log('Compound Computer failed to write files');
+        console.log('Morpho Computer failed to write files');
     }
 }
 
@@ -390,7 +386,7 @@ function recordResults(results, timestamp) {
  * @param {number} endBlock 
  * @returns {Promise<{7: {volatility: number, liquidity: number}, 30: {volatility: number, liquidity: number}, 180: {volatility: number, liquidity: number}}>}
  */
-async function computeMarketCLFBiggestDailyChange(assetParameters, collateralSymbol , baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider, vaultname) {
+async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralSymbol , baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider, vaultname) {
     const startDate = new Date(startDateUnixSec * 1000);
     const from = collateralSymbol;
 
@@ -438,7 +434,7 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateralSym
             if(blockNumberForSpan.length > 0) {
                 let sumLiquidityForTargetSlippageBps = 0;
                 for(const blockNumber of blockNumberForSpan) {
-                    sumLiquidityForTargetSlippageBps += fullLiquidityDataForPlatform[blockNumber].slippageMap[assetParameters.liquidationBonusBPS].base;
+                    sumLiquidityForTargetSlippageBps += fullLiquidityDataForPlatform[blockNumber].slippageMap[assetParameters.liquidationBonusBPS].quote;
                 }
     
                 liquidityToAdd = sumLiquidityForTargetSlippageBps / blockNumberForSpan.length;
@@ -452,7 +448,7 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateralSym
     console.log('parameters', parameters);
 
 
-    recordParameters(`${from == 'stETH' ? 'wstETH': from}-${baseAsset}`, { parameters, assetParameters }, startDate, vaultname);
+    recordParameters(marketId, `${from}-${baseAsset}`, { parameters, assetParameters }, startDate, vaultname);
     /// compute CLFs for all spans and all volatilities
     const results = {};
     for(const volatilitySpan of spans) {
@@ -465,5 +461,6 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateralSym
     console.log('results', results);
     return results;
 }
+
 
 module.exports = { morphoFlagshipComputer };
