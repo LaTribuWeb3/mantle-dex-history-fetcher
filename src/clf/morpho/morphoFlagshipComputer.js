@@ -143,12 +143,8 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
     for(const marketId of marketIds) {
         const marketParams = await morphoBlue.idToMarketParams(marketId, {blockTag: endBlock});
         if(marketParams.collateralToken != ethers.constants.AddressZero) {
-            let collateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
-            const realCollateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
-            const uniqueId = `${realCollateralTokenSymbol}_${marketId}`;
-            if(collateralTokenSymbol == 'wstETH') {
-                collateralTokenSymbol = 'stETH';
-            }
+            const collateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
+            const uniqueId = `${collateralTokenSymbol}_${marketId}`;
             console.log(`market collateral is ${collateralTokenSymbol}`);
             const collateralToken = getConfTokenBySymbol(collateralTokenSymbol);
             const marketConfig = await metamorphoVault.config(marketId, {blockTag: endBlock});
@@ -438,7 +434,7 @@ async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, col
             if(blockNumberForSpan.length > 0) {
                 let sumLiquidityForTargetSlippageBps = 0;
                 for(const blockNumber of blockNumberForSpan) {
-                    sumLiquidityForTargetSlippageBps += fullLiquidityDataForPlatform[blockNumber].slippageMap[assetParameters.liquidationBonusBPS].base;
+                    sumLiquidityForTargetSlippageBps += fullLiquidityDataForPlatform[blockNumber].slippageMap[assetParameters.liquidationBonusBPS].quote;
                 }
     
                 liquidityToAdd = sumLiquidityForTargetSlippageBps / blockNumberForSpan.length;
@@ -452,7 +448,7 @@ async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, col
     console.log('parameters', parameters);
 
 
-    recordParameters(marketId, `${from == 'stETH' ? 'wstETH': from}-${baseAsset}`, { parameters, assetParameters }, startDate, vaultname);
+    recordParameters(marketId, `${from}-${baseAsset}`, { parameters, assetParameters }, startDate, vaultname);
     /// compute CLFs for all spans and all volatilities
     const results = {};
     for(const volatilitySpan of spans) {
@@ -465,5 +461,7 @@ async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, col
     console.log('results', results);
     return results;
 }
+
+morphoFlagshipComputer(0);
 
 module.exports = { morphoFlagshipComputer };
