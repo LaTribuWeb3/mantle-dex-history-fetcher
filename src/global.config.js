@@ -407,6 +407,10 @@ const watchedPairs = {
             quote: 'USDT',
             pivots: ['WETH']
         },
+        {
+            quote: 'wstETH',
+            pivots: ['WETH']
+        },
     ]
 };
 
