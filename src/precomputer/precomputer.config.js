@@ -93,4 +93,43 @@ function getStagingConfTokenBySymbol(symbol) {
     return tokenConf;
 }
 
-module.exports = { pairsToCompute, riskDataConfig, riskDataTestNetConfig, getStagingConfTokenBySymbol };
+const additionalLiquidityConfig = {
+    curve: [
+        {
+            from: 'stETH',
+            pivot: 'WETH',
+            to: 'wstETH',
+            priceSource: 'uniswapv3',
+            priceFrom: 'wstETH',
+            priceTo: 'WETH',
+        }
+    ],
+    uniswapv3: [
+        {
+            from: 'wstETH',
+            pivot: 'WETH',
+            to: 'stETH',
+            priceSource: 'uniswapv3',
+            priceFrom: 'WETH',
+            priceTo: 'wstETH',
+        },
+        {
+            from: 'wstETH',
+            pivot: 'USDC',
+            to: 'stETH',
+            priceSource: 'uniswapv3',
+            priceFrom: 'WETH',
+            priceTo: 'wstETH',
+        },
+        {
+            from: 'wstETH',
+            pivot: 'WBTC',
+            to: 'stETH',
+            priceSource: 'uniswapv3',
+            priceFrom: 'WETH',
+            priceTo: 'wstETH',
+        }
+    ]
+};
+
+module.exports = { pairsToCompute, riskDataConfig, riskDataTestNetConfig, getStagingConfTokenBySymbol, additionalLiquidityConfig };
