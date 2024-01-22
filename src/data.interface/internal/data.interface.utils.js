@@ -278,7 +278,7 @@ function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, to
     const filename = `${fromSymbol}-${toSymbol}-unified-data.csv`;
     // generate pool name using fromsymbol and tosymbol sorted by alphabetical order
     // so that for example the pair USDC/WETH and WETH/USDC are not used two times (because it would come from the same pool)
-    const poolName = [fromSymbol, toSymbol].sort((a,b) => a.localeCompare(b)).join('-') + '-pool';
+    const poolName = [fromSymbol, toSymbol].sort((a,b) => a.localeCompare(b)).join('-') + `-${platform}-pool`;
     const fullFilename = path.join(DATA_DIR, 'precomputed', platform, filename);
 
     if(alreadyUsedPools.includes(poolName)) {
@@ -400,7 +400,7 @@ function getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBl
     const searchString = `${fromSymbol}-${toSymbol}`;
     const directory = path.join(DATA_DIR, 'precomputed', 'curve');
     const matchingFiles = fs.readdirSync(directory).filter(_ => _.startsWith(searchString) && _.endsWith('.csv'));
-    console.log(`found ${matchingFiles.length} matching files for ${searchString}`);
+    // console.log(`found ${matchingFiles.length} matching files for ${searchString}`);
 
     const usedPools = [];
     const unifiedDataForPools = [];
@@ -414,7 +414,7 @@ function getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBl
 
         const unifiedDataForFile = getUnifiedDataForIntervalByFilename(fullFilename, fromBlock, toBlock, stepBlock);
         if(unifiedDataForFile) {
-            console.log(`adding data from pool ${poolName}`);
+            // console.log(`adding data from pool ${poolName}`);
             unifiedDataForPools.push(unifiedDataForFile);
             usedPools.push(poolName);
         }

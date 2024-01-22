@@ -1,5 +1,5 @@
 const { computeAggregatedVolumeFromPivot } = require('../../utils/aggregator');
-const { DEFAULT_STEP_BLOCK } = require('../../utils/constants');
+const { DEFAULT_STEP_BLOCK, PLATFORMS } = require('../../utils/constants');
 const { fnName } = require('../../utils/utils');
 const { getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap } = require('./data.interface.utils');
 
@@ -234,4 +234,159 @@ function getPivotUnifiedData(pivots, platform, fromSymbol, toSymbol, fromBlock, 
     return pivotData;
 }
 
-module.exports = { getAverageLiquidityForInterval, getSlippageMapForInterval};
+function getLiquidityAccrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock = DEFAULT_STEP_BLOCK) {
+    const liquidityData = {};
+
+    // get the direct route liquidity from all dexes
+    const data = getSumSlippageMapAcrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock);
+
+
+    // init to 0 if no data
+    if (!data.unifiedData) {
+        data.unifiedData = getBlankUnifiedData(fromBlock, toBlock, stepBlock);
+        for (const block of Object.keys(data.unifiedData)) {
+            data.unifiedData[block].slippageMap = getDefaultSlippageMap();
+        }
+    }
+
+    const pivots = structuredClone(PIVOTS);
+    const pivotData = getPivotUnifiedDataAccrossDexes(pivots, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, data.usedPools);
+
+    for(const [blockNumber, platformData] of Object.entries(data.unifiedData)) {
+        liquidityData[blockNumber] = {
+            price: platformData.price,
+            slippageMap: getDefaultSlippageMap(),
+        };
+
+        const aggregatedSlippageMap = platformData.slippageMap ? structuredClone(platformData.slippageMap) : getDefaultSlippageMap();
+
+        // try to add pivot routes
+        for(const pivot of pivots) {
+            if(fromSymbol == pivot) {
+                continue;
+            }
+            if(toSymbol == pivot) {
+                continue;
+            }
+
+            const segment1DataForBlock = getPivotDataForBlock(pivotData, fromSymbol, pivot, blockNumber);
+                
+            if(!segment1DataForBlock) {
+                continue;
+            }
+
+            const segment2DataForBlock = getPivotDataForBlock(pivotData, pivot, toSymbol, blockNumber);
+            if(!segment2DataForBlock) {
+                continue;
+            }
+
+            if(!liquidityData[blockNumber].price) {
+                const computedPrice = segment1DataForBlock.price * segment2DataForBlock.price;
+                liquidityData[blockNumber].price = computedPrice;
+            }
+
+
+            for(const slippageBps of Object.keys(aggregatedSlippageMap)) {
+                const aggregVolume = computeAggregatedVolumeFromPivot(segment1DataForBlock.slippageMap, segment2DataForBlock.slippageMap, slippageBps);
+                aggregatedSlippageMap[slippageBps].base += aggregVolume.base;
+                aggregatedSlippageMap[slippageBps].quote += aggregVolume.quote;
+            }
+        }
+
+        for(const slippageBps of Object.keys(aggregatedSlippageMap)) {
+            const slippageToAdd = aggregatedSlippageMap[slippageBps];
+            liquidityData[blockNumber].slippageMap[slippageBps].base += slippageToAdd.base;
+            liquidityData[blockNumber].slippageMap[slippageBps].quote += slippageToAdd.quote;
+        }
+    }
+
+    console.log(`${fnName()}[${fromSymbol}/${toSymbol}]: used pivots ${pivots} and pools ${data.usedPools}`);
+    // console.log(`[${fromSymbol}/${toSymbol}] | [ALL] | 5% slippage: ${liquidityData[fromBlock].slippageMap[500].base}`);
+
+    return liquidityData;
+}
+
+function getPivotUnifiedDataAccrossDexes(pivots, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock=DEFAULT_STEP_BLOCK, alreadyUsedPools) {
+    const pivotData = {};
+
+    for (const pivot of pivots) {
+        if (fromSymbol == pivot) {
+            continue;
+        }
+        if (toSymbol == pivot) {
+            continue;
+        }
+
+        const segment1Data = getSumSlippageMapAcrossDexes(fromSymbol, pivot, fromBlock, toBlock, stepBlock, alreadyUsedPools);
+        if (!segment1Data.unifiedData || Object.keys(segment1Data.unifiedData).length == 0) {
+            continue;
+        }
+
+        // add the segment 1 used pools to alreadyUsedPools before checking for segment2 data
+        const stepUsedPools = alreadyUsedPools.concat(segment1Data.usedPools);
+
+        const segment2Data = getSumSlippageMapAcrossDexes(pivot, toSymbol, fromBlock, toBlock, stepBlock, stepUsedPools);
+        if (!segment2Data.unifiedData || Object.keys(segment2Data.unifiedData).length == 0) {
+            continue;
+        }
+
+        alreadyUsedPools.push(...segment1Data.usedPools);
+        alreadyUsedPools.push(...segment2Data.usedPools);
+
+        if (!pivotData[fromSymbol]) {
+            pivotData[fromSymbol] = {};
+        }
+
+        if (!pivotData[pivot]) {
+            pivotData[pivot] = {};
+        }
+
+        pivotData[fromSymbol][pivot] = segment1Data.unifiedData;
+        pivotData[pivot][toSymbol] = segment2Data.unifiedData;
+    }
+
+    return pivotData;
+}
+
+function getSumSlippageMapAcrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock) {
+    let baseData = undefined;
+    const alreadyUsedPools = [];
+
+    for (const platform of PLATFORMS) {
+
+        const platformData = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
+        if (platformData.unifiedData) {
+            if (!baseData) {
+                baseData = getBlankUnifiedData(fromBlock, toBlock, stepBlock);
+            }
+            alreadyUsedPools.push(...platformData.usedPools);
+            // console.log(`[${fromSymbol}/${toSymbol}] | [${platform}] | 5% slippage: ${platformData.unifiedData[fromBlock].slippageMap[500].base}`);
+
+            for (const block of Object.keys(baseData)) {
+                if (!baseData[block].price) {
+                    baseData[block].price = platformData.unifiedData[block].price;
+                }
+                if (!baseData[block].slippageMap) {
+                    baseData[block].slippageMap = platformData.unifiedData[block].slippageMap;
+                } else {
+                    for (const slippageBps of Object.keys(baseData[block].slippageMap)) {
+                        baseData[block].slippageMap[slippageBps].base += platformData.unifiedData[block].slippageMap[slippageBps].base;
+                        baseData[block].slippageMap[slippageBps].quote += platformData.unifiedData[block].slippageMap[slippageBps].quote;
+                    }
+                }
+            }
+
+        }
+    }
+
+    // if(baseData) {
+    //     console.log(`[${fromSymbol}/${toSymbol}] | [ALL] | 5% slippage: ${baseData[fromBlock].slippageMap[500].base}`);
+    // } else {
+    //     console.log(`[${fromSymbol}/${toSymbol}] | [ALL] | NO DATA FOR ROUTE IN ANY DEXES`);
+    // }
+
+    return {unifiedData: baseData, usedPools: alreadyUsedPools};
+}
+
+
+module.exports = { getAverageLiquidityForInterval, getSlippageMapForInterval, getLiquidityAccrossDexes};
