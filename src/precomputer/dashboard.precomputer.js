@@ -264,47 +264,8 @@ function generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock
         timeOutputResult[blockTimeStamps[block]] = platformOutputResult[block];
     }
 
-    // compute biggest daily change over the last 3 months
-    // for each blocks of the platformOutputResult
-    // computeBiggestDailyChange(pricesAtBlock, platformOutputResult);
-
     const fullFilename = path.join(dirPath, `${pair.base}-${pair.quote}-${platform}.json`);
     fs.writeFileSync(fullFilename, JSON.stringify({ updated: Date.now(), liquidity: timeOutputResult }));
-}
-
-function computeBiggestDailyChange(medianPricesAtBlock, platformOutputResult) {
-    // here, in 'medianPricesAtBlock', we have all the median prices for every 300 blocks
-    // we will now find the biggest daily change over the interval for each blocks of the platform output
-    for(const block of Object.keys(platformOutputResult).map(_ => Number(_))) {
-        const fromBlock = block - (BLOCK_PER_DAY * BIGGEST_DAILY_CHANGE_OVER_DAYS);
-        let currBlock = fromBlock;
-        let biggestPriceChangePct = 0;
-        let cptDay = 0;
-        let label = '';
-        while(currBlock <= block) {
-            cptDay++;
-            const stepTargetBlock = currBlock + BLOCK_PER_DAY;
-            const medianPricesForDay = medianPricesAtBlock.filter(_ => _.block >= currBlock && _.block < stepTargetBlock).map(_ => _.price);
-            if(medianPricesForDay.length > 0) {
-                const minPriceForDay = Math.min(...medianPricesForDay);
-                const maxPriceForDay = Math.max(...medianPricesForDay);
-        
-                let priceChangePctForDay = (maxPriceForDay - minPriceForDay) / minPriceForDay;
-                if(priceChangePctForDay > biggestPriceChangePct) {
-                    label = `Biggest price change on day ${cptDay} for interval [${currBlock}-${stepTargetBlock}]: ${roundTo(priceChangePctForDay*100)}%. [${minPriceForDay} <> ${maxPriceForDay}]`;
-                    biggestPriceChangePct = priceChangePctForDay;
-                }
-            }
-
-            currBlock = stepTargetBlock;
-        }
-
-        if(label) {
-            // console.log(label);
-        }
-
-        platformOutputResult[block].biggestDailyChange = biggestPriceChangePct;
-    }
 }
 
 PrecomputeDashboardData();

@@ -301,7 +301,7 @@ function getLiquidityAccrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, step
     }
 
     console.log(`${fnName()}[${fromSymbol}/${toSymbol}]: used pivots ${pivots} and pools ${data.usedPools}`);
-    console.log(`[${fromSymbol}/${toSymbol}] | [ALL] | 5% slippage: ${liquidityData[toBlock].slippageMap[500].base}`);
+    // console.log(`[${fromSymbol}/${toSymbol}] | [ALL] | 5% slippage: ${liquidityData[fromBlock].slippageMap[500].base}`);
 
     return liquidityData;
 }
@@ -360,7 +360,7 @@ function getSumSlippageMapAcrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, 
                 baseData = getBlankUnifiedData(fromBlock, toBlock, stepBlock);
             }
             alreadyUsedPools.push(...platformData.usedPools);
-            console.log(`[${fromSymbol}/${toSymbol}] | [${platform}] | 5% slippage: ${platformData.unifiedData[toBlock].slippageMap[500].base}`);
+            // console.log(`[${fromSymbol}/${toSymbol}] | [${platform}] | 5% slippage: ${platformData.unifiedData[fromBlock].slippageMap[500].base}`);
 
             for (const block of Object.keys(baseData)) {
                 if (!baseData[block].price) {
@@ -379,12 +379,11 @@ function getSumSlippageMapAcrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, 
         }
     }
 
-    if(baseData) {
-        console.log(`[${fromSymbol}/${toSymbol}] | [ALL] | 5% slippage: ${baseData[toBlock].slippageMap[500].base}`);
-    } else {
-        console.log(`[${fromSymbol}/${toSymbol}] | [ALL] | NO DATA FOR ROUTE IN ANY DEXES`);
-
-    }
+    // if(baseData) {
+    //     console.log(`[${fromSymbol}/${toSymbol}] | [ALL] | 5% slippage: ${baseData[fromBlock].slippageMap[500].base}`);
+    // } else {
+    //     console.log(`[${fromSymbol}/${toSymbol}] | [ALL] | NO DATA FOR ROUTE IN ANY DEXES`);
+    // }
 
     return {unifiedData: baseData, usedPools: alreadyUsedPools};
 }
