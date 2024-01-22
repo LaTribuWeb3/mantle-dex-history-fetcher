@@ -6,7 +6,7 @@ const { DATA_DIR, PLATFORMS } = require('../utils/constants');
 const fs = require('fs');
 const path = require('path');
 const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
-const { getLiquidity, getRollingVolatility } = require('../data.interface/data.interface');
+const { getLiquidity, getRollingVolatility, getLiquidityAll } = require('../data.interface/data.interface');
 const { getDefaultSlippageMap } = require('../data.interface/internal/data.interface.utils');
 const { median } = require('simple-statistics');
 const { watchedPairs } = require('../global.config');
@@ -109,7 +109,6 @@ async function PrecomputeDashboardData() {
             for(const pair of pairsToCompute) {
                 await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
                 console.log(`${fnName()}: precomputing for pair ${pair.base}/${pair.quote}`);
-                let allPlatformsLiquidity = undefined;
                 for(const platform of PLATFORMS) {
                     console.log(`${fnName()}[${pair.base}/${pair.quote}]: precomputing for platform ${platform}`);
                     // get the liquidity since startBlock - avgStep because, for the first block (= startBlock), we will compute the avg liquidity and volatility also
@@ -131,10 +130,6 @@ async function PrecomputeDashboardData() {
                     }
                 }
 
-                if(!allPlatformsLiquidity) {
-                    continue;
-                }
-
                 // here, need to compute avg price and volatility for each block for 'all' platforms
                 const pricesAtBlock = getPrices('all', pair.base, pair.quote)?.filter(_ => _.block >= realStartBlock);
                 if(!pricesAtBlock) {
@@ -143,6 +138,7 @@ async function PrecomputeDashboardData() {
                 
                 const rollingVolatility = await getRollingVolatility('all', pair.base, pair.quote, web3Provider);
                 const startDate = Date.now();
+                const allPlatformsLiquidity = getLiquidityAll(pair.base, pair.quote, realStartBlock, currentBlock);
                 generateDashboardDataFromLiquidityData(allPlatformsLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, 'all', rollingVolatility, blockTimeStamps);                        
                 logFnDurationWithLabel(startDate, 'generateDashboardDataFromLiquidityData');
             }
