@@ -126,17 +126,6 @@ async function PrecomputeDashboardData() {
                         const startDate = Date.now();
                         generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, platform, rollingVolatility, blockTimeStamps);                        
                         logFnDurationWithLabel(startDate, 'generateDashboardDataFromLiquidityData');
-                        if(!allPlatformsLiquidity) {
-                            allPlatformsLiquidity = platformLiquidity;
-                        } else {
-                            // sum liquidity
-                            for(const block of Object.keys(allPlatformsLiquidity)) {
-                                for(const slippageBps of Object.keys(allPlatformsLiquidity[block].slippageMap)) {
-                                    allPlatformsLiquidity[block].slippageMap[slippageBps].base += platformLiquidity[block].slippageMap[slippageBps].base;
-                                    allPlatformsLiquidity[block].slippageMap[slippageBps].quote += platformLiquidity[block].slippageMap[slippageBps].quote;
-                                }
-                            }
-                        }
                     } else {
                         console.log(`no liquidity data for ${platform} ${pair.base} ${pair.quote}`);
                     }

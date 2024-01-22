@@ -10,7 +10,7 @@ const { normalize, getConfTokenBySymbol } = require('../../utils/token.utils');
 const { compoundV3Pools, cometABI } = require('./compoundV3Computer.config');
 const { RecordMonitoring } = require('../../utils/monitoring');
 const { DATA_DIR, PLATFORMS } = require('../../utils/constants');
-const { getLiquidity, getRollingVolatility } = require('../../data.interface/data.interface');
+const { getLiquidity, getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
 const spans = [7, 30, 180];
 
 /**
@@ -361,32 +361,28 @@ async function computeMarketCLFBiggestDailyChange(assetParameters, collateral , 
         };
     }
 
-    for(const platform of PLATFORMS) {
-        const oldestBlock = fromBlocks[maxSpan];
-        const fullLiquidityDataForPlatform = getLiquidity(platform, from, baseAsset, oldestBlock, endBlock);
-        if(!fullLiquidityDataForPlatform) {
-            continue;
-        }
+    const oldestBlock = fromBlocks[maxSpan];
 
-        const allBlockNumbers = Object.keys(fullLiquidityDataForPlatform).map(_ => Number(_));
-        // compute the liquidity data for each spans
-        for (const span of spans) {
-            const fromBlock = fromBlocks[span];
-            const blockNumberForSpan = allBlockNumbers.filter(_ => _ >= fromBlock); 
+    const fullLiquidity = getLiquidityAll(from, baseAsset, oldestBlock, endBlock);
+    const allBlockNumbers = Object.keys(fullLiquidity).map(_ => Number(_));
 
-            let liquidityToAdd = 0;
-            if(blockNumberForSpan.length > 0) {
-                let sumLiquidityForTargetSlippageBps = 0;
-                for(const blockNumber of blockNumberForSpan) {
-                    sumLiquidityForTargetSlippageBps += fullLiquidityDataForPlatform[blockNumber].slippageMap[assetParameters.liquidationBonusBPS].base;
-                }
-    
-                liquidityToAdd = sumLiquidityForTargetSlippageBps / blockNumberForSpan.length;
+    // compute the liquidity data for each spans
+    for (const span of spans) {
+        const fromBlock = fromBlocks[span];
+        const blockNumberForSpan = allBlockNumbers.filter(_ => _ >= fromBlock); 
+
+        let liquidityToAdd = 0;
+        if(blockNumberForSpan.length > 0) {
+            let sumLiquidityForTargetSlippageBps = 0;
+            for(const blockNumber of blockNumberForSpan) {
+                sumLiquidityForTargetSlippageBps += fullLiquidity[blockNumber].slippageMap[assetParameters.liquidationBonusBPS].base;
             }
 
-            parameters[span].liquidity += liquidityToAdd;
-            console.log(`[${from}-${baseAsset}] [${span}d] [${platform}] liquidity: ${liquidityToAdd}`);
+            liquidityToAdd = sumLiquidityForTargetSlippageBps / blockNumberForSpan.length;
         }
+
+        parameters[span].liquidity += liquidityToAdd;
+        console.log(`[${from}-${baseAsset}] [${span}d] all dexes liquidity: ${liquidityToAdd}`);
     }
 
     console.log('parameters', parameters);

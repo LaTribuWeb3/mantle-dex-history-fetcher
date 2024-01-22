@@ -11,7 +11,7 @@ const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
 const { uploadJsonFile } = require('../utils/githubPusher');
 const { PLATFORMS, MORPHO_RISK_PARAMETERS_ARRAY } = require('../utils/constants');
 const { signData, generateTypedData } = require('../../scripts/signTypedData');
-const { getRollingVolatility, getLiquidity } = require('../data.interface/data.interface');
+const { getRollingVolatility, getLiquidity, getLiquidityAll } = require('../data.interface/data.interface');
 const { getConfTokenBySymbol } = require('../utils/token.utils');
 const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
 const { getStagingConfTokenBySymbol, riskDataTestNetConfig, riskDataConfig } = require('./precomputer.config');
@@ -166,44 +166,12 @@ async function fetchLiquidity(base, quote) {
     const currentBlock = (await web3Provider.getBlockNumber()) - 100;
 
     console.log(`Precomputing for pair ${base.symbol}/${quote.symbol}`);
-    let allPlatformsLiquidity = {};
 
-    // Aggregate liquidity data from various platforms
-    for (const platform of PLATFORMS) {
-        const platformLiquidity = getLiquidity(platform, base.symbol, quote.symbol, startBlock, currentBlock, true);
-        if (platformLiquidity) {
-            mergePlatformLiquidity(allPlatformsLiquidity, platformLiquidity);
-        } else {
-            console.log(`No liquidity data for ${platform} ${base.symbol}/${quote.symbol}`);
-        }
-    }
-
+    const allPlatformsLiquidity = getLiquidityAll(base.symbol, quote.symbol, startBlock, currentBlock);
+    
     // Calculate averaged liquidity and fetch volatility data
     const averagedLiquidity = calculateSlippageBaseAverages(allPlatformsLiquidity);
     return averagedLiquidity;
-}
-
-/**
- * Merges liquidity data from a single platform into a consolidated object.
- * 
- * @param {{[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}} allPlatformsLiquidity The consolidated liquidity object.
- * @param {{[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}} platformLiquidity Liquidity data from a single platform.
- */
-function mergePlatformLiquidity(allPlatformsLiquidity, platformLiquidity) {
-    for (const block in platformLiquidity) {
-        if (!allPlatformsLiquidity[block]) {
-            allPlatformsLiquidity[block] = platformLiquidity[block];
-        } else {
-            for (const slippageBps in platformLiquidity[block].slippageMap) {
-                if (!allPlatformsLiquidity[block].slippageMap[slippageBps]) {
-                    allPlatformsLiquidity[block].slippageMap[slippageBps] = platformLiquidity[block].slippageMap[slippageBps];
-                } else {
-                    allPlatformsLiquidity[block].slippageMap[slippageBps].base += platformLiquidity[block].slippageMap[slippageBps].base;
-                    allPlatformsLiquidity[block].slippageMap[slippageBps].quote += platformLiquidity[block].slippageMap[slippageBps].quote;
-                }
-            }
-        }
-    }
 }
 
 /**
