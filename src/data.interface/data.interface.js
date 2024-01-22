@@ -59,10 +59,18 @@ function getLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJu
     return liquidity;
 }
 
-function getLiquidityV2(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock = DEFAULT_STEP_BLOCK) {
+/**
+ * Get the aggregated liquidity (using 'jump routes') from all available platforms (dexes)
+ * @param {string} fromSymbol 
+ * @param {string} toSymbol 
+ * @param {number} fromBlock 
+ * @param {number} toBlock 
+ * @param {number} stepBlock 
+ * @returns {{[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}}
+ */
+function getLiquidityAll(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock = DEFAULT_STEP_BLOCK) {
     return getLiquidityAccrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock);
 }
-
 
 
 async function getRollingVolatility(platform, fromSymbol, toSymbol, web3Provider, lambda = LAMBDA) {
@@ -95,4 +103,4 @@ function checkPlatform(platform) {
     }
 }
 
-module.exports = { getAverageLiquidity, getLiquidity, getRollingVolatility, getLiquidityV2};
+module.exports = { getAverageLiquidity, getLiquidity, getRollingVolatility, getLiquidityAll};
