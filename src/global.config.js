@@ -236,184 +236,226 @@ const watchedPairs = {
     'WETH': [
         {
             quote: 'wstETH',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: true
         },
         {
             quote: 'stETH',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: true
         },
         {
             quote: 'USDC',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: true
         },
         {
             quote: 'PEPE',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: false
         },
         {
             quote: 'BLUR',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: false
         },
         {
             quote: 'SHIB',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: false
         },
         {
             quote: 'HarryPotterObamaSonic10Inu',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: false
         },
         {
             quote: 'cbETH',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: true
         },
         {
             quote: 'WBTC',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: true
         },
         {
             quote: 'DAI',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: true
         },
         {
             quote: 'MANA',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: false
         },
         {
             quote: 'MKR',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: true
         },
         {
             quote: 'SNX',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: true
         },
         {
             quote: 'sUSD',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: true
         },
         {
             quote: 'UNI',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: true
         },
         {
             quote: 'USDT',
-            pivots: undefined
+            pivots: undefined,
+            exportToInternalDashboard: true
         },
     ],
     'USDC': [
         {
             quote: 'MKR',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'LINK',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'UNI',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'LDO',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'RPL',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'APE',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: false
         },
         {
             quote: 'CVX',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: false
         },
         {
             quote: 'FXS',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: false
         },
         {
             quote: 'COMP',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'WBTC',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'CRV',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'DAI',
             pivots: undefined,
             pivotsSpecific: {
                 'sushiswapv2': ['WETH']
-            }
+            },
+            exportToInternalDashboard: true
         },
         {
             quote: 'MANA',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: false
         },
         {
             quote: 'SNX',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'sUSD',
             pivots: undefined,
             pivotsSpecific: {
                 'uniswapv2': ['WETH']
-            }
+            },
+            exportToInternalDashboard: true
         },
         {
             quote: 'USDT',
             pivots: undefined,
             pivotsSpecific: {
                 'sushiswapv2': ['WETH']
-            }
+            },
+            exportToInternalDashboard: true
         },
         {
             quote: 'wstETH',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote:'stETH',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         }
     ],
     'WBTC': [
         {
             quote: 'DAI',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'MANA',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: false
         },
         {
             quote: 'MKR',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'SNX',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'sUSD',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'UNI',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'USDT',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
         {
             quote: 'wstETH',
-            pivots: ['WETH']
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
         },
     ]
 };

@@ -90,17 +90,19 @@ async function PrecomputeDashboardData() {
             const pairsToCompute = [];
             for(const [base, quotes] of Object.entries(watchedPairs)) {
                 for(const quoteConfig of quotes) {
-                    pairsToCompute.push({
-                        base: base,
-                        quote: quoteConfig.quote,
-                        pivots: quoteConfig.pivots
-                    });
-
-                    pairsToCompute.push({
-                        base: quoteConfig.quote,
-                        quote: base,
-                        pivots: quoteConfig.pivots
-                    });
+                    if(quoteConfig.exportToInternalDashboard) {
+                        pairsToCompute.push({
+                            base: base,
+                            quote: quoteConfig.quote,
+                            pivots: quoteConfig.pivots
+                        });
+    
+                        pairsToCompute.push({
+                            base: quoteConfig.quote,
+                            quote: base,
+                            pivots: quoteConfig.pivots
+                        });
+                    }
                 }
             }
 
