@@ -8,14 +8,18 @@ const { getRollingVolatility } = require('../src/data.interface/data.interface')
 
 async function checkVolatility() {
 
-    const base = 'wstETH';
-    const quote = 'WETH';
+    const base = 'WETH';
+    const quote = 'wstETH';
     const prices = getPricesAtBlockForIntervalViaPivots('uniswapv3', base, quote, 0, 19_000_000);
     const medianed = medianPricesOverBlocks(prices, undefined);
 
     const web3Provider = new ethers.providers.StaticJsonRpcProvider('https://eth.llamarpc.com');
-    const volatility_all= await rollingBiggestDailyChange(medianed, web3Provider);
-    fs.writeFileSync('volatility.json', JSON.stringify(volatility_all, null, 2));
+    let volatility_all = await rollingBiggestDailyChange(medianed, web3Provider);
+    console.log(volatility_all.latest.current);
+    volatility_all = await getRollingVolatility('all', base, quote, web3Provider);
+    console.log(volatility_all.latest.current);
+
+    // fs.writeFileSync('volatility.json', JSON.stringify(volatility_all, null, 2));
 
     // const volatility_all = await getRollingVolatility('all', base, quote, web3Provider);
     // fs.writeFileSync('volatility.json', JSON.stringify(volatility_all, null, 2));
