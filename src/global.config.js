@@ -292,22 +292,22 @@ const watchedPairs = {
         {
             quote: 'MKR',
             pivots: undefined,
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'SNX',
             pivots: undefined,
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'sUSD',
             pivots: undefined,
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'UNI',
             pivots: undefined,
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'USDT',
@@ -319,27 +319,27 @@ const watchedPairs = {
         {
             quote: 'MKR',
             pivots: ['WETH'],
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'LINK',
             pivots: ['WETH'],
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'UNI',
             pivots: ['WETH'],
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'LDO',
             pivots: ['WETH'],
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'RPL',
             pivots: ['WETH'],
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'APE',
@@ -369,7 +369,7 @@ const watchedPairs = {
         {
             quote: 'CRV',
             pivots: ['WETH'],
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'DAI',
@@ -387,7 +387,7 @@ const watchedPairs = {
         {
             quote: 'SNX',
             pivots: ['WETH'],
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'sUSD',
@@ -395,7 +395,7 @@ const watchedPairs = {
             pivotsSpecific: {
                 'uniswapv2': ['WETH']
             },
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'USDT',
@@ -430,22 +430,22 @@ const watchedPairs = {
         {
             quote: 'MKR',
             pivots: ['WETH'],
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'SNX',
             pivots: ['WETH'],
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'sUSD',
             pivots: ['WETH'],
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'UNI',
             pivots: ['WETH'],
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'USDT',
