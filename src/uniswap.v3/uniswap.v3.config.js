@@ -8,6 +8,10 @@ const uniswapFactoryV3Address = "0x1F98431c8aD98523631AE4a59f267346ea31F984"
 
 const pairsToFetch = [
   {
+    "token0": "rETH",
+    "token1": "WETH"
+  },
+  {
     "token0": "DAI",
     "token1": "WETH"
   },

@@ -8,6 +8,7 @@ const uniswapV2PairABI = [{"inputs":[],"payable":false,"stateMutability":"nonpay
 
 // compound assets + oracle without sale pools
 const uniswapV2Pairs = [
+  "rETH-WETH",
   "AAVE-USDC",
   "AAVE-WETH",
   "BAT-DAI",

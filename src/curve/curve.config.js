@@ -14,6 +14,24 @@ const stableSwapFactoryAbi = [{"name":"Transfer","inputs":[{"name":"sender","typ
 
 const curvePairs = [
     {
+        poolAddress: '0x0f3159811670c117c372428d4e69ac32325e4d0f',
+        poolName: 'rETHPool',
+        lpTokenAddress: '0x6c38cE8984a890F5e46e6dF6117C26b3F1EcfC9C',
+        lpTokenName: 'rETH-f',
+        isCryptoV2: true,
+        abi: 'cryptov2',
+        tokens: [
+            {
+                symbol: 'WETH',
+                address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+            },
+            {
+                symbol: 'rETH',
+                address: '0xae78736Cd615f374D3085123A210448E74Fc6393',
+            },
+        ]
+    },
+    {
         poolAddress: '0xdc24316b9ae028f1497c275eb9192a3ea0f67022',
         poolName: 'stETHPool',
         lpTokenAddress: '0x06325440D014e39736583c165C2963BA99fAf14E',
@@ -218,6 +236,26 @@ const curvePairs = [
 ]
 
 const curvePricePairs = [
+    {
+        poolAddress: '0x0f3159811670c117c372428d4e69ac32325e4d0f',
+        poolName: 'rETHPool',
+        tokens: [
+            {
+                symbol: 'WETH',
+                address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+            },
+            {
+                symbol: 'rETH',
+                address: '0xae78736Cd615f374D3085123A210448E74Fc6393',
+            },
+        ],
+        pairs: [
+            {
+                "token0": "rETH",
+                "token1": "WETH"
+            }
+        ]
+    },
     {
         poolAddress: "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
         poolName: '3Pool',
