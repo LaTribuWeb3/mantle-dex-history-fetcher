@@ -239,6 +239,7 @@ const curvePricePairs = [
     {
         poolAddress: '0x0f3159811670c117c372428d4e69ac32325e4d0f',
         poolName: 'rETHPool',
+        abi: cryptov2Abi,
         tokens: [
             {
                 symbol: 'WETH',
