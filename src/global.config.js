@@ -235,6 +235,11 @@ const tokens = {
 const watchedPairs = {
     'WETH': [
         {
+            quote: 'rETH',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
+        {
             quote: 'wstETH',
             pivots: undefined,
             exportToInternalDashboard: true
@@ -316,6 +321,11 @@ const watchedPairs = {
         },
     ],
     'USDC': [
+        {
+            quote: 'rETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
         {
             quote: 'MKR',
             pivots: ['WETH'],
