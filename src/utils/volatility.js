@@ -183,8 +183,8 @@ async function rollingBiggestDailyChange(medianPricesAtBlock, web3Provider, lamb
     const start = Date.now();
     const fromBlock = medianPricesAtBlock[0].block;
     const endBlock = await web3Provider.getBlockNumber();
-    const oldBlockDateSec = (await retry(() => web3Provider.getBlock(fromBlock), [])).timestamp;
-    const currentDateSec = (await retry(() => web3Provider.getBlock(endBlock), [])).timestamp;
+    const oldBlockDateSec =  await retry(async () => (await web3Provider.getBlock(fromBlock)).timestamp, []);
+    const currentDateSec = await retry(async () => (await web3Provider.getBlock(endBlock)).timestamp, []);
     const dayDiff = (currentDateSec - oldBlockDateSec) / (24 * 60 * 60);
     const blockPerDay = (endBlock - fromBlock) / dayDiff;
     console.log({blockPerDay});
