@@ -178,7 +178,11 @@ async function getCollateralAmount(collateral, cometContract, priceDateUnixSecon
  */
 async function getAssetParameters(cometContract, collateral, currentBlock) {
     const results = await cometContract.getAssetInfo(collateral.index, {blockTag: currentBlock});
-    const liquidationBonusBPS = Math.round((1 - normalize(results.liquidationFactor, 18)) * 10000);
+    let liquidationBonusBPS = Math.round((1 - normalize(results.liquidationFactor, 18)) * 10000);
+    if(liquidationBonusBPS > 2000) {
+        console.log(`[WARNING] DOWNGRADE ${collateral.symbol} LIQUIDATION BONUS FROM ${liquidationBonusBPS/100}% to 20%`);
+        liquidationBonusBPS = 2000;
+    }
     const LTV = normalize(results.liquidateCollateralFactor, 18) * 100;
     const tokenConf = getConfTokenBySymbol(collateral.symbol);
     const supplyCap = normalize(results.supplyCap, tokenConf.decimals);
