@@ -32,9 +32,9 @@ async function backComputing() {
         }
 
         const currDay = getDay(startDate);
-        if (!fs.existsSync(`${DATA_DIR}/clf/${currDay}`)) {
+        if (!fs.existsSync(`${DATA_DIR}/clf/compoundv3/${currDay}`)) {
             console.log(`fetching ${startDate} data`);
-            const cmd = `node ./src/clf/compoundV3/compoundV3ComputerLauncher.js ${startDate.getTime()}`;
+            const cmd = `node --max-old-space-size=8192 ./src/clf/compoundV3/compoundV3ComputerLauncher.js ${startDate.getTime()}`;
             console.log(`starting cmd: ${cmd}`);
             const childProcess = exec(cmd);
             childProcess.stderr.on('data', function(data) {
@@ -44,7 +44,7 @@ async function backComputing() {
             allChilds.push(childProcess);
             await sleep(10000);
         }
-        if (fs.existsSync(`${DATA_DIR}/clf/${currDay}`)) {
+        if (fs.existsSync(`${DATA_DIR}/clf/compoundv3/${currDay}`)) {
             console.log('data already fetched');
         }
         
