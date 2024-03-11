@@ -129,6 +129,16 @@ const additionalLiquidityConfig = {
             priceFrom: 'WETH',
             priceTo: 'wstETH',
         }
+    ],
+    balancer: [
+        {
+            from: 'wstETH',
+            pivot: 'WETH',
+            to: 'stETH',
+            priceSource: 'uniswapv3',
+            priceFrom: 'WETH',
+            priceTo: 'wstETH',
+        }
     ]
 };
 
