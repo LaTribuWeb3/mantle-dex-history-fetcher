@@ -9,7 +9,7 @@ const DATA_DIR = process.cwd() + '/data';
 /**
  * List of platforms (dexes) that are available for data querying
  */
-const PLATFORMS = ['uniswapv2', 'curve', 'uniswapv3', 'sushiswapv2'];
+const PLATFORMS = ['uniswapv2', 'curve', 'uniswapv3', 'sushiswapv2', 'balancer'];
 
 /**
  * Base slippages we are searching for the risk oracle frontend

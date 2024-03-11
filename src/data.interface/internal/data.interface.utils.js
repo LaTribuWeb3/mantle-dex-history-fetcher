@@ -275,6 +275,10 @@ function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, to
         return getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
     }
 
+    if(platform == 'balancer') {
+        return getUnifiedDataForIntervalForBalancer(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
+    }
+
     const filename = `${fromSymbol}-${toSymbol}-unified-data.csv`;
     // generate pool name using fromsymbol and tosymbol sorted by alphabetical order
     // so that for example the pair USDC/WETH and WETH/USDC are not used two times (because it would come from the same pool)
@@ -406,6 +410,69 @@ function getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBl
     const unifiedDataForPools = [];
     for(const matchingFile of matchingFiles) {
         const poolName = matchingFile.split('-')[2];
+        if(alreadyUsedPools.includes(poolName)) {
+            console.log(`pool ${poolName} already used, cannot reuse it`);
+            continue;
+        }
+        const fullFilename = path.join(directory, matchingFile);
+
+        const unifiedDataForFile = getUnifiedDataForIntervalByFilename(fullFilename, fromBlock, toBlock, stepBlock);
+        if(unifiedDataForFile) {
+            // console.log(`adding data from pool ${poolName}`);
+            unifiedDataForPools.push(unifiedDataForFile);
+            usedPools.push(poolName);
+        }
+    }
+
+    if(unifiedDataForPools.length == 0) {
+        return { unifiedData: undefined, usedPools: [] };
+    }
+
+    const unifiedData = unifiedDataForPools[0];
+    
+    if(unifiedDataForPools.length > 1) {
+        for(const block of Object.keys(unifiedData)) {
+            let nonZeroPriceCounter = unifiedData[block].price == 0 ? 0 : 1;
+            for(let i = 1; i < unifiedDataForPools.length; i++) {
+                const unifiedDataToAdd = unifiedDataForPools[i];
+        
+                for(const slippageBps of Object.keys(unifiedData[block].slippageMap)) {
+                    unifiedData[block].slippageMap[slippageBps].base += unifiedDataToAdd[block].slippageMap[slippageBps].base;
+                    unifiedData[block].slippageMap[slippageBps].quote += unifiedDataToAdd[block].slippageMap[slippageBps].quote;
+                }
+
+                if(unifiedDataToAdd[block].price > 0) {
+                    nonZeroPriceCounter++;
+                }
+
+                unifiedData[block].price += unifiedDataToAdd[block].price;
+            }
+            
+            // save avg price for each pools
+            unifiedData[block].price = nonZeroPriceCounter == 0 ? 0 : unifiedData[block].price / nonZeroPriceCounter;
+        }
+    }
+
+    return { unifiedData, usedPools };
+}
+
+
+
+function getUnifiedDataForIntervalForBalancer(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock= DEFAULT_STEP_BLOCK, alreadyUsedPools) {
+    // for curve, find all files in the precomputed/curve directory that math the fromSymbol-toSymbol.*.csv
+    const searchString = `${fromSymbol}-${toSymbol}`;
+    const directory = path.join(DATA_DIR, 'precomputed', 'balancer');
+    const matchingFiles = fs.readdirSync(directory).filter(_ => _.startsWith(searchString) && _.endsWith('unified-data.csv'));
+    // console.log(`found ${matchingFiles.length} matching files for ${searchString}`);
+
+    const usedPools = [];
+    const unifiedDataForPools = [];
+    for(const matchingFile of matchingFiles) {
+        // for balancer, the file name is: "ezETH-rswETH-Balancer-weETH-ezETH-rswETH-unified-data.csv"
+        // where "ezETH-rswETH" is the searchString
+        // "Balancer-weETH-ezETH-rswETH" is the pool name
+        // and unified-data is always at the end
+        const poolName = matchingFile.replace(searchString + '-', '').replace('-unified-data.csv', '');
         if(alreadyUsedPools.includes(poolName)) {
             console.log(`pool ${poolName} already used, cannot reuse it`);
             continue;
