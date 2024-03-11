@@ -130,7 +130,7 @@ function GetAmountXDumpable(currentTick, tickSpacing, liquidities, token0Decimal
             } 
             // If the current price is in the range: pa < P < pb. mix of x and y
             else {
-                const y = L.times(sqrtP - sqrtPa);
+                const y = L.times(sqrtP.toNumber() - sqrtPa);
                 yLiquidityInTick = y;
             }
 
