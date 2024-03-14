@@ -57,10 +57,12 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes, startDate = Dat
             }
         }
 
-        console.log('firing record function');
-        recordResults(results, startDate);
+        const sortedData = sortData(results);
 
-        console.log('Morpho CLF Computer: ending');
+        console.log('firing record function');
+        recordResults(sortedData, startDate);
+
+        console.log('Morpho Dashboard Summary Computer: ending');
 
         const runEndDate = Math.round(Date.now() / 1000);
         await RecordMonitoring({
@@ -140,7 +142,10 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
                 usdSupply: currentSupply * basePrice
             };
 
-            resultsData.collateralsData[uniqueId].clfs = await computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralToken.symbol, baseAsset, fromBlock, endBlock, startDateUnixSec, web3Provider, vaultName);
+            const resultsAndParameters = await computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralToken.symbol, baseAsset, fromBlock, endBlock, startDateUnixSec, web3Provider, vaultName);
+            resultsData.collateralsData[uniqueId].clfs = resultsAndParameters.results;
+            resultsData.collateralsData[uniqueId]['marketParameters'] = resultsAndParameters.parameters;
+            resultsData.collateralsData[uniqueId].assetParameters = resultsAndParameters.assetParameters;
         }
     }
 
@@ -212,94 +217,22 @@ function findRiskLevelFromParameters(volatility, liquidity, liquidationBonus, lt
  * @param {{collateralsData: {[collateralSymbol: string]: {collateral: {inKindSupply: number, usdSupply: number}, clfs: {7: {volatility: number, liquidity: number}, 30: {volatility: number, liquidity: number}, 180: {volatility: number, liquidity: number}}}}} poolData 
  * @returns 
  */
-function computeAverageCLFForVault(poolData) {
-    //get pool total collateral in usd
-    let totalCollateral = 0;
-    for (const value of Object.values(poolData.collateralsData)) {
-        if (value) {
-            totalCollateral += value.collateral.usdSupply;
-        }
-    }
-    const weightMap = {};
-    // get each collateral weight
-    for (const [collateral, value] of Object.entries(poolData.collateralsData)) {
-        if (value) {
-            const weight = value.collateral.usdSupply / totalCollateral;
-            const clf = value['clfs']['7']['7'] ? value['clfs']['7']['7'] : value['clfs']['30']['7'] ? value['clfs']['30']['7'] : value['clfs']['180']['7'];
-            weightMap[collateral] = weight * clf;
-        }
-    }
-    let weightedCLF = 0;
-    for (const weight of Object.values(weightMap)) {
-        weightedCLF += weight;
-    }
-    weightedCLF = roundTo(weightedCLF, 2);
-    return { weightedCLF, totalCollateral };
-}
 
 /**
  * 
  * @param {{[baseAsset: string]: {totalCollateral: number, weightedCLF: number}}} protocolData 
  * @returns 
  */
-function computeProtocolWeightedCLF(protocolData) {
-    let protocolCollateral = 0;
-    const weightMap = {};
-    for (const marketData of Object.values(protocolData)) {
-        if (marketData) {
-            protocolCollateral += marketData['totalCollateral'];
-        }
-    }
-    // get each collateral weight
-    for (const [market, marketData] of Object.entries(protocolData)) {
-        if (marketData) {
-            const weight = marketData['totalCollateral'] / protocolCollateral;
-            const clf = marketData['weightedCLF'];
-            weightMap[market] = weight * clf;
-        }
-    }
-    let weightedCLF = 0;
-    for (const value of Object.values(weightMap)) {
-        weightedCLF += value;
-    }
-    weightedCLF = roundTo(weightedCLF, 2);
-    return weightedCLF;
-}
 
-function recordParameters(marketId, pair, data, timestamp) {
-    const date = getDay(timestamp);
-    if (!fs.existsSync(`${DATA_DIR}/precomputed/morpho-dashboard/${date}`)) {
-        fs.mkdirSync(`${DATA_DIR}/precomputed/morpho-dashboard/${date}`, { recursive: true });
+function recordResults(results) {
+    if (!fs.existsSync(`${DATA_DIR}/precomputed/morpho-dashboard/`)) {
+        fs.mkdirSync(`${DATA_DIR}/precomputed/morpho-dashboard/`, { recursive: true });
     }
-    const withUniqueId = pair.split('-')[0] + '_' + marketId + ('-') + pair.split('-')[1];
-
-    const datedProtocolFilename = path.join(DATA_DIR, `precomputed/morpho-dashboard/${date}/${date}_${withUniqueId}_morpho_CLFs.json`);
-    const objectToWrite = JSON.stringify(data, null, 2);
-    console.log('recording results');
-    try {
-        fs.writeFileSync(datedProtocolFilename, objectToWrite, 'utf8');
-    }
-    catch (error) {
-        console.error(error);
-        console.log('Morpho Computer failed to write files');
-    }
-}
-
-function recordResults(results, timestamp) {
-    const date = getDay(timestamp);
-    if (!fs.existsSync(`${DATA_DIR}/precomputed/morpho-dashboard/${date}`)) {
-        fs.mkdirSync(`${DATA_DIR}/precomputed/morpho-dashboard/${date}`, { recursive: true });
-    }
-    if (!fs.existsSync(`${DATA_DIR}/precomputed/morpho-dashboard/latest`)) {
-        fs.mkdirSync(`${DATA_DIR}/precomputed/morpho-dashboard/latest`, { recursive: true });
-    }
-    const datedProtocolFilename = path.join(DATA_DIR, `precomputed/morpho-dashboard/${date}/${date}_morpho_CLFs.json`);
-    const latestFullFilename = path.join(DATA_DIR, 'precomputed/morpho-dashboard/latest/morpho_CLFs.json');
+    const summaryFilePath = path.join(DATA_DIR, 'precomputed/morpho-dashboard/morpho-summary.json');
     const objectToWrite = JSON.stringify(results, null, 2);
     console.log('recording results');
     try {
-        fs.writeFileSync(datedProtocolFilename, objectToWrite, 'utf8');
-        fs.writeFileSync(latestFullFilename, objectToWrite, 'utf8');
+        fs.writeFileSync(summaryFilePath, objectToWrite, 'utf8');
     }
     catch (error) {
         console.error(error);
@@ -371,8 +304,6 @@ async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, col
     console.log('parameters', parameters);
 
 
-    recordParameters(marketId, `${from}-${baseAsset}`, { parameters, assetParameters }, startDate, vaultname);
-    /// compute CLFs for all spans and all volatilities
     const results = {};
     for (const volatilitySpan of spans) {
         results[volatilitySpan] = {};
@@ -382,7 +313,58 @@ async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, col
     }
 
     console.log('results', results);
-    return results;
+    return { results, parameters, assetParameters };
+}
+
+function sortData(data) {
+    // Initialize the result object to store the transformed data
+    const result = {};
+
+    // Iterate over each top-level currency (like "WETH", "USDC", "USDT")
+    Object.entries(data).forEach(([currency, { collateralsData }]) => {
+        // Initialize an array to store subMarket data for each currency
+        let subMarkets = [];
+        // Initialize a variable to track the highest riskLevel
+        let maxRiskLevel = 0;
+
+        // Process each collateral to calculate riskLevel and other properties
+        Object.entries(collateralsData).forEach(([key, collateral]) => {
+            const { clfs, marketParameters, assetParameters } = collateral;
+
+            // Assuming riskLevel is derived from `clfs["30"]["30"]`, adjust as necessary
+            const riskLevel = clfs['30']['30'];
+            // Update maxRiskLevel if this collateral's riskLevel is higher
+            maxRiskLevel = Math.max(maxRiskLevel, riskLevel);
+
+            const { volatility, liquidity } = marketParameters['30'];
+            const { LTV, liquidationBonusBPS, supplyCap } = assetParameters;
+
+            // Extract the "quote" from the property key
+            const quote = key.split('_')[0]; // Splits the key and takes the first part
+
+            // Convert liquidationBonusBPS to a decimal for liquidationBonus
+            const liquidationBonus = liquidationBonusBPS / 10000;
+
+            // Construct the subMarket entry and add it to the subMarkets array
+            subMarkets.push({
+                quote,
+                riskLevel,
+                LTV: LTV / 100, // Convert LTV to a decimal
+                liquidationBonus,
+                supplyCapInKind: supplyCap,
+                volatility,
+                liquidity,
+            });
+        });
+
+        // Assign the calculated data to the result object, using maxRiskLevel for the currency
+        result[currency] = {
+            riskLevel: maxRiskLevel,
+            subMarkets,
+        };
+    });
+
+    return result;
 }
 
 
