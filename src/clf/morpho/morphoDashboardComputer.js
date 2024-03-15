@@ -103,7 +103,8 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes) {
  *     quotePrice: number, // The price of the collateral asset at the start date
  *     riskLevel: number, // The calculated risk level for the sub-market
  *     volatility: number, // The volatility of the sub-market asset
- *     liquidity: number // The liquidity of the sub-market asset
+ *     liquidityInKind: number // The liquidity of the sub-market asset
+ *     liquidityUsd: number // The liquidity of the sub-market asset
  *   }>
  * }>} A promise that resolves to an object containing the overall risk level of the vault and an array of objects representing each sub-market's metrics.
  * 
@@ -173,7 +174,8 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
                 vaultData.riskLevel = riskData.riskLevel;
             }
             pairData.volatility = riskData.volatility;
-            pairData.liquidity = riskData.liquidity;
+            pairData.liquidityInKind = riskData.liquidityInKind;
+            pairData.liquidityUsd = riskData.liquidityUsd;
             vaultData.subMarkets.push(pairData);
         }
     }
@@ -267,7 +269,8 @@ async function computeMarketRiskLevel(assetParameters, collateralSymbol, baseAss
     const toReturn = {
         riskLevel: 0,
         volatility: 0,
-        liquidity: 0,
+        liquidityUsd: 0,
+        liquidityInKind: 0,
     };
 
     const from = collateralSymbol;
@@ -289,13 +292,14 @@ async function computeMarketRiskLevel(assetParameters, collateralSymbol, baseAss
     const oldestBlock = fromBlock;
     const fullLiquidity = getLiquidityAll(from, baseAsset, oldestBlock, endBlock);
     const averageLiquidityOn30Days = computeAverageSlippageMap(fullLiquidity);
-    const computedUsdLiquidityForCollateral = averageLiquidityOn30Days.slippageMap[assetParameters.liquidationBonusBPS].base * collateralPrice;
-    
-    console.log(`[${from}-${baseAsset}] [30d] all dexes liquidity: ${toReturn.liquidity}`);
-    const computedRiskLevel = findRiskLevelFromParameters(volatility, computedUsdLiquidityForCollateral, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCapUsd);
+    const liquidityInKind = averageLiquidityOn30Days.slippageMap[assetParameters.liquidationBonusBPS].base;
+    const liquidityUsd = liquidityInKind * collateralPrice;
+    console.log(`[${from}-${baseAsset}] [30d] all dexes liquidity: ${liquidityInKind}`);
+    const computedRiskLevel = findRiskLevelFromParameters(volatility, liquidityUsd, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCapUsd);
     
     toReturn.volatility = volatility;
-    toReturn.liquidity = computedUsdLiquidityForCollateral;
+    toReturn.liquidityInKind = liquidityInKind;
+    toReturn.liquidityUsd = liquidityUsd;
     toReturn.riskLevel = computedRiskLevel;
 
     return toReturn;
