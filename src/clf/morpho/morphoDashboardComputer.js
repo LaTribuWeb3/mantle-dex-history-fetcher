@@ -163,7 +163,7 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
                 LTV
             };
 
-            const riskData = await computeMarketRiskLevelBiggestDailyChange(assetParameters, collateralToken.symbol, baseAsset, fromBlock, endBlock, web3Provider, quotePrice);
+            const riskData = await computeMarketRiskLevel(assetParameters, collateralToken.symbol, baseAsset, fromBlock, endBlock, web3Provider, quotePrice);
             pairData['riskLevel'] = riskData.riskLevel;
             if (riskData.riskLevel > vaultData.riskLevel) {
                 vaultData.riskLevel = riskData.riskLevel;
@@ -270,7 +270,7 @@ function recordResults(results) {
  * within the specified block range (`fromBlock` to `endBlock`). The risk level is derived from these metrics in conjunction
  * with the provided asset parameters.
  */
-async function computeMarketRiskLevelBiggestDailyChange(assetParameters, collateralSymbol, baseAsset, fromBlock, endBlock, web3Provider, quotePrice) {
+async function computeMarketRiskLevel(assetParameters, collateralSymbol, baseAsset, fromBlock, endBlock, web3Provider, quotePrice) {
     const from = collateralSymbol;
 
 
