@@ -118,7 +118,7 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
     const metamorphoVault = new ethers.Contract(vaultAddress, metamorphoAbi, web3Provider);
 
     // find the vault markets
-    const marketIds = await getVaultMarkets(metamorphoVault, endBlock);
+    const marketIds = await getVaultMarkets(metamorphoVault);
 
     if (marketIds.length == 0) {
         return undefined;
@@ -128,13 +128,13 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
 
     // compute summary data for all markets with a collateral
     for (const marketId of marketIds) {
-        const marketParams = await morphoBlue.idToMarketParams(marketId, { blockTag: endBlock });
+        const marketParams = await morphoBlue.idToMarketParams(marketId);
         if (marketParams.collateralToken != ethers.constants.AddressZero) {
             const collateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
             console.log(`market collateral is ${collateralTokenSymbol}`);
             const collateralToken = getConfTokenBySymbol(collateralTokenSymbol);
-            const marketConfig = await metamorphoVault.config(marketId, { blockTag: endBlock });
-            const blueMarket = await morphoBlue.market(marketId, { blockTag: endBlock });
+            const marketConfig = await metamorphoVault.config(marketId);
+            const blueMarket = await morphoBlue.market(marketId);
             // assetParameters { liquidationBonusBPS: 1200, supplyCap: 900000, LTV: 70 }
             const LTV = normalize(marketParams.lltv, 18);
             const liquidationBonusBPS = getLiquidationBonusForLtv(LTV);
@@ -144,19 +144,19 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
             const supplyCap = Math.max(configCap, currentSupply);
             
             const pairData = {
-                'quote': collateralTokenSymbol,
-                'LTV': LTV,
-                'liquidationBonus': liquidationBonusBPS / 10000,
-                'supplyCapInKind': supplyCap
+                quote: collateralTokenSymbol,
+                LTV: LTV,
+                liquidationBonus: liquidationBonusBPS / 10000,
+                supplyCapInKind: supplyCap
             };
             const basePrice = await getPrice(baseToken.address);
             const quotePrice = await getPrice(collateralToken.address);
 
             const supplyCapUsd = supplyCap * basePrice;
-            pairData['supplyCapUsd'] = supplyCapUsd;
+            pairData.supplyCapUsd = supplyCapUsd;
 
-            pairData['basePrice'] = basePrice;
-            pairData['quotePrice'] = quotePrice;
+            pairData.basePrice = basePrice;
+            pairData.quotePrice = quotePrice;
             const assetParameters = {
                 liquidationBonusBPS,
                 supplyCapUsd,
@@ -164,12 +164,12 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
             };
 
             const riskData = await computeMarketRiskLevel(assetParameters, collateralToken.symbol, baseAsset, fromBlock, endBlock, web3Provider, quotePrice);
-            pairData['riskLevel'] = riskData.riskLevel;
+            pairData.riskLevel = riskData.riskLevel;
             if (riskData.riskLevel > vaultData.riskLevel) {
                 vaultData.riskLevel = riskData.riskLevel;
             }
-            pairData['volatility'] = riskData.volatility;
-            pairData['liquidity'] = riskData.liquidity;
+            pairData.volatility = riskData.volatility;
+            pairData.liquidity = riskData.liquidity;
             vaultData.subMarkets.push(pairData);
         }
     }
@@ -198,13 +198,13 @@ function getLiquidationBonusForLtv(ltv) {
     }
 }
 
-async function getVaultMarkets(vault, currentBlock) {
+async function getVaultMarkets(vault) {
     try {
         const marketIds = [];
-        const withdrawQueueLengthBn = await vault.withdrawQueueLength({ blockTag: currentBlock });
+        const withdrawQueueLengthBn = await vault.withdrawQueueLength();
         const vaultQueueLength = Number(withdrawQueueLengthBn.toString());
         for (let i = 0; i < vaultQueueLength; i++) {
-            const marketId = await vault.withdrawQueue(i, { blockTag: currentBlock });
+            const marketId = await vault.withdrawQueue(i);
             marketIds.push(marketId);
         }
 
