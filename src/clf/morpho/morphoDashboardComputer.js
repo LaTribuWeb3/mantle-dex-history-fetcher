@@ -214,8 +214,8 @@ async function getVaultMarkets(vault, currentBlock) {
 
 async function getPrice(tokenAddress) {
     const apiUrl = `https://coins.llama.fi/prices/current/ethereum:${tokenAddress}?searchWidth=12h`;
-    const historicalPriceResponse = await retry(axios.get, [apiUrl], 0, 100);
-    return historicalPriceResponse.data.coins[`ethereum:${tokenAddress}`].price;
+    const priceResponse = await retry(axios.get, [apiUrl], 0, 100);
+    return priceResponse.data.coins[`ethereum:${tokenAddress}`].price;
 }
 
 function findRiskLevelFromParameters(volatility, liquidity, liquidationBonus, ltv, borrowCap) {
