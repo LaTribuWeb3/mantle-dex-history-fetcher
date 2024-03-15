@@ -12,7 +12,6 @@ const { RecordMonitoring } = require('../../utils/monitoring');
 const { DATA_DIR } = require('../../utils/constants');
 const { getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
 
-morphoDashboardSummaryComputer(60);
 /**
  * Compute the Summary values for Morpho
  * @param {number} fetchEveryMinutes 
