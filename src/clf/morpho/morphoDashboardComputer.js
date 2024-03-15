@@ -13,7 +13,7 @@ const { DATA_DIR } = require('../../utils/constants');
 const { getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
 const { computeAverageSlippageMap } = require('../../data.interface/internal/data.interface.liquidity');
 
-
+morphoDashboardSummaryComputer(30);
 /**
  * Compute the Summary values for Morpho
  * @param {number} fetchEveryMinutes 
@@ -176,6 +176,7 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
 }
 
 function getLiquidationBonusForLtv(ltv) {
+    ltv = Number((ltv * 100).toFixed(3));
     switch (ltv) {
         default:
             throw new Error(`No liquidation bonus for ltv ${ltv}`);
