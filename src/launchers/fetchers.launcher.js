@@ -3,7 +3,6 @@ const { fnName, roundTo, sleep } = require('../utils/utils');
 const dotenv = require('dotenv');
 dotenv.config();
 const { UniswapV3HistoryFetcher } = require('../uniswap.v3/uniswap.v3.history.fetcher');
-const { CurvePriceHistoryFetcher } = require('../curve/curve.price.history.fetcher');
 const { UniswapV3PriceHistoryFetcher } = require('../uniswap.v3/uniswap.v3.price.history.fetcher');
 const { PrecomputeMedianPrices } = require('../precomputer/median.precomputer');
 const { UpdateSyncFile, SYNC_FILENAMES, WaitUntilDone } = require('../utils/sync');
@@ -15,7 +14,7 @@ const fetchersToStart = [
     // UniswapV2HistoryFetcher,
     // SushiswapV2HistoryFetcher,
     // CurveHistoryFetcher,
-    CurvePriceHistoryFetcher,
+    // CurvePriceHistoryFetcher,
     UniswapV3HistoryFetcher,
     UniswapV3PriceHistoryFetcher,
     PrecomputeMedianPrices,
