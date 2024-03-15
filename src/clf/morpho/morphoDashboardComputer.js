@@ -12,6 +12,7 @@ const { RecordMonitoring } = require('../../utils/monitoring');
 const { DATA_DIR } = require('../../utils/constants');
 const { getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
 
+
 /**
  * Compute the Summary values for Morpho
  * @param {number} fetchEveryMinutes 
@@ -31,11 +32,6 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes, startDate = Dat
         }
 
         console.log(new Date(startDate));
-
-        if (!fs.existsSync(path.join(DATA_DIR, 'clf'))) {
-            fs.mkdirSync(path.join(DATA_DIR, 'clf'));
-        }
-
         console.log(`${fnName()}: starting`);
         const web3Provider = new ethers.providers.StaticJsonRpcProvider(process.env.RPC_URL);
         const fromBlock = await getBlocknumberForTimestamp(Math.round(startDate / 1000) - (30 * 24 * 60 * 60));
@@ -46,7 +42,7 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes, startDate = Dat
 
         /// for all vaults in morpho config
         for (const vault of Object.values(config.vaults)) {
-            const riskDataForVault = await computeCLFForVault(config.blueAddress, vault.address, vault.name, vault.baseAsset, web3Provider, fromBlock, currentBlock, startDateUnixSecond);
+            const riskDataForVault = await computeSummaryForVault(config.blueAddress, vault.address, vault.baseAsset, web3Provider, fromBlock, currentBlock, startDateUnixSecond);
             if (riskDataForVault) {
                 results[vault.baseAsset] = riskDataForVault;
                 console.log(`results[${vault.baseAsset}]`, results[vault.baseAsset]);
@@ -81,16 +77,37 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes, startDate = Dat
 }
 
 /**
- * Compute CLF value for a vault
- * @param {string} cometAddress 
- * @param {string} baseAsset 
- * @param {{index: number, symbol: string, address: string, coinGeckoID: string}[]} collaterals 
- * @param {ethers.providers.StaticJsonRpcProvider} web3Provider 
- * @param {number} fromBlock 
- * @param {number} endBlock 
- * @returns {Promise<{collateralsData: {[collateralSymbol: string]: {collateral: {inKindSupply: number, usdSupply: number}, clfs: {7: {volatility: number, liquidity: number}, 30: {volatility: number, liquidity: number}, 180: {volatility: number, liquidity: number}}}}>}
+ * Computes a summary for a vault, including its overall risk level and detailed metrics for each of its sub-markets.
+ * 
+ * @param {string} blueAddress The address of the Morpho Blue contract.
+ * @param {string} vaultAddress The address of the Metamorpho Vault contract.
+ * @param {string} baseAsset The symbol of the base asset in the vault.
+ * @param {ethers.providers.StaticJsonRpcProvider} web3Provider A web3 provider instance for blockchain interaction.
+ * @param {number} fromBlock The starting block number for historical data queries.
+ * @param {number} endBlock The ending block number for historical data queries.
+ * @param {number} startDateUnixSec The start date in Unix seconds for price history queries.
+ * 
+ * @returns {Promise<{
+ *   riskLevel: number,
+ *   subMarkets: Array<{
+ *     quote: string, // The symbol of the collateral asset
+ *     LTV: number, // The loan-to-value ratio
+ *     liquidationBonus: number, // The liquidation bonus as a percentage
+ *     supplyCapInKind: number, // The supply cap in the kind of asset
+ *     supplyCapUsd: number, // The supply cap in USD
+ *     basePrice: number, // The price of the base asset at the start date
+ *     quotePrice: number, // The price of the collateral asset at the start date
+ *     riskLevel: number, // The calculated risk level for the sub-market
+ *     volatility: number, // The volatility of the sub-market asset
+ *     liquidity: number // The liquidity of the sub-market asset
+ *   }>
+ * }>} A promise that resolves to an object containing the overall risk level of the vault and an array of objects representing each sub-market's metrics.
+ * 
+ * This function assesses the risk level of a vault by calculating the risk metrics for each of its sub-markets based on
+ * the market configuration, historical price data, and the provided asset parameters. The overall risk level of the vault
+ * is determined by the highest risk level among its sub-markets.
  */
-async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsset, web3Provider, fromBlock, endBlock, startDateUnixSec) {
+async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3Provider, fromBlock, endBlock, startDateUnixSec) {
     const vaultData = {
         'riskLevel': 0,
         'subMarkets': []
@@ -109,7 +126,7 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
 
     const baseToken = getConfTokenBySymbol(baseAsset);
 
-    // compute clf for all markets with a collateral
+    // compute summary data for all markets with a collateral
     for (const marketId of marketIds) {
         const marketParams = await morphoBlue.idToMarketParams(marketId, { blockTag: endBlock });
         if (marketParams.collateralToken != ethers.constants.AddressZero) {
@@ -144,7 +161,7 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
             pairData['basePrice'] = basePrice;
             pairData['quotePrice'] = quotePrice;
 
-            const riskData = await computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralToken.symbol, baseAsset, fromBlock, endBlock, startDateUnixSec, web3Provider, vaultName);
+            const riskData = await computeMarketRiskLevelBiggestDailyChange(assetParameters, collateralToken.symbol, baseAsset, fromBlock, endBlock, web3Provider);
             pairData['riskLevel'] = riskData.riskLevel;
             if (riskData.riskLevel > vaultData.riskLevel) {
                 vaultData.riskLevel = riskData.riskLevel;
@@ -236,15 +253,27 @@ function recordResults(results) {
 
 
 /**
+ * Computes the market risk level based on the biggest daily change in volatility and liquidity.
+ * This calculation is used to assess the risk associated with a given market.
  * 
- * @param {{liquidationBonusBPS: number, supplyCap: number, LTV: number}} assetParameters 
- * @param {{index: number, symbol: string, volatilityPivot: string, address: string, coinGeckoID: string}} collateral 
- * @param {string} baseAsset 
- * @param {{[span: number]: number}]} fromBlocks 
- * @param {number} endBlock 
- * @returns {Promise<{7: {volatility: number, liquidity: number}, 30: {volatility: number, liquidity: number}, 180: {volatility: number, liquidity: number}}>}
+ * @param {{liquidationBonusBPS: number, supplyCap: number, LTV: number}} assetParameters Asset parameters including liquidation bonus in basis points, supply cap, and loan-to-value ratio.
+ * @param {string} collateralSymbol The symbol for the collateral asset.
+ * @param {string} baseAsset The base asset symbol.
+ * @param {number} fromBlock The starting block number for the calculation period.
+ * @param {number} endBlock The ending block number for the calculation period.
+ * @param {ethers.providers.StaticJsonRpcProvider} web3Provider The web3 provider for making blockchain calls.
+ * 
+ * @returns {Promise<{
+ *   volatility: number,
+ *   liquidity: number,
+ *   riskLevel: number
+ * }>} An object containing the computed volatility and liquidity of the market, as well as the overall risk level.
+ * 
+ * The function calculates volatility based on historical data up to `endBlock` and computes the average liquidity
+ * within the specified block range (`fromBlock` to `endBlock`). The risk level is derived from these metrics in conjunction
+ * with the provided asset parameters.
  */
-async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralSymbol, baseAsset, fromBlock, endBlock, startDateUnixSec, web3Provider) {
+async function computeMarketRiskLevelBiggestDailyChange(assetParameters, collateralSymbol, baseAsset, fromBlock, endBlock, web3Provider) {
     const from = collateralSymbol;
 
 
