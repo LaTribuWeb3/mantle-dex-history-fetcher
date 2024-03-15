@@ -9,11 +9,13 @@ const { getBlocknumberForTimestamp } = require('../../utils/web3.utils');
 const { normalize, getConfTokenBySymbol, getTokenSymbolByAddress } = require('../../utils/token.utils');
 const { config, morphoBlueAbi, metamorphoAbi } = require('./morphoFlagshipComputer.config');
 const { RecordMonitoring } = require('../../utils/monitoring');
-const { DATA_DIR } = require('../../utils/constants');
+const { DATA_DIR, BLOCK_PER_DAY } = require('../../utils/constants');
 const { getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
 const { computeAverageSlippageMap } = require('../../data.interface/internal/data.interface.liquidity');
 
-morphoDashboardSummaryComputer(30);
+morphoDashboardSummaryComputer(6 * 60);
+
+
 /**
  * Compute the Summary values for Morpho
  * @param {number} fetchEveryMinutes 
@@ -35,8 +37,8 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes) {
         console.log(new Date(start));
         console.log(`${fnName()}: starting`);
         const web3Provider = new ethers.providers.StaticJsonRpcProvider(process.env.RPC_URL);
-        const fromBlock = await getBlocknumberForTimestamp(Math.round(start / 1000) - (30 * 24 * 60 * 60));
-        const currentBlock = await getBlocknumberForTimestamp(Math.round(start / 1000));
+        const currentBlock = await web3Provider.getBlockNumber();
+        const fromBlock = currentBlock - (30 * BLOCK_PER_DAY);
 
         const results = {};
 
@@ -50,11 +52,13 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes) {
                 console.log(`not data for vault ${vault.name}`);
             }
         }
-
-
-        console.log('firing record function');
-        recordResults(results, start);
-
+        
+        if (!fs.existsSync(`${DATA_DIR}/precomputed/morpho-dashboard/`)) {
+            fs.mkdirSync(`${DATA_DIR}/precomputed/morpho-dashboard/`, { recursive: true });
+        }
+        const summaryFilePath = path.join(DATA_DIR, 'precomputed/morpho-dashboard/morpho-summary.json');
+        const objectToWrite = JSON.stringify(results, null, 2);
+        fs.writeFileSync(summaryFilePath, objectToWrite, 'utf8');
         console.log('Morpho Dashboard Summary Computer: ending');
 
         const runEndDate = Math.round(Date.now() / 1000);
@@ -237,17 +241,6 @@ function findRiskLevelFromParameters(volatility, liquidity, liquidationBonus, lt
     return r;
 }
 
-function recordResults(results) {
-    if (!fs.existsSync(`${DATA_DIR}/precomputed/morpho-dashboard/`)) {
-        fs.mkdirSync(`${DATA_DIR}/precomputed/morpho-dashboard/`, { recursive: true });
-    }
-    const summaryFilePath = path.join(DATA_DIR, 'precomputed/morpho-dashboard/morpho-summary.json');
-    const objectToWrite = JSON.stringify(results, null, 2);
-    console.log('recording results');
-
-    fs.writeFileSync(summaryFilePath, objectToWrite, 'utf8');
-}
-
 
 /**
  * Computes the market risk level based on the biggest daily change in volatility and liquidity.
@@ -259,7 +252,7 @@ function recordResults(results) {
  * @param {number} fromBlock The starting block number for the calculation period.
  * @param {number} endBlock The ending block number for the calculation period.
  * @param {ethers.providers.StaticJsonRpcProvider} web3Provider The web3 provider for making blockchain calls.
- * 
+ * @param {number} collateralPrice the collateral price (in usd)
  * @returns {Promise<{
  *   volatility: number,
  *   liquidity: number,
@@ -270,10 +263,14 @@ function recordResults(results) {
  * within the specified block range (`fromBlock` to `endBlock`). The risk level is derived from these metrics in conjunction
  * with the provided asset parameters.
  */
-async function computeMarketRiskLevel(assetParameters, collateralSymbol, baseAsset, fromBlock, endBlock, web3Provider, quotePrice) {
+async function computeMarketRiskLevel(assetParameters, collateralSymbol, baseAsset, fromBlock, endBlock, web3Provider, collateralPrice) {
+    const toReturn = {
+        riskLevel: 0,
+        volatility: 0,
+        liquidity: 0,
+    };
+
     const from = collateralSymbol;
-
-
     // for each platform, compute the volatility and the avg liquidity
     // only request one data (the biggest span) and recompute the avg for each spans
     const rollingVolatility = await getRollingVolatility('all', from, baseAsset, web3Provider);
@@ -286,26 +283,20 @@ async function computeMarketRiskLevel(assetParameters, collateralSymbol, baseAss
         throw new Error('CANNOT FIND VOLATILITY');
     }
 
+
     console.log(`[${from}-${baseAsset}] volatility: ${roundTo(volatility * 100)}%`);
-
-    const toReturn = {
-        volatility,
-        liquidity: 0,
-    };
-
 
     const oldestBlock = fromBlock;
     const fullLiquidity = getLiquidityAll(from, baseAsset, oldestBlock, endBlock);
     const averageLiquidityOn30Days = computeAverageSlippageMap(fullLiquidity);
-    toReturn.liquidity = averageLiquidityOn30Days.slippageMap[assetParameters.liquidationBonusBPS].base * quotePrice;
-
+    const computedUsdLiquidityForCollateral = averageLiquidityOn30Days.slippageMap[assetParameters.liquidationBonusBPS].base * collateralPrice;
     
     console.log(`[${from}-${baseAsset}] [30d] all dexes liquidity: ${toReturn.liquidity}`);
-
-
-    toReturn.riskLevel = findRiskLevelFromParameters(toReturn.volatility, toReturn.liquidity, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCapUsd);
-
-
+    const computedRiskLevel = findRiskLevelFromParameters(volatility, computedUsdLiquidityForCollateral, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCapUsd);
+    
+    toReturn.volatility = volatility;
+    toReturn.liquidity = computedUsdLiquidityForCollateral;
+    toReturn.riskLevel = computedRiskLevel;
 
     return toReturn;
 }
