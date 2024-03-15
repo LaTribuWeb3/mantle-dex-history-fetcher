@@ -93,7 +93,7 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes, startDate = Dat
  *     quote: string, // The symbol of the collateral asset
  *     LTV: number, // The loan-to-value ratio
  *     liquidationBonus: number, // The liquidation bonus as a percentage
- *     supplyCapInKind: number, // The supply cap in the kind of asset
+ *     supplyCapInKind: number, // The supply cap in base asset kind
  *     supplyCapUsd: number, // The supply cap in USD
  *     basePrice: number, // The price of the base asset at the start date
  *     quotePrice: number, // The price of the collateral asset at the start date
