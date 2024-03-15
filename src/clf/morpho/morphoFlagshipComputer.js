@@ -11,7 +11,6 @@ const { config, morphoBlueAbi, metamorphoAbi } = require('./morphoFlagshipComput
 const { RecordMonitoring } = require('../../utils/monitoring');
 const { DATA_DIR } = require('../../utils/constants');
 const { getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
-const { morphoDashboardSummaryComputer } = require('./morphoDashboardComputer');
 const spans = [7, 30, 180];
 
 // morphoFlagshipComputer(60);
@@ -89,10 +88,6 @@ async function morphoFlagshipComputer(fetchEveryMinutes, startDate=Date.now()) {
 
         console.log('firing record function');
         recordResults(toRecord, startDate);
-
-        console.log('firing morpho dashboard summary computer');
-        await morphoDashboardSummaryComputer(fetchEveryMinutes, startDate);
-        console.log('Morpho dashboard summary computer ended');
 
         console.log('Morpho CLF Computer: ending');
 
