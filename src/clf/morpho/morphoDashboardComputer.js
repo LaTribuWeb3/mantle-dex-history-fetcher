@@ -135,7 +135,7 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
             const marketConfig = await metamorphoVault.config(marketId, { blockTag: endBlock });
             const blueMarket = await morphoBlue.market(marketId, { blockTag: endBlock });
             // assetParameters { liquidationBonusBPS: 1200, supplyCap: 900000, LTV: 70 }
-            const LTV = normalize(marketParams.lltv, 18) * 100;
+            const LTV = normalize(marketParams.lltv, 18);
             const liquidationBonusBPS = getLiquidationBonusForLtv(LTV / 100);
             // max(config cap from metamorpho vault, current market supply)
             const configCap = normalize(marketConfig.cap, baseToken.decimals);
@@ -148,7 +148,7 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
             };
             const pairData = {
                 'quote': collateralTokenSymbol,
-                'LTV': LTV / 100,
+                'LTV': LTV,
                 'liquidationBonus': liquidationBonusBPS / 10000,
                 'supplyCapInKind': supplyCap
             };
@@ -223,7 +223,7 @@ function findRiskLevelFromParameters(volatility, liquidity, liquidationBonus, lt
     const d = borrowCap;
     const beta = liquidationBonus;
     const l = liquidity;
-    ltv = Number(ltv) / 100;
+    ltv = Number(ltv);
 
     const sigmaTimesSqrtOfD = sigma * Math.sqrt(d);
     const ltvPlusBeta = ltv + beta;
