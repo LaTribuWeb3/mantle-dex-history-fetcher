@@ -20,8 +20,8 @@ const cacheDuration = 30 * 60 * 1000; // 30 min cache duration
 
 app.get('/api/dashboard/morpho-overview', async (req, res, next) => {
     try {
-        const kinzaOverview = getMorphoOverview();
-        res.json(kinzaOverview);
+        const morphoOverview = getMorphoOverview();
+        res.json(morphoOverview);
     } catch (error) {
         res.status(400).json({ error: error.message });
         next();
