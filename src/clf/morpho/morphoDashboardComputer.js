@@ -137,16 +137,12 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
             const blueMarket = await morphoBlue.market(marketId, { blockTag: endBlock });
             // assetParameters { liquidationBonusBPS: 1200, supplyCap: 900000, LTV: 70 }
             const LTV = normalize(marketParams.lltv, 18);
-            const liquidationBonusBPS = getLiquidationBonusForLtv(LTV / 100);
+            const liquidationBonusBPS = getLiquidationBonusForLtv(LTV);
             // max(config cap from metamorpho vault, current market supply)
             const configCap = normalize(marketConfig.cap, baseToken.decimals);
             const currentSupply = normalize(blueMarket.totalSupplyAssets, baseToken.decimals);
             const supplyCap = Math.max(configCap, currentSupply);
-            const assetParameters = {
-                liquidationBonusBPS,
-                supplyCap,
-                LTV
-            };
+            
             const pairData = {
                 'quote': collateralTokenSymbol,
                 'LTV': LTV,
@@ -156,12 +152,18 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
             const basePrice = await getPrice(baseToken.address);
             const quotePrice = await getPrice(collateralToken.address);
 
-            pairData['supplyCapUsd'] = supplyCap * basePrice;
+            const supplyCapUsd = supplyCap * basePrice;
+            pairData['supplyCapUsd'] = supplyCapUsd;
 
             pairData['basePrice'] = basePrice;
             pairData['quotePrice'] = quotePrice;
+            const assetParameters = {
+                liquidationBonusBPS,
+                supplyCapUsd,
+                LTV
+            };
 
-            const riskData = await computeMarketRiskLevelBiggestDailyChange(assetParameters, collateralToken.symbol, baseAsset, fromBlock, endBlock, web3Provider);
+            const riskData = await computeMarketRiskLevelBiggestDailyChange(assetParameters, collateralToken.symbol, baseAsset, fromBlock, endBlock, web3Provider, quotePrice);
             pairData['riskLevel'] = riskData.riskLevel;
             if (riskData.riskLevel > vaultData.riskLevel) {
                 vaultData.riskLevel = riskData.riskLevel;
@@ -176,7 +178,6 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
 }
 
 function getLiquidationBonusForLtv(ltv) {
-    ltv = Number((ltv * 100).toFixed(3));
     switch (ltv) {
         default:
             throw new Error(`No liquidation bonus for ltv ${ltv}`);
@@ -269,7 +270,7 @@ function recordResults(results) {
  * within the specified block range (`fromBlock` to `endBlock`). The risk level is derived from these metrics in conjunction
  * with the provided asset parameters.
  */
-async function computeMarketRiskLevelBiggestDailyChange(assetParameters, collateralSymbol, baseAsset, fromBlock, endBlock, web3Provider) {
+async function computeMarketRiskLevelBiggestDailyChange(assetParameters, collateralSymbol, baseAsset, fromBlock, endBlock, web3Provider, quotePrice) {
     const from = collateralSymbol;
 
 
@@ -296,15 +297,14 @@ async function computeMarketRiskLevelBiggestDailyChange(assetParameters, collate
     const oldestBlock = fromBlock;
     const fullLiquidity = getLiquidityAll(from, baseAsset, oldestBlock, endBlock);
     const averageLiquidityOn30Days = computeAverageSlippageMap(fullLiquidity);
-    toReturn.liquidity = averageLiquidityOn30Days.slippageMap[assetParameters.liquidationBonusBPS].base;
+    toReturn.liquidity = averageLiquidityOn30Days.slippageMap[assetParameters.liquidationBonusBPS].base * quotePrice;
 
     
     console.log(`[${from}-${baseAsset}] [30d] all dexes liquidity: ${toReturn.liquidity}`);
 
 
+    toReturn.riskLevel = findRiskLevelFromParameters(toReturn.volatility, toReturn.liquidity, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCapUsd);
 
-
-    toReturn.riskLevel = findRiskLevelFromParameters(toReturn.volatility, toReturn.liquidity, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCap);
 
 
     return toReturn;
