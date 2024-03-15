@@ -38,11 +38,10 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes, startDate = Dat
         const currentBlock = await getBlocknumberForTimestamp(Math.round(startDate / 1000));
 
         const results = {};
-        const startDateUnixSecond = Math.round(startDate / 1000);
 
         /// for all vaults in morpho config
         for (const vault of Object.values(config.vaults)) {
-            const riskDataForVault = await computeSummaryForVault(config.blueAddress, vault.address, vault.baseAsset, web3Provider, fromBlock, currentBlock, startDateUnixSecond);
+            const riskDataForVault = await computeSummaryForVault(config.blueAddress, vault.address, vault.baseAsset, web3Provider, fromBlock, currentBlock);
             if (riskDataForVault) {
                 results[vault.baseAsset] = riskDataForVault;
                 console.log(`results[${vault.baseAsset}]`, results[vault.baseAsset]);
@@ -107,7 +106,7 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes, startDate = Dat
  * the market configuration, historical price data, and the provided asset parameters. The overall risk level of the vault
  * is determined by the highest risk level among its sub-markets.
  */
-async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3Provider, fromBlock, endBlock, startDateUnixSec) {
+async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3Provider, fromBlock, endBlock) {
     const vaultData = {
         'riskLevel': 0,
         'subMarkets': []
@@ -153,8 +152,8 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
                 'liquidationBonus': liquidationBonusBPS / 10000,
                 'supplyCapInKind': supplyCap
             };
-            const basePrice = await getHistoricalPrice(baseToken.address, startDateUnixSec);
-            const quotePrice = await getHistoricalPrice(collateralToken.address, startDateUnixSec);
+            const basePrice = await getPrice(baseToken.address);
+            const quotePrice = await getPrice(collateralToken.address);
 
             pairData['supplyCapUsd'] = supplyCap * basePrice;
 
@@ -213,8 +212,8 @@ async function getVaultMarkets(vault, currentBlock) {
     }
 }
 
-async function getHistoricalPrice(tokenAddress, dateUnixSec) {
-    const apiUrl = `https://coins.llama.fi/prices/historical/${dateUnixSec}/ethereum:${tokenAddress}?searchWidth=12h`;
+async function getPrice(tokenAddress) {
+    const apiUrl = `https://coins.llama.fi/prices/current/ethereum:${tokenAddress}?searchWidth=12h`;
     const historicalPriceResponse = await retry(axios.get, [apiUrl], 0, 100);
     return historicalPriceResponse.data.coins[`ethereum:${tokenAddress}`].price;
 }
