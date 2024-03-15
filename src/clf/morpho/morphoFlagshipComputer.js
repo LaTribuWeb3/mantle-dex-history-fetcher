@@ -9,8 +9,8 @@ const { getBlocknumberForTimestamp } = require('../../utils/web3.utils');
 const { normalize, getConfTokenBySymbol, getTokenSymbolByAddress } = require('../../utils/token.utils');
 const { config, morphoBlueAbi, metamorphoAbi } = require('./morphoFlagshipComputer.config');
 const { RecordMonitoring } = require('../../utils/monitoring');
-const { DATA_DIR, PLATFORMS } = require('../../utils/constants');
-const { getLiquidity, getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
+const { DATA_DIR } = require('../../utils/constants');
+const { getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
 const { morphoDashboardSummaryComputer } = require('./morphoDashboardComputer');
 const spans = [7, 30, 180];
 

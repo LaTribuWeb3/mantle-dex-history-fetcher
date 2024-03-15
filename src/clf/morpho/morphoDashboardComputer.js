@@ -218,18 +218,6 @@ function findRiskLevelFromParameters(volatility, liquidity, liquidationBonus, lt
     return r;
 }
 
-/**
- * 
- * @param {{collateralsData: {[collateralSymbol: string]: {collateral: {inKindSupply: number, usdSupply: number}, clfs: {7: {volatility: number, liquidity: number}, 30: {volatility: number, liquidity: number}, 180: {volatility: number, liquidity: number}}}}} poolData 
- * @returns 
- */
-
-/**
- * 
- * @param {{[baseAsset: string]: {totalCollateral: number, weightedCLF: number}}} protocolData 
- * @returns 
- */
-
 function recordResults(results) {
     if (!fs.existsSync(`${DATA_DIR}/precomputed/morpho-dashboard/`)) {
         fs.mkdirSync(`${DATA_DIR}/precomputed/morpho-dashboard/`, { recursive: true });
@@ -256,7 +244,7 @@ function recordResults(results) {
  * @param {number} endBlock 
  * @returns {Promise<{7: {volatility: number, liquidity: number}, 30: {volatility: number, liquidity: number}, 180: {volatility: number, liquidity: number}}>}
  */
-async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralSymbol, baseAsset, fromBlock, endBlock, startDateUnixSec, web3Provider, vaultname) {
+async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralSymbol, baseAsset, fromBlock, endBlock, startDateUnixSec, web3Provider) {
     const from = collateralSymbol;
 
 
