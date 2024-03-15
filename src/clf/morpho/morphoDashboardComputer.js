@@ -5,7 +5,6 @@ const { fnName, roundTo, retry } = require('../../utils/utils');
 const fs = require('fs');
 const { default: axios } = require('axios');
 dotenv.config();
-const { getBlocknumberForTimestamp } = require('../../utils/web3.utils');
 const { normalize, getConfTokenBySymbol, getTokenSymbolByAddress } = require('../../utils/token.utils');
 const { config, morphoBlueAbi, metamorphoAbi } = require('./morphoFlagshipComputer.config');
 const { RecordMonitoring } = require('../../utils/monitoring');
