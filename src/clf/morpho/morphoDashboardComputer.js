@@ -1,7 +1,7 @@
 const { ethers } = require('ethers');
 const dotenv = require('dotenv');
 const path = require('path');
-const { fnName, getDay, roundTo, retry } = require('../../utils/utils');
+const { fnName, roundTo, retry } = require('../../utils/utils');
 const fs = require('fs');
 const { default: axios } = require('axios');
 dotenv.config();
@@ -11,7 +11,6 @@ const { config, morphoBlueAbi, metamorphoAbi } = require('./morphoFlagshipComput
 const { RecordMonitoring } = require('../../utils/monitoring');
 const { DATA_DIR } = require('../../utils/constants');
 const { getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
-const spans = [30];
 
 morphoDashboardSummaryComputer(60);
 /**
@@ -48,19 +47,18 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes, startDate = Dat
 
         /// for all vaults in morpho config
         for (const vault of Object.values(config.vaults)) {
-            const clfValue = await computeCLFForVault(config.blueAddress, vault.address, vault.name, vault.baseAsset, web3Provider, fromBlock, currentBlock, startDateUnixSecond);
-            if (clfValue) {
-                results[vault.baseAsset] = clfValue;
+            const riskDataForVault = await computeCLFForVault(config.blueAddress, vault.address, vault.name, vault.baseAsset, web3Provider, fromBlock, currentBlock, startDateUnixSecond);
+            if (riskDataForVault) {
+                results[vault.baseAsset] = riskDataForVault;
                 console.log(`results[${vault.baseAsset}]`, results[vault.baseAsset]);
             } else {
                 console.log(`not data for vault ${vault.name}`);
             }
         }
 
-        const sortedData = sortData(results);
 
         console.log('firing record function');
-        recordResults(sortedData, startDate);
+        recordResults(results, startDate);
 
         console.log('Morpho Dashboard Summary Computer: ending');
 
@@ -94,8 +92,9 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes, startDate = Dat
  * @returns {Promise<{collateralsData: {[collateralSymbol: string]: {collateral: {inKindSupply: number, usdSupply: number}, clfs: {7: {volatility: number, liquidity: number}, 30: {volatility: number, liquidity: number}, 180: {volatility: number, liquidity: number}}}}>}
  */
 async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsset, web3Provider, fromBlock, endBlock, startDateUnixSec) {
-    const resultsData = {
-        collateralsData: {}
+    const vaultData = {
+        'riskLevel': 0,
+        'subMarkets': []
     };
 
     console.log(`Started work on Morpho flagship --- ${baseAsset} --- vault`);
@@ -116,7 +115,6 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
         const marketParams = await morphoBlue.idToMarketParams(marketId, { blockTag: endBlock });
         if (marketParams.collateralToken != ethers.constants.AddressZero) {
             const collateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
-            const uniqueId = `${collateralTokenSymbol}_${marketId}`;
             console.log(`market collateral is ${collateralTokenSymbol}`);
             const collateralToken = getConfTokenBySymbol(collateralTokenSymbol);
             const marketConfig = await metamorphoVault.config(marketId, { blockTag: endBlock });
@@ -133,23 +131,32 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
                 supplyCap,
                 LTV
             };
-
-            resultsData.collateralsData[uniqueId] = {};
-            // collateral data { inKindSupply: 899999.9260625947, usdSupply: 45764996.240282945 }
-            const basePrice = await getHistoricalPrice(baseToken.address, startDateUnixSec);
-            resultsData.collateralsData[uniqueId].collateral = {
-                inKindSupply: currentSupply,
-                usdSupply: currentSupply * basePrice
+            const pairData = {
+                'quote': collateralTokenSymbol,
+                'LTV': LTV / 100,
+                'liquidationBonus': liquidationBonusBPS / 10000,
+                'supplyCapInKind': supplyCap
             };
+            const basePrice = await getHistoricalPrice(baseToken.address, startDateUnixSec);
+            const quotePrice = await getHistoricalPrice(collateralToken.address, startDateUnixSec);
 
-            const resultsAndParameters = await computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralToken.symbol, baseAsset, fromBlock, endBlock, startDateUnixSec, web3Provider, vaultName);
-            resultsData.collateralsData[uniqueId].clfs = resultsAndParameters.results;
-            resultsData.collateralsData[uniqueId]['marketParameters'] = resultsAndParameters.parameters;
-            resultsData.collateralsData[uniqueId].assetParameters = resultsAndParameters.assetParameters;
+            pairData['supplyCapUsd'] = supplyCap * basePrice;
+
+            pairData['basePrice'] = basePrice;
+            pairData['quotePrice'] = quotePrice;
+
+            const riskData = await computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralToken.symbol, baseAsset, fromBlock, endBlock, startDateUnixSec, web3Provider, vaultName);
+            pairData['riskLevel'] = riskData.riskLevel;
+            if (riskData.riskLevel > vaultData.riskLevel) {
+                vaultData.riskLevel = riskData.riskLevel;
+            }
+            pairData['volatility'] = riskData.volatility;
+            pairData['liquidity'] = riskData.liquidity;
+            vaultData.subMarkets.push(pairData);
         }
     }
 
-    return resultsData;
+    return vaultData;
 }
 
 function getLiquidationBonusForLtv(ltv) {
@@ -251,10 +258,8 @@ function recordResults(results) {
  * @returns {Promise<{7: {volatility: number, liquidity: number}, 30: {volatility: number, liquidity: number}, 180: {volatility: number, liquidity: number}}>}
  */
 async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralSymbol, baseAsset, fromBlock, endBlock, startDateUnixSec, web3Provider, vaultname) {
-    const startDate = new Date(startDateUnixSec * 1000);
     const from = collateralSymbol;
 
-    const parameters = {};
 
     // for each platform, compute the volatility and the avg liquidity
     // only request one data (the biggest span) and recompute the avg for each spans
@@ -273,12 +278,10 @@ async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, col
 
     console.log(`[${from}-${baseAsset}] volatility: ${roundTo(volatility * 100)}%`);
 
-    for (const span of spans) {
-        parameters[span] = {
-            volatility,
-            liquidity: 0,
-        };
-    }
+    const toReturn = {
+        volatility,
+        liquidity: 0,
+    };
 
 
     const oldestBlock = fromBlock;
@@ -298,73 +301,16 @@ async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, col
         liquidityToAdd = sumLiquidityForTargetSlippageBps / blockNumberForSpan.length;
     }
 
-    parameters['30'].liquidity += liquidityToAdd;
+    toReturn.liquidity += liquidityToAdd;
     console.log(`[${from}-${baseAsset}] [30d] all dexes liquidity: ${liquidityToAdd}`);
 
-    console.log('parameters', parameters);
 
 
-    const results = {};
-    for (const volatilitySpan of spans) {
-        results[volatilitySpan] = {};
-        for (const liquiditySpan of spans) {
-            results[volatilitySpan][liquiditySpan] = findRiskLevelFromParameters(parameters[volatilitySpan].volatility, parameters[liquiditySpan].liquidity, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCap);
-        }
-    }
 
-    console.log('results', results);
-    return { results, parameters, assetParameters };
-}
+    toReturn['riskLevel'] = findRiskLevelFromParameters(toReturn.volatility, toReturn.liquidity, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCap);
 
-function sortData(data) {
-    // Initialize the result object to store the transformed data
-    const result = {};
 
-    // Iterate over each top-level currency (like "WETH", "USDC", "USDT")
-    Object.entries(data).forEach(([currency, { collateralsData }]) => {
-        // Initialize an array to store subMarket data for each currency
-        let subMarkets = [];
-        // Initialize a variable to track the highest riskLevel
-        let maxRiskLevel = 0;
-
-        // Process each collateral to calculate riskLevel and other properties
-        Object.entries(collateralsData).forEach(([key, collateral]) => {
-            const { clfs, marketParameters, assetParameters } = collateral;
-
-            // Assuming riskLevel is derived from `clfs["30"]["30"]`, adjust as necessary
-            const riskLevel = clfs['30']['30'];
-            // Update maxRiskLevel if this collateral's riskLevel is higher
-            maxRiskLevel = Math.max(maxRiskLevel, riskLevel);
-
-            const { volatility, liquidity } = marketParameters['30'];
-            const { LTV, liquidationBonusBPS, supplyCap } = assetParameters;
-
-            // Extract the "quote" from the property key
-            const quote = key.split('_')[0]; // Splits the key and takes the first part
-
-            // Convert liquidationBonusBPS to a decimal for liquidationBonus
-            const liquidationBonus = liquidationBonusBPS / 10000;
-
-            // Construct the subMarket entry and add it to the subMarkets array
-            subMarkets.push({
-                quote,
-                riskLevel,
-                LTV: LTV / 100, // Convert LTV to a decimal
-                liquidationBonus,
-                supplyCapInKind: supplyCap,
-                volatility,
-                liquidity,
-            });
-        });
-
-        // Assign the calculated data to the result object, using maxRiskLevel for the currency
-        result[currency] = {
-            riskLevel: maxRiskLevel,
-            subMarkets,
-        };
-    });
-
-    return result;
+    return toReturn;
 }
 
 
