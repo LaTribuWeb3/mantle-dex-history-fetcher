@@ -2,12 +2,12 @@ const express = require('express');
 const fs = require('fs');
 const { getAvailableCurve } = require('../curve/curve.utils');
 const { getAvailableUniswapV2 } = require('../uniswap.v2/uniswap.v2.utils');
-const compression = require('compression')
+const compression = require('compression');
 var cors = require('cors');
 var path = require('path');
 const { roundTo, getDay } = require('../utils/utils');
 const { DATA_DIR } = require('../utils/constants');
-const { getAvailableForDashboard, getDataForPairAndPlatform, checkPlatform, getFetcherResults } = require('./dashboardUtils');
+const { getAvailableForDashboard, getDataForPairAndPlatform, checkPlatform, getFetcherResults, getMorphoOverview } = require('./dashboardUtils');
 const app = express();
 
 app.use(cors());
@@ -17,6 +17,16 @@ const port = process.env.API_PORT || 3000;
 
 const cache = {};
 const cacheDuration = 30 * 60 * 1000; // 30 min cache duration
+
+app.get('/api/dashboard/morpho-overview', async (req, res, next) => {
+    try {
+        const kinzaOverview = getMorphoOverview();
+        res.json(kinzaOverview);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+        next();
+    }
+});
 
 // getprecomputeddata?platform=uniswapv2&span=1
 app.get('/api/getprecomputeddata', async (req, res, next) => {
