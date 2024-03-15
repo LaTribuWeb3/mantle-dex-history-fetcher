@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { DATA_DIR, PLATFORMS } = require('../utils/constants');
 const dirPath = path.join(DATA_DIR, 'precomputed', 'dashboard');
-const overviewFile = path.join(DATA_DIR, 'precomputed', 'morpho-dashboard', 'morpho-overview.json');
+const overviewFile = path.join(DATA_DIR, 'precomputed', 'morpho-dashboard', 'morpho-summary.json');
 
 
 function getFetcherResults() {
