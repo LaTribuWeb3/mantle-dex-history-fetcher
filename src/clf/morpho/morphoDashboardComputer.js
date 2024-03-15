@@ -17,7 +17,7 @@ const { getRollingVolatility, getLiquidityAll } = require('../../data.interface/
  * Compute the Summary values for Morpho
  * @param {number} fetchEveryMinutes 
  */
-async function morphoDashboardSummaryComputer(fetchEveryMinutes, startDate = Date.now()) {
+async function morphoDashboardSummaryComputer(fetchEveryMinutes) {
     const MONITORING_NAME = 'Morpho Flagship Dashboard Summary Computer';
     const start = Date.now();
     try {
@@ -31,11 +31,11 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes, startDate = Dat
             throw new Error('Could not find RPC_URL env variable');
         }
 
-        console.log(new Date(startDate));
+        console.log(new Date(start));
         console.log(`${fnName()}: starting`);
         const web3Provider = new ethers.providers.StaticJsonRpcProvider(process.env.RPC_URL);
-        const fromBlock = await getBlocknumberForTimestamp(Math.round(startDate / 1000) - (30 * 24 * 60 * 60));
-        const currentBlock = await getBlocknumberForTimestamp(Math.round(startDate / 1000));
+        const fromBlock = await getBlocknumberForTimestamp(Math.round(start / 1000) - (30 * 24 * 60 * 60));
+        const currentBlock = await getBlocknumberForTimestamp(Math.round(start / 1000));
 
         const results = {};
 
@@ -52,7 +52,7 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes, startDate = Dat
 
 
         console.log('firing record function');
-        recordResults(results, startDate);
+        recordResults(results, start);
 
         console.log('Morpho Dashboard Summary Computer: ending');
 
