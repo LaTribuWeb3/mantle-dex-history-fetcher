@@ -241,13 +241,8 @@ function recordResults(results) {
     const summaryFilePath = path.join(DATA_DIR, 'precomputed/morpho-dashboard/morpho-summary.json');
     const objectToWrite = JSON.stringify(results, null, 2);
     console.log('recording results');
-    try {
-        fs.writeFileSync(summaryFilePath, objectToWrite, 'utf8');
-    }
-    catch (error) {
-        console.error(error);
-        console.log('Morpho Computer failed to write files');
-    }
+
+    fs.writeFileSync(summaryFilePath, objectToWrite, 'utf8');
 }
 
 
