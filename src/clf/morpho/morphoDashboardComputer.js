@@ -274,12 +274,9 @@ async function computeMarketRiskLevelBiggestDailyChange(assetParameters, collate
     // for each platform, compute the volatility and the avg liquidity
     // only request one data (the biggest span) and recompute the avg for each spans
     const rollingVolatility = await getRollingVolatility('all', from, baseAsset, web3Provider);
-    const volatilityAtBlock = rollingVolatility.history.filter(_ => _.blockStart <= endBlock && _.blockEnd >= endBlock)[0];
 
     let volatility = 0;
-    if (volatilityAtBlock) {
-        volatility = volatilityAtBlock.current;
-    } else if (rollingVolatility.latest && rollingVolatility.latest.current) {
+    if(rollingVolatility.latest && rollingVolatility.latest.current) {
         volatility = rollingVolatility.latest.current;
     }
     else {
