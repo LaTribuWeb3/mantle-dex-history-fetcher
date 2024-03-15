@@ -179,26 +179,6 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
     }
 
     return resultsData;
-
-
-    /// for all collaterals in selected pool
-    // for (const collateral of collaterals) {
-    //     try {
-    //         console.log(`Computing CLFs for ${collateral.symbol}`);
-    //         const assetParameters = await getAssetParameters(cometContract, collateral, endBlock);
-    //         console.log('assetParameters', assetParameters);
-    //         resultsData.collateralsData[collateral.symbol] = {};
-    //         resultsData.collateralsData[collateral.symbol].collateral = await getCollateralAmount(collateral, cometContract, startDateUnixSec, endBlock);
-    //         console.log('collateral data', resultsData.collateralsData[collateral.symbol].collateral);
-    //         resultsData.collateralsData[collateral.symbol].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateral, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider);
-    //         console.log('resultsData', resultsData);
-    //     }
-    //     catch (error) {
-    //         console.error('error', error);
-    //         resultsData[collateral.symbol] = null;
-    //     }
-    // }
-    // return resultsData;
 }
 
 function getLiquidationBonusForLtv(ltv) {
@@ -243,25 +223,6 @@ async function getHistoricalPrice(tokenAddress, dateUnixSec) {
     const apiUrl = `https://coins.llama.fi/prices/historical/${dateUnixSec}/ethereum:${tokenAddress}?searchWidth=12h`;
     const historicalPriceResponse = await retry(axios.get, [apiUrl], 0, 100);
     return historicalPriceResponse.data.coins[`ethereum:${tokenAddress}`].price;
-}
-
-/**
- * 
- * @param {number} volatility 
- * @param {number} liquidity 
- * @param {number} liquidationBonus 
- * @param {number} ltv 
- * @param {number} borrowCap 
- * @returns 
- */
-function findCLFFromParameters(volatility, liquidity, liquidationBonus, ltv, borrowCap) {
-    ltv = Number(ltv) / 100;
-    const sqrtResult = Math.sqrt(liquidity / borrowCap);
-    const sqrtBySigma = sqrtResult / volatility;
-    const ltvPlusBeta = Number(ltv) + Number(liquidationBonus);
-    const lnLtvPlusBeta = Math.log(ltvPlusBeta);
-    const c = -1 * lnLtvPlusBeta * sqrtBySigma;
-    return c;
 }
 
 function findRiskLevelFromParameters(volatility, liquidity, liquidationBonus, ltv, borrowCap) {
