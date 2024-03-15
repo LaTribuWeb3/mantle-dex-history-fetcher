@@ -314,7 +314,7 @@ async function computeMarketRiskLevelBiggestDailyChange(assetParameters, collate
 
 
 
-    toReturn['riskLevel'] = findRiskLevelFromParameters(toReturn.volatility, toReturn.liquidity, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCap);
+    toReturn.riskLevel = findRiskLevelFromParameters(toReturn.volatility, toReturn.liquidity, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCap);
 
 
     return toReturn;
