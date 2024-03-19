@@ -10,7 +10,6 @@ const { config, morphoBlueAbi, metamorphoAbi } = require('./morphoFlagshipComput
 const { RecordMonitoring } = require('../../utils/monitoring');
 const { DATA_DIR, BLOCK_PER_DAY } = require('../../utils/constants');
 
-
 /**
  * Compute the Summary values for Morpho
  * @param {number} fetchEveryMinutes 
@@ -155,7 +154,7 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
             vaultData.loanAssetPrice = marketPrice;
             const basePrice = await getPrice(collateralToken.address);
 
-            const supplyCapUsd = supplyCap * basePrice;
+            const supplyCapUsd = supplyCap * marketPrice;
             pairData.supplyCapUsd = supplyCapUsd;
 
             pairData.basePrice = basePrice;
@@ -254,7 +253,8 @@ function findRiskLevelFromParameters(volatility, liquidity, liquidationBonus, lt
  * @param {number} collateralPrice the collateral price (in usd)
  * @returns {Promise<{
  *   volatility: number,
- *   liquidity: number,
+ *   liquidityUsd number,
+ *   liquidityInKind: number,
  *   riskLevel: number
  * }>} An object containing the computed volatility and liquidity of the market, as well as the overall risk level.
  * 
