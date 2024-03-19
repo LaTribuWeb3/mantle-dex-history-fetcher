@@ -150,11 +150,11 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
                 liquidationBonus: liquidationBonusBPS / 10000,
                 supplyCapInKind: supplyCap
             };
-            const marketPrice = await getPrice(baseToken.address);
-            vaultData.loanAssetPrice = marketPrice;
+            const loanAssetPrice = await getPrice(baseToken.address);
+            vaultData.loanAssetPrice = loanAssetPrice;
             const basePrice = await getPrice(collateralToken.address);
 
-            const supplyCapUsd = supplyCap * marketPrice;
+            const supplyCapUsd = supplyCap * loanAssetPrice;
             pairData.supplyCapUsd = supplyCapUsd;
 
             pairData.basePrice = basePrice;
