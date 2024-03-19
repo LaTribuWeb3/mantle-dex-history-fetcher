@@ -121,6 +121,7 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
 
     // find the vault markets
     const marketIds = await getVaultMarkets(metamorphoVault);
+    vaultData.name = await metamorphoVault.name();
 
     if (marketIds.length == 0) {
         return undefined;
