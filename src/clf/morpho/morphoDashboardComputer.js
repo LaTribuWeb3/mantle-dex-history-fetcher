@@ -11,7 +11,6 @@ const { RecordMonitoring } = require('../../utils/monitoring');
 const { DATA_DIR, BLOCK_PER_DAY } = require('../../utils/constants');
 
 
-
 /**
  * Compute the Summary values for Morpho
  * @param {number} fetchEveryMinutes 
@@ -166,7 +165,7 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
                 LTV
             };
 
-            const riskData = await computeMarketRiskLevel(assetParameters, collateralToken.symbol, baseAsset, fromBlock, endBlock, web3Provider, quotePrice);
+            const riskData = await computeMarketRiskLevel(assetParameters, collateralToken.symbol, baseAsset, fromBlock, endBlock, web3Provider, basePrice);
             pairData.riskLevel = riskData.riskLevel;
             if (riskData.riskLevel > vaultData.riskLevel) {
                 vaultData.riskLevel = riskData.riskLevel;
