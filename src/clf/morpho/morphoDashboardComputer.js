@@ -9,10 +9,7 @@ const { normalize, getConfTokenBySymbol, getTokenSymbolByAddress } = require('..
 const { config, morphoBlueAbi, metamorphoAbi } = require('./morphoFlagshipComputer.config');
 const { RecordMonitoring } = require('../../utils/monitoring');
 const { DATA_DIR, BLOCK_PER_DAY } = require('../../utils/constants');
-const { getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
-const { computeAverageSlippageMap } = require('../../data.interface/internal/data.interface.liquidity');
 
-morphoDashboardSummaryComputer(6 * 60);
 
 
 /**
@@ -247,7 +244,7 @@ function findRiskLevelFromParameters(volatility, liquidity, liquidationBonus, lt
  * Computes the market risk level based on the biggest daily change in volatility and liquidity.
  * This calculation is used to assess the risk associated with a given market.
  * 
- * @param {{liquidationBonusBPS: number, supplyCap: number, LTV: number}} assetParameters Asset parameters including liquidation bonus in basis points, supply cap, and loan-to-value ratio.
+ * @param {{liquidationBonusBPS: number, supplyCapUsd: number, LTV: number}} assetParameters Asset parameters including liquidation bonus in basis points, supply cap, and loan-to-value ratio.
  * @param {string} collateralSymbol The symbol for the collateral asset.
  * @param {string} baseAsset The base asset symbol.
  * @param {number} fromBlock The starting block number for the calculation period.
@@ -271,28 +268,15 @@ async function computeMarketRiskLevel(assetParameters, collateralSymbol, baseAss
         liquidityUsd: 0,
         liquidityInKind: 0,
     };
-
     const from = collateralSymbol;
-    // for each platform, compute the volatility and the avg liquidity
-    // only request one data (the biggest span) and recompute the avg for each spans
-    const rollingVolatility = await getRollingVolatility('all', from, baseAsset, web3Provider);
+    const {volatility, liquidityInKind} = getLiquidityAndVolatilityFromDashboardData(from, baseAsset, assetParameters.liquidationBonusBPS);
 
-    let volatility = 0;
-    if(rollingVolatility.latest && rollingVolatility.latest.current) {
-        volatility = rollingVolatility.latest.current;
-    }
-    else {
-        throw new Error('CANNOT FIND VOLATILITY');
-    }
 
 
     console.log(`[${from}-${baseAsset}] volatility: ${roundTo(volatility * 100)}%`);
 
-    const oldestBlock = fromBlock;
-    const fullLiquidity = getLiquidityAll(from, baseAsset, oldestBlock, endBlock);
-    const averageLiquidityOn30Days = computeAverageSlippageMap(fullLiquidity);
-    const liquidityInKind = averageLiquidityOn30Days.slippageMap[assetParameters.liquidationBonusBPS].base;
-    const liquidityUsd = liquidityInKind * collateralPrice;
+
+    const liquidityUsd = liquidityInKind * collateralPrice; 
     console.log(`[${from}-${baseAsset}] [30d] all dexes liquidity: ${liquidityInKind}`);
     const computedRiskLevel = findRiskLevelFromParameters(volatility, liquidityUsd, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCapUsd);
     
@@ -302,6 +286,17 @@ async function computeMarketRiskLevel(assetParameters, collateralSymbol, baseAss
     toReturn.riskLevel = computedRiskLevel;
 
     return toReturn;
+}
+
+function getLiquidityAndVolatilityFromDashboardData(base, quote, liquidationBonusBPS) {
+    const filePath = path.join(DATA_DIR, 'precomputed', 'dashboard', `${base}-${quote}-all.json`);
+    const dashboardData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const dataKeys = Object.keys(dashboardData.liquidity);
+    const latestKey = dataKeys[dataKeys.length - 1];
+    const liquidityData = dashboardData.liquidity[latestKey];
+    const volatilityData = liquidityData.volatility;
+    const slippageMap = liquidityData.avgSlippageMap;
+    return {volatility: volatilityData, liquidityInKind: slippageMap[liquidationBonusBPS].base};
 }
 
 

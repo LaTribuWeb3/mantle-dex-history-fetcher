@@ -13,6 +13,7 @@ const { watchedPairs } = require('../global.config');
 const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
 const { getPrices } = require('../data.interface/internal/data.interface.price');
 const { default: axios } = require('axios');
+const { morphoDashboardSummaryComputer } = require('../clf/morpho/morphoDashboardComputer');
 
 const RUN_EVERY_MINUTES = 6 * 60; // in minutes
 const MONITORING_NAME = 'Dashboard Precomputer';
@@ -144,6 +145,8 @@ async function PrecomputeDashboardData() {
                 generateDashboardDataFromLiquidityData(allPlatformsLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, 'all', rollingVolatility, blockTimeStamps);                        
                 logFnDurationWithLabel(startDate, 'generateDashboardDataFromLiquidityData');
             }
+
+            await morphoDashboardSummaryComputer(RUN_EVERY_MINUTES);
 
             const runEndDate = Math.round(Date.now() / 1000);
             await RecordMonitoring({
