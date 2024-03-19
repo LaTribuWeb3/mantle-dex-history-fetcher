@@ -111,6 +111,7 @@ async function morphoDashboardSummaryComputer(fetchEveryMinutes) {
 async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3Provider, fromBlock, endBlock) {
     const vaultData = {
         'riskLevel': 0,
+        'loanAssetPrice': 0,
         'subMarkets': []
     };
 
@@ -145,19 +146,19 @@ async function computeSummaryForVault(blueAddress, vaultAddress, baseAsset, web3
             const supplyCap = Math.max(configCap, currentSupply);
             
             const pairData = {
-                quote: collateralTokenSymbol,
+                base: collateralTokenSymbol,
                 LTV: LTV,
                 liquidationBonus: liquidationBonusBPS / 10000,
                 supplyCapInKind: supplyCap
             };
-            const basePrice = await getPrice(baseToken.address);
-            const quotePrice = await getPrice(collateralToken.address);
+            const marketPrice = await getPrice(baseToken.address);
+            vaultData.loanAssetPrice = marketPrice;
+            const basePrice = await getPrice(collateralToken.address);
 
             const supplyCapUsd = supplyCap * basePrice;
             pairData.supplyCapUsd = supplyCapUsd;
 
             pairData.basePrice = basePrice;
-            pairData.quotePrice = quotePrice;
             const assetParameters = {
                 liquidationBonusBPS,
                 supplyCapUsd,
