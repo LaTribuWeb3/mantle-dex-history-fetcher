@@ -478,7 +478,12 @@ const watchedPairs = {
             quote: 'wstETH',
             pivots: ['WETH'],
             exportToInternalDashboard: true
-        }
+        },
+        {
+            quote: 'DAI',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
     ]
 };
 
