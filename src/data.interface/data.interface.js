@@ -89,17 +89,17 @@ function checkPlatform(platform) {
 }
 
 function GetPairToUse(from, to) {
-    let newFrom = from;
-    let newTo = to;
+    let actualFrom = from;
+    let actualTo = to;
 
     if(from == 'sDAI') {
-        newFrom = 'DAI';
+        actualFrom = 'DAI';
     }
     if(to == 'sDAI') {
-        newTo = 'DAI';
+        actualTo = 'DAI';
     }
 
-    return {newFrom, newTo};
+    return {actualFrom, actualTo};
 }
 
 module.exports = { getLiquidity, getRollingVolatility, getLiquidityAll};
