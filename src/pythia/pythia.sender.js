@@ -167,7 +167,7 @@ function generateLiquidityData(span, baseSymbol, startBlock, endBlock) {
     const avgValuesForPlatform = {};
     const results = [];
     for(const platform of PLATFORMS_TO_USE) {
-        const liquidityAverage = getAverageLiquidity(platform, baseSymbol, 'USDC', startBlock, endBlock);
+        // const liquidityAverage = getAverageLiquidity(platform, baseSymbol, 'USDC', startBlock, endBlock);
 
         // if some data found, generate per-platform data in the valid format
         if(liquidityAverage.avgPrice != 0) {

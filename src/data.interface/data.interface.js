@@ -22,23 +22,6 @@ const { rollingBiggestDailyChange } = require('../utils/volatility');
 // only use these functions when querying csv data :)                                                                                                                                               
 
 /**
- * Get the average liquidity in a block interval, for a platform, with or without pivot route jumps
- * @param {string} platform platform (univ2, univ3...)
- * @param {string} fromSymbol base symbol (WETH, USDC...)
- * @param {string} toSymbol quote symbol (WETH, USDC...)
- * @param {number} fromBlock start block of the query (included)
- * @param {number} toBlock endblock of the query (included)
- * @param {bool} withJumps default true. pivot route jump: from UNI to MKR, we will add "additional routes" using UNI->USDC->MKR + UNI->WETH->MKR + UNI->WBTC+MKR
- */
-function getAverageLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJumps = true) {
-    checkPlatform(platform);
-    const start = Date.now();
-    const avgLiquidity = getAverageLiquidityForInterval(fromSymbol, toSymbol, fromBlock, toBlock, platform, withJumps);
-    logFnDurationWithLabel(start, `p: ${platform}, [${fromSymbol}/${toSymbol}], blocks: ${(toBlock-fromBlock)}, jumps: ${withJumps}`);
-    return avgLiquidity;
-}
-
-/**
  * Get the slippage maps since fromBlock to toBlock
  * Aggregating from each 'platforms' requested and possibly using "jumps"
  * @param {string} fromSymbol base symbol (WETH, USDC...)
@@ -51,9 +34,10 @@ function getAverageLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock,
  * @returns {{[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}}
  */
 function getLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJumps = true, stepBlock = DEFAULT_STEP_BLOCK) {
+    const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
     checkPlatform(platform);
     const start = Date.now();
-    const liquidity = getSlippageMapForInterval(fromSymbol, toSymbol, fromBlock, toBlock, platform, withJumps, stepBlock);
+    const liquidity = getSlippageMapForInterval(actualFrom, actualTo, fromBlock, toBlock, platform, withJumps, stepBlock);
     logFnDurationWithLabel(start, `p: ${platform}, [${fromSymbol}/${toSymbol}], blocks: ${(toBlock-fromBlock)}, jumps: ${withJumps}, step: ${stepBlock}`);
     return liquidity;
 }
@@ -68,15 +52,17 @@ function getLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJu
  * @returns {{[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}}
  */
 function getLiquidityAll(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock = DEFAULT_STEP_BLOCK) {
-    return getLiquidityAccrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock);
+    const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
+    return getLiquidityAccrossDexes(actualFrom, actualTo, fromBlock, toBlock, stepBlock);
 }
 
 
 async function getRollingVolatility(platform, fromSymbol, toSymbol, web3Provider, lambda = LAMBDA) {
+    const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
     // find the median file
-    const medianPrices = getPrices(platform, fromSymbol, toSymbol);
+    const medianPrices = getPrices(platform, actualFrom, actualTo);
     if(!medianPrices) {
-        console.warn(`No median prices for ${platform}, ${fromSymbol}, ${toSymbol}`);
+        console.warn(`No median prices for ${platform}, ${actualFrom}, ${actualTo}`);
         return undefined;
     }
 
@@ -102,4 +88,18 @@ function checkPlatform(platform) {
     }
 }
 
-module.exports = { getAverageLiquidity, getLiquidity, getRollingVolatility, getLiquidityAll};
+function GetPairToUse(from, to) {
+    let newFrom = from;
+    let newTo = to;
+
+    if(from == 'sDAI') {
+        newFrom = 'DAI';
+    }
+    if(to == 'sDAI') {
+        newTo = 'DAI';
+    }
+
+    return {newFrom, newTo};
+}
+
+module.exports = { getLiquidity, getRollingVolatility, getLiquidityAll};
