@@ -395,6 +395,11 @@ const watchedPairs = {
             exportToInternalDashboard: true
         },
         {
+            quote: 'sDAI',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
+        {
             quote: 'MANA',
             pivots: ['WETH'],
             exportToInternalDashboard: false
@@ -481,6 +486,11 @@ const watchedPairs = {
         },
         {
             quote: 'DAI',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'sDAI',
             pivots: undefined,
             exportToInternalDashboard: true
         },
