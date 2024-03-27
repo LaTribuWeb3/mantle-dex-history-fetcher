@@ -102,4 +102,4 @@ function GetPairToUse(from, to) {
     return {actualFrom, actualTo};
 }
 
-module.exports = { getLiquidity, getRollingVolatility, getLiquidityAll};
+module.exports = { getLiquidity, getRollingVolatility, getLiquidityAll, GetPairToUse};

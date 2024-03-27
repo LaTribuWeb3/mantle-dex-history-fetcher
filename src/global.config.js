@@ -324,6 +324,11 @@ const watchedPairs = {
             pivots: undefined,
             exportToInternalDashboard: true
         },
+        {
+            quote: 'sDAI',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
     ],
     'USDC': [
         {
