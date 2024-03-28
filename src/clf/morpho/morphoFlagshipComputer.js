@@ -60,7 +60,7 @@ async function morphoFlagshipComputer(fetchEveryMinutes, startDate=Date.now()) {
 
         /// for all vaults in morpho config
         for (const vault of Object.values(config.vaults)) {
-            const clfValue = await computeCLFForVault(config.blueAddress, vault.address, vault.name, vault.baseAsset, web3Provider, fromBlocks, currentBlock, startDateUnixSecond);
+            const clfValue = await retry(computeCLFForVault, [config.blueAddress, vault.address, vault.name, vault.baseAsset, web3Provider, fromBlocks, currentBlock, startDateUnixSecond]);
             if(clfValue) {
                 results[vault.baseAsset] = clfValue;
                 const averagePoolData = computeAverageCLFForVault(results[vault.baseAsset]);
@@ -135,14 +135,14 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
 
     // compute clf for all markets with a collateral
     for(const marketId of marketIds) {
-        const marketParams = await morphoBlue.idToMarketParams(marketId, {blockTag: endBlock});
+        const marketParams = await retry(() => morphoBlue.idToMarketParams(marketId, {blockTag: endBlock}), []);
         if(marketParams.collateralToken != ethers.constants.AddressZero) {
             const collateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
             const uniqueId = `${collateralTokenSymbol}_${marketId}`;
             console.log(`market collateral is ${collateralTokenSymbol}`);
             const collateralToken = getConfTokenBySymbol(collateralTokenSymbol);
-            const marketConfig = await metamorphoVault.config(marketId, {blockTag: endBlock});
-            const blueMarket = await morphoBlue.market(marketId, {blockTag: endBlock});
+            const marketConfig = await retry(() => metamorphoVault.config(marketId, {blockTag: endBlock}), []);
+            const blueMarket = await retry(() => morphoBlue.market(marketId, {blockTag: endBlock}), []);
             // assetParameters { liquidationBonusBPS: 1200, supplyCap: 900000, LTV: 70 }
             const LTV = normalize(marketParams.lltv, 18) * 100;
             const liquidationBonusBPS = getLiquidationBonusForLtv(LTV/100);
