@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { DATA_DIR, DEFAULT_STEP_BLOCK, MEDIAN_OVER_BLOCK } = require('../../utils/constants');
 const { fnName, logFnDurationWithLabel } = require('../../utils/utils');
-const { GetPairToUse } = require('../data.interface');
+const { GetPairToUse } = require('../../global.config');
 
 /**
  * 

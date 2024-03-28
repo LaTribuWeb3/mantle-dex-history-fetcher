@@ -502,4 +502,19 @@ const watchedPairs = {
     ]
 };
 
-module.exports = { tokens, watchedPairs };
+
+function GetPairToUse(from, to) {
+    let actualFrom = from;
+    let actualTo = to;
+
+    if(from == 'sDAI') {
+        actualFrom = 'DAI';
+    }
+    if(to == 'sDAI') {
+        actualTo = 'DAI';
+    }
+
+    return {actualFrom, actualTo};
+}
+
+module.exports = { tokens, watchedPairs, GetPairToUse };

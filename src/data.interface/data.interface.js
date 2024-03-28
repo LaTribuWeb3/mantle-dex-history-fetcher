@@ -10,6 +10,7 @@ const { getAverageLiquidityForInterval, getSlippageMapForInterval, getLiquidityA
 const { logFnDurationWithLabel } = require('../utils/utils');
 const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA } = require('../utils/constants');
 const { rollingBiggestDailyChange } = require('../utils/volatility');
+const { GetPairToUse } = require('../global.config');
 
 
 //    _____  _   _  _______  ______  _____   ______        _____  ______     ______  _    _  _   _   _____  _______  _____  ____   _   _   _____ 
@@ -88,18 +89,5 @@ function checkPlatform(platform) {
     }
 }
 
-function GetPairToUse(from, to) {
-    let actualFrom = from;
-    let actualTo = to;
 
-    if(from == 'sDAI') {
-        actualFrom = 'DAI';
-    }
-    if(to == 'sDAI') {
-        actualTo = 'DAI';
-    }
-
-    return {actualFrom, actualTo};
-}
-
-module.exports = { getLiquidity, getRollingVolatility, getLiquidityAll, GetPairToUse};
+module.exports = { getLiquidity, getRollingVolatility, getLiquidityAll};
