@@ -60,7 +60,7 @@ async function morphoFlagshipComputer(fetchEveryMinutes, startDate=Date.now()) {
 
         /// for all vaults in morpho config
         for (const vault of Object.values(config.vaults)) {
-            const clfValue = await retry(computeCLFForVault, [config.blueAddress, vault.address, vault.name, vault.baseAsset, web3Provider, fromBlocks, currentBlock, startDateUnixSecond]);
+            const clfValue = await computeCLFForVault(config.blueAddress, vault.address, vault.name, vault.baseAsset, web3Provider, fromBlocks, currentBlock, startDateUnixSecond);
             if(clfValue) {
                 results[vault.baseAsset] = clfValue;
                 const averagePoolData = computeAverageCLFForVault(results[vault.baseAsset]);
