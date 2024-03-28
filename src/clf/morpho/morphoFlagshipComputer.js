@@ -9,8 +9,8 @@ const { getBlocknumberForTimestamp } = require('../../utils/web3.utils');
 const { normalize, getConfTokenBySymbol, getTokenSymbolByAddress } = require('../../utils/token.utils');
 const { config, morphoBlueAbi, metamorphoAbi } = require('./morphoFlagshipComputer.config');
 const { RecordMonitoring } = require('../../utils/monitoring');
-const { DATA_DIR, PLATFORMS } = require('../../utils/constants');
-const { getLiquidity, getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
+const { DATA_DIR } = require('../../utils/constants');
+const { getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
 const spans = [7, 30, 180];
 
 // morphoFlagshipComputer(60);
@@ -73,13 +73,8 @@ async function morphoFlagshipComputer(fetchEveryMinutes, startDate=Date.now()) {
             }
         }
 
-        let protocolWeightedCLF = undefined;
-        try {
-            protocolWeightedCLF = computeProtocolWeightedCLF(averagePerAsset);
-        }
-        catch (error) {
-            console.error(error);
-        }
+        const protocolWeightedCLF = computeProtocolWeightedCLF(averagePerAsset);
+
         const toRecord = {
             protocol: 'morpho',
             weightedCLF: protocolWeightedCLF,
@@ -174,26 +169,6 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
     }
 
     return resultsData;
-
-
-    /// for all collaterals in selected pool
-    // for (const collateral of collaterals) {
-    //     try {
-    //         console.log(`Computing CLFs for ${collateral.symbol}`);
-    //         const assetParameters = await getAssetParameters(cometContract, collateral, endBlock);
-    //         console.log('assetParameters', assetParameters);
-    //         resultsData.collateralsData[collateral.symbol] = {};
-    //         resultsData.collateralsData[collateral.symbol].collateral = await getCollateralAmount(collateral, cometContract, startDateUnixSec, endBlock);
-    //         console.log('collateral data', resultsData.collateralsData[collateral.symbol].collateral);
-    //         resultsData.collateralsData[collateral.symbol].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateral, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider);
-    //         console.log('resultsData', resultsData);
-    //     }
-    //     catch (error) {
-    //         console.error('error', error);
-    //         resultsData[collateral.symbol] = null;
-    //     }
-    // }
-    // return resultsData;
 }
 
 function getLiquidationBonusForLtv(ltv) {
@@ -229,7 +204,7 @@ async function getVaultMarkets(vault, currentBlock) {
     
         return marketIds;
     } catch(e) {
-        console.warn(e);
+        console.log('cannot find vault: vault does not exist yet');
         return [];
     }
 }
@@ -344,13 +319,7 @@ function recordParameters(marketId, pair, data, timestamp) {
     const datedProtocolFilename = path.join(DATA_DIR, `clf/morpho/${date}/${date}_${withUniqueId}_morpho_CLFs.json`);
     const objectToWrite = JSON.stringify(data, null, 2);
     console.log('recording results');
-    try {
-        fs.writeFileSync(datedProtocolFilename, objectToWrite, 'utf8');
-    }
-    catch (error) {
-        console.error(error);
-        console.log('Morpho Computer failed to write files');
-    }
+    fs.writeFileSync(datedProtocolFilename, objectToWrite, 'utf8');
 }
 
 function recordResults(results, timestamp) {
@@ -365,14 +334,9 @@ function recordResults(results, timestamp) {
     const latestFullFilename = path.join(DATA_DIR, 'clf/morpho/latest/morpho_CLFs.json');
     const objectToWrite = JSON.stringify(results, null, 2);
     console.log('recording results');
-    try {
-        fs.writeFileSync(datedProtocolFilename, objectToWrite, 'utf8');
-        fs.writeFileSync(latestFullFilename, objectToWrite, 'utf8');
-    }
-    catch (error) {
-        console.error(error);
-        console.log('Morpho Computer failed to write files');
-    }
+    fs.writeFileSync(datedProtocolFilename, objectToWrite, 'utf8');
+    fs.writeFileSync(latestFullFilename, objectToWrite, 'utf8');
+
 }
 
 

@@ -6,7 +6,7 @@
 //////////// THE FETCHERS //////////////
 
 const { getPrices } = require('./internal/data.interface.price');
-const { getAverageLiquidityForInterval, getSlippageMapForInterval, getLiquidityAccrossDexes } = require('./internal/data.interface.liquidity');
+const { getSlippageMapForInterval, getLiquidityAccrossDexes } = require('./internal/data.interface.liquidity');
 const { logFnDurationWithLabel } = require('../utils/utils');
 const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA } = require('../utils/constants');
 const { rollingBiggestDailyChange } = require('../utils/volatility');
