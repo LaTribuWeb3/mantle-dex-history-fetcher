@@ -8,7 +8,8 @@ module.exports = {
     'overrides': [
     ],
     'parserOptions': {
-        'ecmaVersion': 'latest'
+        'ecmaVersion': 'latest',
+        'sourceType': 'module'
     },
     'rules': {
         'indent': ['error', 4, { 'SwitchCase': 1 }],
