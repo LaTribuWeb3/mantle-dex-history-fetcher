@@ -20,56 +20,19 @@ async function checkLiquidity() {
     setLiquidityAndPrice(liquidities, 'WETH', 'USDC', block);
     setLiquidityAndPrice(liquidities, 'WETH', 'USDT', block);
     setLiquidityAndPrice(liquidities, 'USDC', 'USDT', block);
-    // console.log(JSON.stringify(liquidities));
-
-    // const l2 = getLiquidity('uniswapv3', 'WETH', 'USDC', block, block, false);
-    // l2.base = 'WETH';
-    // l2.quote = 'USDC';
-    // console.log(l2);
-    // const l3 = getLiquidity('uniswapv3', 'WETH', 'USDT', block, block, false);
-    // l3.base = 'WETH';
-    // l3.quote = 'USDT';
-    // console.log(l3);
-    // const l4 = getLiquidity('uniswapv3', 'USDC', 'USDT', block, block, false);
-    // l4.base = 'USDC';
-    // l4.quote = 'USDT';
-    // console.log(l4);
 
     let liquiditiesWithSlippagesAsArray = {};
 
-    for (const targetSlippage of [500]) {
-
-        const reworkedSlippages = [];
-        for (const base of Object.keys(liquidities)) {
-            for (const quote of Object.keys(liquidities[base])) {
-                const liquidity = liquidities[base][quote][block];
-                if (!Object.hasOwn(liquiditiesWithSlippagesAsArray, base)) liquiditiesWithSlippagesAsArray[base] = {};
-                if (!Object.hasOwn(liquiditiesWithSlippagesAsArray[base], quote)) liquiditiesWithSlippagesAsArray[base][quote] = {};
-                liquiditiesWithSlippagesAsArray[base][quote] = Object.keys(liquidity.slippageMap).map(slippage => liquidity.slippageMap[slippage].base * liquidity.price);
-                // for (const slippageBps of Object.keys(liquidity.slippageMap)) {
-                //     if (Number(slippageBps) <= targetSlippage) {
-                //         reworkedSlippages.push({
-                //             name: `${base}_${slippageBps}_${quote}`,
-                //             valueUsd: liquidity.slippageMap[slippageBps].base * liquidity.price // TODO PRICE OF THE GOOD TOKEN LOL
-                //         });
-                //     }
-                // }
-            }
+    for (const base of Object.keys(liquidities)) {
+        for (const quote of Object.keys(liquidities[base])) {
+            const liquidity = liquidities[base][quote][block];
+            if (!Object.hasOwn(liquiditiesWithSlippagesAsArray, base)) liquiditiesWithSlippagesAsArray[base] = {};
+            if (!Object.hasOwn(liquiditiesWithSlippagesAsArray[base], quote)) liquiditiesWithSlippagesAsArray[base][quote] = {};
+            liquiditiesWithSlippagesAsArray[base][quote] = Object.keys(liquidity.slippageMap).map(slippage => liquidity.slippageMap[slippage].base * liquidity.price);
         }
-
-        // console.log(reworkedSlippages);
-        // const amount = getSolverResult(targetSlippage, [liquiditywstETHETH, l2, l3, l4, l5]);
     }
 
     fs.writeFileSync('liquidityresult.csv', 'base,quote,liquidity\n');
-
-    // for(const base of Object.keys(watchedPairs)) {
-    //     for(const quoteCfg of watchedPairs[base]) {
-    //         const quote = quoteCfg.quote;
-    //         computePairLiquidity(base, quote);
-    //         computePairLiquidity(quote, base);
-    //     }
-    // }
 
     computePairLiquidity('wstETH', 'USDT');
 

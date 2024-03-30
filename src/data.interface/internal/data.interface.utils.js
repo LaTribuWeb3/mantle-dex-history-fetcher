@@ -10,6 +10,35 @@ const { fnName, logFnDurationWithLabel } = require('../../utils/utils');
  * @param {string} fromSymbol 
  * @param {string} toSymbol 
  */
+function getLastMedianPriceForBlock(platform, fromSymbol, toSymbol, searchedBlock) {
+    const medianFileName = path.join(DATA_DIR, 'precomputed', 'median', platform, `${fromSymbol}-${toSymbol}-median-prices.csv`);
+    if (!fs.existsSync(medianFileName)) {
+        console.warn(`getLastMedianPriceForBlock: file ${medianFileName} does not exists`);
+        return undefined;
+    }
+
+    const allData = fs.readFileSync(medianFileName, 'utf-8').split('\n');
+
+    let price = allData[1].split(',')[1];
+
+    for (let i = 2; i < allData.length - 1; i++) {
+        const lineSplitted = allData[i].split(',');
+        const block = Number(lineSplitted[0]);
+
+        if(block > searchedBlock) break;
+
+        price = lineSplitted[1];
+    }
+
+    return price;
+}
+
+/**
+ * 
+ * @param {string} platform 
+ * @param {string} fromSymbol 
+ * @param {string} toSymbol 
+ */
 function readMedianPricesFile(platform, fromSymbol, toSymbol, fromBlock = undefined, toBlock = undefined) {
     const medianFileName = path.join(DATA_DIR, 'precomputed', 'median', platform, `${fromSymbol}-${toSymbol}-median-prices.csv`);
     if (!fs.existsSync(medianFileName)) {
@@ -575,4 +604,4 @@ function extractDataFromUnifiedLine(line) {
     };
 }
 
-module.exports = { getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, readMedianPricesFile, getPricesAtBlockForIntervalViaPivots, getUnifiedDataForIntervalByFilename, extractDataFromUnifiedLine };
+module.exports = { getLastMedianPriceForBlock, getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, readMedianPricesFile, getPricesAtBlockForIntervalViaPivots, getUnifiedDataForIntervalByFilename, extractDataFromUnifiedLine };
