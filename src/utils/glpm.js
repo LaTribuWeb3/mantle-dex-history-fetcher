@@ -2,10 +2,11 @@ const BigNumber = require('bignumber.js');
 
 function writeGLPMSpec(spec, liquidity) {
   // Retrieving each field from the structured object
-  const { assets, origin, target, slippageStep, maxSlippage, liquidationBonus } = spec;
+  const { assets, origin, target, slippageStepBps, targetSlippageBps } = spec;
   // TODO: Limite le maxslippage pour les 5000 - 10000 - 15000, etc.
 
-  const numSlippageSteps = maxSlippage / slippageStep;
+  const numSlippageSteps = targetSlippageBps / slippageStepBps;
+  const liquidationBonus = targetSlippageBps;
 
   const allNames = [];
 
@@ -18,7 +19,7 @@ function writeGLPMSpec(spec, liquidity) {
   }
 
   function getName(assetIn, assetOut, slippage) {
-    const name = assetIn + "_" + (slippage * 100).toString() + "_" + assetOut
+    const name = assetIn + "_" + slippage.toString() + "_" + assetOut
     if (!elementInArray(allNames, name)) {
       allNames.push(name)
 
@@ -49,7 +50,7 @@ function writeGLPMSpec(spec, liquidity) {
 
       for (const assetOut of assets) {
         for (let step = 0; step < numSlippageSteps; step++) {
-          const slippage = (step + 1) * slippageStep
+          const slippage = (step + 1) * slippageStepBps
 
           // in edges
           if (getInputLiquidity(assetIn, assetOut, step) > 0 && assetOut !== src) {
@@ -73,7 +74,7 @@ function writeGLPMSpec(spec, liquidity) {
             const name = getName(assetOut, assetIn, slippage)
             const weight = getInputLiquidity(assetOut, assetIn, step)
 
-            inEqualsOutvectors[name] = new BigNumber(-1.0).times(new BigNumber(1).minus(new BigNumber(slippage).div(new BigNumber(100)))); // - (1 - slippage) / 100
+            inEqualsOutvectors[name] = new BigNumber(-1.0).times(new BigNumber(10_000).minus(slippage)).div(10_000); // - (1 - slippage) / 100
 
             const weightVecotr = {}
             weightVecotr[name] = 1
@@ -100,11 +101,11 @@ function writeGLPMSpec(spec, liquidity) {
     for (const asset of assets) {
       if (asset === src) continue
       for (let step = 0; step < numSlippageSteps; step++) {
-        const slippage = (step + 1) * slippageStep
+        const slippage = (step + 1) * slippageStepBps
         if (getInputLiquidity(src, asset, step) === 0) continue
 
         const name = getName(src, asset, slippage)
-        objective[name] = (new BigNumber(100).minus(new BigNumber(liquidationBonus))).div(new BigNumber(100)).times(new BigNumber(-1)); // (1 - liquidationBonus) * (-1) // To convert to BigNumber
+        objective[name] = (new BigNumber(10000).minus(liquidationBonus)).div(10_000).times(-1); // (1 - liquidationBonus) * (-1) // To convert to BigNumber
       }
     }
 
@@ -112,7 +113,7 @@ function writeGLPMSpec(spec, liquidity) {
     for (const asset of assets) {
       if (asset === dst) continue
       for (let step = 0; step < numSlippageSteps; step++) {
-        const slippage = (step + 1) * slippageStep
+        const slippage = (step + 1) * slippageStepBps
         if (getInputLiquidity(asset, dst, step) === 0) continue
 
         const name = getName(asset, dst, slippage)

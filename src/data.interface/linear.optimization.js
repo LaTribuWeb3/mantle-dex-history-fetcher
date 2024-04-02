@@ -52,6 +52,7 @@ function computePairLiquidity(base, quote) {
 }
 
 async function solve_GLPM(gLPMSpec) {
+    fs.writeFileSync("input", gLPMSpec);
     let res = await lp_solve.executeGLPSol(gLPMSpec);
     console.log(res);
     return res;
@@ -62,17 +63,15 @@ async function solve_GLPM(gLPMSpec) {
 //     origin: string,
 //     target: string,
 //     slippageStep: number;
-//     maxSlippage: number;
-//     liquidationBonus: number;
+//     targetSlippage: number;
 // };
 
 var gLPMSpec = glpm.writeGLPMSpec({
     assets: ["wstETH", "WETH", "USDC", "USDT"],
     origin: "wstETH",
     target: "USDC",
-    slippageStep: 0.5,
-    maxSlippage: 3,
-    liquidationBonus: 5
+    slippageStepBps: 50,
+    targetSlippageBps: 500
 }, liquidity);
 
 solve_GLPM(gLPMSpec);
