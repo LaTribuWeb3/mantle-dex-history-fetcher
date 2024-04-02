@@ -71,7 +71,7 @@ function writeGLPMSpec(spec, liquidity) {
             const name = getName(assetOut, assetIn, slippage)
             const weight = getInputLiquidity(assetOut, assetIn, step)
 
-            inEqualsOutvectors[name] = new BigNumber(-1.0).times(new BigNumber(1).minus(new BigNumber(slippage).div(new BigNumber(10000))));
+            inEqualsOutvectors[name] = new BigNumber(-1.0).times(new BigNumber(1).minus(new BigNumber(slippage).div(new BigNumber(100)))); // - (1 - slippage) / 100
 
             const weightVecotr = {}
             weightVecotr[name] = 1
@@ -102,7 +102,7 @@ function writeGLPMSpec(spec, liquidity) {
         if (getInputLiquidity(src, asset, step) === 0) continue
 
         const name = getName(src, asset, slippage)
-        objective[name] = (new BigNumber(1).minus(new BigNumber(liquidationBonus))).times(new BigNumber(-1)); // (1 - liquidationBonus) * (-1) // To convert to BigNumber
+        objective[name] = (new BigNumber(100).minus(new BigNumber(liquidationBonus))).div(new BigNumber(100)).times(new BigNumber(-1)); // (1 - liquidationBonus) * (-1) // To convert to BigNumber
       }
     }
 

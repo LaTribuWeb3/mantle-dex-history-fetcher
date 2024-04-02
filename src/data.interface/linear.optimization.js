@@ -71,10 +71,10 @@ var gLPMSpec = glpm.writeGLPMSpec({
     assets: ["wstETH", "WETH", "USDC", "USDT"],
     origin: "wstETH",
     target: "USDC",
-    slippageStep: 50,
+    slippageStep: 0.5,
     numSlippageSteps: 40,
-    maxSlippage: 2000,
-    liquidationBonus: 0.05
+    maxSlippage: 20,
+    liquidationBonus: 5
 }, liquidity);
 
 solve_GLPM(gLPMSpec);
