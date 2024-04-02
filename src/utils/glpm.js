@@ -2,8 +2,10 @@ const BigNumber = require('bignumber.js');
 
 function writeGLPMSpec(spec, liquidity) {
   // Retrieving each field from the structured object
-  const { assets, origin, target, slippageStep, numSlippageSteps, maxSlippage, liquidationBonus } = spec;
+  const { assets, origin, target, slippageStep, maxSlippage, liquidationBonus } = spec;
   // TODO: Limite le maxslippage pour les 5000 - 10000 - 15000, etc.
+
+  const numSlippageSteps = maxSlippage / slippageStep;
 
   const allNames = [];
 

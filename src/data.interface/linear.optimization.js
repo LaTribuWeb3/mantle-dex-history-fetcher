@@ -62,7 +62,6 @@ async function solve_GLPM(gLPMSpec) {
 //     origin: string,
 //     target: string,
 //     slippageStep: number;
-//     numSlippageSteps: number;
 //     maxSlippage: number;
 //     liquidationBonus: number;
 // };
@@ -72,8 +71,7 @@ var gLPMSpec = glpm.writeGLPMSpec({
     origin: "wstETH",
     target: "USDC",
     slippageStep: 0.5,
-    numSlippageSteps: 40,
-    maxSlippage: 20,
+    maxSlippage: 3,
     liquidationBonus: 5
 }, liquidity);
 
