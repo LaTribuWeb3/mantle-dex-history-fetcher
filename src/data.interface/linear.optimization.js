@@ -53,9 +53,9 @@ function computePairLiquidity(base, quote) {
 
 const assets = ["wstETH", "WETH", "USDC", "USDT"]
 
-const slippageStep = 0.5;
+const slippageStep = 50;
 const numSlippageSteps = 40;
-const maxSlippage = 20; // TODO: Limite le maxslippage pour les 5000 - 10000 - 15000, etc.
+const maxSlippage = 2000; // TODO: Limite le maxslippage pour les 5000 - 10000 - 15000, etc.
 
 
 const allNames = [];
@@ -84,7 +84,7 @@ function getName(assetIn, assetOut, slippage) {
 
 function getInputLiquidity(assetIn, assetOut, slippage) {
     if (!liquidity.hasOwnProperty(assetIn)) return 0
-    const srcLiquidity = liquidity[assetIn] // UNDERSTAND WHYU ITS NOT THE SAME 
+    const srcLiquidity = liquidity[assetIn] // UNDERSTAND WHYU ITS
     //console.log(Object.keys(srcLiquidity))
     if (!srcLiquidity.hasOwnProperty(assetOut)) return 0
 
@@ -99,7 +99,7 @@ function buildConstraints(src, dst) {
         const inEqualsOutvectors = {}
 
         for (const assetOut of assets) {
-            for (let step = 0; (step + 1) * slippageStep < maxSlippage; step++) {
+            for (let step = 0; step < numSlippageSteps; step++) {
                 const slippage = (step + 1) * slippageStep
 
                 // in edges
@@ -124,7 +124,7 @@ function buildConstraints(src, dst) {
                     const name = getName(assetOut, assetIn, slippage)
                     const weight = getInputLiquidity(assetOut, assetIn, step)
 
-                    inEqualsOutvectors[name] = new BigNumber(-1.0).times(new BigNumber(1).minus(new BigNumber(slippage).div(new BigNumber(100))));
+                    inEqualsOutvectors[name] = new BigNumber(-1.0).times(new BigNumber(1).minus(new BigNumber(slippage).div(new BigNumber(10000))));
 
                     const weightVecotr = {}
                     weightVecotr[name] = 1
@@ -150,19 +150,19 @@ function buildObjective(src, dst, liquidationBonus) {
     // encode src negative objective
     for (const asset of assets) {
         if (asset === src) continue
-        for (let step = 0; (step + 1) * slippageStep < maxSlippage; step++) {
+        for (let step = 0; step < numSlippageSteps; step++) {
             const slippage = (step + 1) * slippageStep
             if (getInputLiquidity(src, asset, step) === 0) continue
 
             const name = getName(src, asset, slippage)
-            objective[name] = (new BigNumber(10000).minus(new BigNumber(liquidationBonus))).div(new BigNumber(10000)).times(new BigNumber(-1)); // (1 - liquidationBonus) * (-1) // To convert to BigNumber
+            objective[name] = (new BigNumber(1).minus(new BigNumber(liquidationBonus))).times(new BigNumber(-1)); // (1 - liquidationBonus) * (-1) // To convert to BigNumber
         }
     }
 
     // encode dst positive objective
     for (const asset of assets) {
         if (asset === dst) continue
-        for (let step = 0; (step + 1) * slippageStep < maxSlippage; step++) {
+        for (let step = 0; step < numSlippageSteps; step++) {
             const slippage = (step + 1) * slippageStep
             if (getInputLiquidity(asset, dst, step) === 0) continue
 
@@ -212,7 +212,7 @@ function addSlackVariablesToConstraints(constraints) {
 
 
 const constraints = addSlackVariablesToConstraints(buildConstraints("wstETH", "USDC"))
-const objective = addSlackVariables(buildObjective("wstETH", "USDC", 50))
+const objective = addSlackVariables(buildObjective("wstETH", "USDC", 0.05))
 
 var GLPMSpec = "";
 
