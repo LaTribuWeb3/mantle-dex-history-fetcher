@@ -1,7 +1,6 @@
-const { getLiquidity, getInputLiquidityAll } = require('./data.interface');
-const fs = require('fs');
-const lp_solve = require('lp_solve')
-const glpm = require('../utils/glpm.js')
+const { getLiquidity } = require('./data.interface');
+const lp_solve = require('lp_solve');
+const glpm = require('../utils/glpm.js');
 
 function setLiquidityAndPrice(liquidities, base, quote, block) {
     if (!Object.hasOwn(liquidities, base)) liquidities[base] = {};
@@ -9,69 +8,67 @@ function setLiquidityAndPrice(liquidities, base, quote, block) {
     liquidities[base][quote] = getLiquidity('uniswapv3', base, quote, block, block, false);
 }
 
-let liquidity = {};
+function generateSpecForBlock(block, assetsSpecification) {
+    let origin = assetsSpecification.origin;
+    let intermediaryAssets = assetsSpecification.intermediaryAssets;
+    let target = assetsSpecification.target;
 
-async function checkLiquidity() {
+    let liquidity = {};
 
-    const block = 19467267; //19539915;
     let liquidities = {};
-    setLiquidityAndPrice(liquidities, 'wstETH', 'WETH', block);
-    setLiquidityAndPrice(liquidities, 'WETH', 'USDC', block);
-    setLiquidityAndPrice(liquidities, 'WETH', 'USDT', block);
-    setLiquidityAndPrice(liquidities, 'USDC', 'USDT', block);
 
-    for (const base of Object.keys(liquidities)) {
-        for (const quote of Object.keys(liquidities[base])) {
-            const oneLiquidity = liquidities[base][quote][block];
-            if (!Object.hasOwn(liquidity, base)) liquidity[base] = {};
-            if (!Object.hasOwn(liquidity[base], quote)) liquidity[base][quote] = {};
-            liquidity[base][quote] = Object.keys(oneLiquidity.slippageMap).map(slippage => oneLiquidity.slippageMap[slippage].base * oneLiquidity.price);
+    for (let intermediaryAsset of intermediaryAssets) {
+        setLiquidityAndPrice(liquidities, origin, intermediaryAsset, block);
+    }
+
+    for (let assetIn of intermediaryAssets) {
+        for (let assetOut of intermediaryAssets) {
+            if (assetIn == assetOut) continue;
+            setLiquidityAndPrice(liquidities, assetIn, assetOut, block);
         }
     }
 
-    fs.writeFileSync('liquidityresult.csv', 'base,quote,liquidity\n');
+    for (let intermediaryAsset of intermediaryAssets) {
+        setLiquidityAndPrice(liquidities, intermediaryAsset, target, block);
+    }
 
-    // computePairLiquidity('wstETH', 'USDT');
+    for (const base of Object.keys(liquidities)) {
+        for (const quote of Object.keys(liquidities[base])) {
+            if (base === quote) continue;
+            const liquidityForBaseQuote = liquidities[base][quote];
+            if (liquidityForBaseQuote !== undefined) {
+                const oneLiquidity = liquidityForBaseQuote[block];
+                if (!Object.hasOwn(liquidity, base)) liquidity[base] = {};
+                if (!Object.hasOwn(liquidity[base], quote)) liquidity[base][quote] = {};
+                liquidity[base][quote] = Object.keys(oneLiquidity.slippageMap).map(slippage => oneLiquidity.slippageMap[slippage].base * oneLiquidity.price);
+            }
+        }
+    }
 
-    // computePairLiquidity('wstETH', 'USDC');
-
+    return glpm.writeGLPMSpec(
+        {
+            assets: intermediaryAssets.concat([origin, target]),
+            origin: origin,
+            target: target,
+            slippageStepBps: 50,
+            targetSlippageBps: 500
+        }, liquidity
+    );
 }
 
-checkLiquidity();
-
-function computePairLiquidity(base, quote) {
-    const block = 19467267;
-    // const univ3Liquidity = getInputLiquidity(base, quote, block, block);
-
-    const newLiquidity = getLiquidityAll(base, quote, block, block);
-    const newLqty = newLiquidity[block].slippageMap[500].base;
-    console.log(`${base}/${quote} new liquidity: ${newLqty}`);
-    const line = `${base},${quote},${newLqty}`;
-    console.log(line);
-    fs.appendFileSync('liquidityresult.csv', line + '\n');
-}
 
 async function solve_GLPM(gLPMSpec) {
-    fs.writeFileSync("input", gLPMSpec);
     let res = await lp_solve.executeGLPSol(gLPMSpec);
-    console.log(res);
     return res;
 }
 
-// type GLPMSpec = {
-//     assets: string[]; // You can replace 'any' with the specific type of assets
-//     origin: string,
-//     target: string,
-//     slippageStep: number;
-//     targetSlippage: number;
-// };
-
-var gLPMSpec = glpm.writeGLPMSpec({
-    assets: ["wstETH", "WETH", "USDC", "USDT"],
-    origin: "wstETH",
-    target: "USDC",
-    slippageStepBps: 50,
-    targetSlippageBps: 500
-}, liquidity);
+var gLPMSpec = generateSpecForBlock(
+    19467267,
+    {
+        origin: 'wstEth',
+        intermediaryAssets: ['WETH', 'USDT'],
+        target: 'USDC'
+    }
+);
 
 solve_GLPM(gLPMSpec);
