@@ -1,6 +1,7 @@
 const { getLiquidity } = require('./data.interface');
 const lp_solve = require('lp_solve');
 const glpm = require('../utils/glpm.js');
+const { getPriceAtBlock } = require('./internal/data.interface.price.js');
 
 function setLiquidityAndPrice(liquidities, base, quote, block) {
     if (!Object.hasOwn(liquidities, base)) liquidities[base] = {};
@@ -40,7 +41,12 @@ function generateSpecForBlock(block, assetsSpecification) {
                 const oneLiquidity = liquidityForBaseQuote[block];
                 if (!Object.hasOwn(liquidity, base)) liquidity[base] = {};
                 if (!Object.hasOwn(liquidity[base], quote)) liquidity[base][quote] = {};
-                liquidity[base][quote] = Object.keys(oneLiquidity.slippageMap).map(slippage => oneLiquidity.slippageMap[slippage].base * oneLiquidity.price);
+                liquidity[base][quote] =
+                    Object.keys(oneLiquidity.slippageMap)
+                        .map(slippage =>
+                            oneLiquidity.slippageMap[slippage].base
+                            * getPriceAtBlock('uniswapv3', base, quote, block)
+                        );
             }
         }
     }
@@ -59,7 +65,13 @@ function generateSpecForBlock(block, assetsSpecification) {
 
 async function solve_GLPM(gLPMSpec) {
     let res = await lp_solve.executeGLPSol(gLPMSpec);
-    return res;
+    let columns = res.columns.filter(column => column.activity !== 0);
+    let ret = {};
+    for (let column of columns) {
+        ret[column.name] = column.activity;
+    }
+    console.log(ret);
+    return ret;
 }
 
 var gLPMSpec = generateSpecForBlock(
