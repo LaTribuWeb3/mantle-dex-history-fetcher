@@ -121,9 +121,10 @@ async function solve_GLPM(gLPMSpec) {
 var gLPMSpec = generateSpecForBlock(
     19467267,
     {
-        origin: 'wstEth',
-        intermediaryAssets: ['WETH', 'USDC', 'DAI', 'USDT'],
-        target: 'SNX'
+        origin: 'WETH',
+        intermediaryAssets: ['DAI', 'WBTC', 'USDC'],
+        // intermediaryAssets: ['WETH'],
+        target: 'USDT'
     }
 );
 
