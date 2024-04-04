@@ -1,4 +1,4 @@
-const { getLiquidity } = require('./data.interface');
+const { getLiquidityAll } = require('./data.interface');
 const lp_solve = require('lp_solve');
 const glpm = require('../utils/glpm.js');
 const { getPriceAtBlock } = require('./internal/data.interface.price.js');
@@ -8,7 +8,7 @@ const humanFormat = require('human-format');
 function setLiquidityAndPrice(liquidities, base, quote, block) {
     if (!Object.hasOwn(liquidities, base)) liquidities[base] = {};
     if (!Object.hasOwn(liquidities[base], quote)) liquidities[base][quote] = {};
-    liquidities[base][quote] = getLiquidity('uniswapv3', base, quote, block, block, false);
+    liquidities[base][quote] = getLiquidityAll(base, quote, block, block, false);
 }
 
 function generateSpecForBlock(block, assetsSpecification) {
@@ -48,7 +48,7 @@ function generateSpecForBlock(block, assetsSpecification) {
                         .map(slippage =>
                             oneLiquidity.slippageMap[slippage].base
                             * (base === 'USDC' ?
-                                1 : getPriceAtBlock('uniswapv3', base, 'USDC', block))
+                                1 : getPriceAtBlock('all', base, 'USDC', block))
                         )
                         .map((e, i, a) => i === 0 ? e : e - a[i - 1]);
             }
