@@ -2,6 +2,8 @@ const { getLiquidity } = require('./data.interface');
 const lp_solve = require('lp_solve');
 const glpm = require('../utils/glpm.js');
 const { getPriceAtBlock } = require('./internal/data.interface.price.js');
+const fs = require('fs');
+const humanFormat = require('human-format');
 
 function setLiquidityAndPrice(liquidities, base, quote, block) {
     if (!Object.hasOwn(liquidities, base)) liquidities[base] = {};
@@ -45,8 +47,10 @@ function generateSpecForBlock(block, assetsSpecification) {
                     Object.keys(oneLiquidity.slippageMap)
                         .map(slippage =>
                             oneLiquidity.slippageMap[slippage].base
-                            * getPriceAtBlock('uniswapv3', base, quote, block)
-                        );
+                            * (base === 'USDC' ?
+                                1 : getPriceAtBlock('uniswapv3', base, 'USDC', block))
+                        )
+                        .map((e, i, a) => i === 0 ? e : e - a[i - 1]);
             }
         }
     }
@@ -67,19 +71,59 @@ async function solve_GLPM(gLPMSpec) {
     let res = await lp_solve.executeGLPSol(gLPMSpec);
     let columns = res.columns.filter(column => column.activity !== 0);
     let ret = {};
+
     for (let column of columns) {
-        ret[column.name] = column.activity;
+        let [base, slippage, quote] = column.name.split('_');
+        if (ret[base] == undefined) ret[base] = {};
+        if (ret[base][quote] == undefined) ret[base][quote] = {};
+        ret[base][quote][slippage] = column.activity;
     }
+
+    var graph = 'flowchart LR;\n';
+    var totals = {};
+    let quoteTotals = {};
+
+    for (let base of Object.keys(ret)) {
+        let edges = [];
+        for (let quote of Object.keys(ret[base])) {
+            let total = 0;
+            for (let slippage of Object.keys(ret[base][quote])) {
+                total += ret[base][quote][slippage];
+            }
+            edges[edges.length] = { 'base': base, 'total': total, 'quote': quote };
+            if (Object.keys(totals).includes(base)) totals[base] = totals[base] + total;
+            else totals[base] = total;
+            if (Object.keys(quoteTotals).includes(quote)) quoteTotals[quote] = quoteTotals[quote] + total;
+            else quoteTotals[quote] = total;
+        }
+        edges.map(edge => {
+            graph += '  ' + edge.base + '-->|$' + humanFormat(edge.total) + '|' + edge.quote + '\n';
+        });
+    }
+
+    for (let totalKey of Object.keys(totals)) {
+        graph += '  ' + totalKey + '[ ' + totalKey + ' $' + humanFormat(totals[totalKey]) + ' ]\n';
+    }
+
+    for (let totalKey of Object.keys(quoteTotals)) {
+        if (! Object.keys(totals).includes(totalKey) ) {
+            graph += '  ' + totalKey + '[ ' + totalKey + ' $' + humanFormat(quoteTotals[totalKey] * 0.95) + ' ]\n';
+        }
+    }
+
+    fs.writeFileSync('graph.md', graph);
+
     console.log(ret);
-    return ret;
+
+    return { detailedMatrix: ret, graph: graph };
 }
 
 var gLPMSpec = generateSpecForBlock(
     19467267,
     {
         origin: 'wstEth',
-        intermediaryAssets: ['WETH', 'USDT'],
-        target: 'USDC'
+        intermediaryAssets: ['WETH', 'USDC', 'DAI', 'USDT'],
+        target: 'SNX'
     }
 );
 
