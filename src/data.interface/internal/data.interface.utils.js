@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { DATA_DIR, DEFAULT_STEP_BLOCK, MEDIAN_OVER_BLOCK } = require('../../utils/constants');
 const { fnName, logFnDurationWithLabel } = require('../../utils/utils');
+const { GetPairToUse } = require('../../global.config');
 
 /**
  * 
@@ -103,22 +104,23 @@ function readMedianPricesFile(platform, fromSymbol, toSymbol, fromBlock = undefi
 }
 
 function getPricesAtBlockForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
+    const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
     const start = Date.now();
 
     // specific case for univ3 and stETH/WETH pair
     // because it does not really exists
     if(platform == 'uniswapv3' 
-        && ((fromSymbol == 'stETH' && toSymbol == 'WETH') 
-            || (fromSymbol == 'WETH' && toSymbol == 'stETH'))) {
+        && ((actualFrom == 'stETH' && actualTo == 'WETH') 
+            || (actualFrom == 'WETH' && actualTo == 'stETH'))) {
         const prices = generateFakePriceForStETHWETHUniswapV3(Math.max(fromBlock, 10_000_000), toBlock);
-        logFnDurationWithLabel(start, `[${fromSymbol}->${toSymbol}] [${fromBlock}-${toBlock}] [${platform}]`);
+        logFnDurationWithLabel(start, `[${actualFrom}->${actualTo}] [${fromBlock}-${toBlock}] [${platform}]`);
         return prices;
     }
     else {
-        const filename = `${fromSymbol}-${toSymbol}-unified-data.csv`;
+        const filename = `${actualFrom}-${actualTo}-unified-data.csv`;
         const fullFilename = path.join(DATA_DIR, 'precomputed', 'price', platform, filename);
         const prices = readAllPricesFromFilename(fullFilename, fromBlock, toBlock);
-        logFnDurationWithLabel(start, `[${fromSymbol}->${toSymbol}] [${fromBlock}-${toBlock}] [${platform}]`);
+        logFnDurationWithLabel(start, `[${actualFrom}->${actualTo}] [${fromBlock}-${toBlock}] [${platform}]`);
         return prices;
     }
 }

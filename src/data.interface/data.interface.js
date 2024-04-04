@@ -6,10 +6,11 @@
 //////////// THE FETCHERS //////////////
 
 const { getPrices } = require('./internal/data.interface.price');
-const { getAverageLiquidityForInterval, getSlippageMapForInterval, getLiquidityAccrossDexes } = require('./internal/data.interface.liquidity');
+const { getSlippageMapForInterval, getLiquidityAccrossDexes, getSumSlippageMapAcrossDexes } = require('./internal/data.interface.liquidity');
 const { logFnDurationWithLabel } = require('../utils/utils');
 const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA } = require('../utils/constants');
 const { rollingBiggestDailyChange } = require('../utils/volatility');
+const { GetPairToUse } = require('../global.config');
 
 
 //    _____  _   _  _______  ______  _____   ______        _____  ______     ______  _    _  _   _   _____  _______  _____  ____   _   _   _____ 
@@ -51,9 +52,13 @@ function getLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJu
  * @param {number} stepBlock 
  * @returns {{[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}}
  */
-function getLiquidityAll(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock = DEFAULT_STEP_BLOCK) {
+function getLiquidityAll(fromSymbol, toSymbol, fromBlock, toBlock, withJumps = true, stepBlock = DEFAULT_STEP_BLOCK) {
     const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
-    return getLiquidityAccrossDexes(actualFrom, actualTo, fromBlock, toBlock, stepBlock);
+    if(withJumps) {
+        return getLiquidityAccrossDexes(actualFrom, actualTo, fromBlock, toBlock, stepBlock);
+    } else {
+        return getSumSlippageMapAcrossDexes(actualFrom, actualTo, fromBlock, toBlock, stepBlock).unifiedData;
+    }
 }
 
 
@@ -88,18 +93,5 @@ function checkPlatform(platform) {
     }
 }
 
-function GetPairToUse(from, to) {
-    let actualFrom = from;
-    let actualTo = to;
-
-    if(from == 'sDAI') {
-        actualFrom = 'DAI';
-    }
-    if(to == 'sDAI') {
-        actualTo = 'DAI';
-    }
-
-    return {actualFrom, actualTo};
-}
 
 module.exports = { getLiquidity, getRollingVolatility, getLiquidityAll};

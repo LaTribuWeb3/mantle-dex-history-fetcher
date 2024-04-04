@@ -9,8 +9,8 @@ const { getBlocknumberForTimestamp } = require('../../utils/web3.utils');
 const { normalize, getConfTokenBySymbol, getTokenSymbolByAddress } = require('../../utils/token.utils');
 const { config, morphoBlueAbi, metamorphoAbi } = require('./morphoFlagshipComputer.config');
 const { RecordMonitoring } = require('../../utils/monitoring');
-const { DATA_DIR, PLATFORMS } = require('../../utils/constants');
-const { getLiquidity, getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
+const { DATA_DIR } = require('../../utils/constants');
+const { getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
 const spans = [7, 30, 180];
 
 // morphoFlagshipComputer(60);
@@ -73,13 +73,8 @@ async function morphoFlagshipComputer(fetchEveryMinutes, startDate=Date.now()) {
             }
         }
 
-        let protocolWeightedCLF = undefined;
-        try {
-            protocolWeightedCLF = computeProtocolWeightedCLF(averagePerAsset);
-        }
-        catch (error) {
-            console.error(error);
-        }
+        const protocolWeightedCLF = computeProtocolWeightedCLF(averagePerAsset);
+
         const toRecord = {
             protocol: 'morpho',
             weightedCLF: protocolWeightedCLF,
@@ -140,14 +135,14 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
 
     // compute clf for all markets with a collateral
     for(const marketId of marketIds) {
-        const marketParams = await morphoBlue.idToMarketParams(marketId, {blockTag: endBlock});
+        const marketParams = await retry(() => morphoBlue.idToMarketParams(marketId, {blockTag: endBlock}), []);
         if(marketParams.collateralToken != ethers.constants.AddressZero) {
             const collateralTokenSymbol = getTokenSymbolByAddress(marketParams.collateralToken);
             const uniqueId = `${collateralTokenSymbol}_${marketId}`;
             console.log(`market collateral is ${collateralTokenSymbol}`);
             const collateralToken = getConfTokenBySymbol(collateralTokenSymbol);
-            const marketConfig = await metamorphoVault.config(marketId, {blockTag: endBlock});
-            const blueMarket = await morphoBlue.market(marketId, {blockTag: endBlock});
+            const marketConfig = await retry(() => metamorphoVault.config(marketId, {blockTag: endBlock}), []);
+            const blueMarket = await retry(() => morphoBlue.market(marketId, {blockTag: endBlock}), []);
             // assetParameters { liquidationBonusBPS: 1200, supplyCap: 900000, LTV: 70 }
             const LTV = normalize(marketParams.lltv, 18) * 100;
             const liquidationBonusBPS = getLiquidationBonusForLtv(LTV/100);
@@ -174,26 +169,6 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
     }
 
     return resultsData;
-
-
-    /// for all collaterals in selected pool
-    // for (const collateral of collaterals) {
-    //     try {
-    //         console.log(`Computing CLFs for ${collateral.symbol}`);
-    //         const assetParameters = await getAssetParameters(cometContract, collateral, endBlock);
-    //         console.log('assetParameters', assetParameters);
-    //         resultsData.collateralsData[collateral.symbol] = {};
-    //         resultsData.collateralsData[collateral.symbol].collateral = await getCollateralAmount(collateral, cometContract, startDateUnixSec, endBlock);
-    //         console.log('collateral data', resultsData.collateralsData[collateral.symbol].collateral);
-    //         resultsData.collateralsData[collateral.symbol].clfs = await computeMarketCLFBiggestDailyChange(assetParameters, collateral, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider);
-    //         console.log('resultsData', resultsData);
-    //     }
-    //     catch (error) {
-    //         console.error('error', error);
-    //         resultsData[collateral.symbol] = null;
-    //     }
-    // }
-    // return resultsData;
 }
 
 function getLiquidationBonusForLtv(ltv) {
@@ -229,7 +204,7 @@ async function getVaultMarkets(vault, currentBlock) {
     
         return marketIds;
     } catch(e) {
-        console.warn(e);
+        console.log('cannot find vault: vault does not exist yet');
         return [];
     }
 }
@@ -344,13 +319,7 @@ function recordParameters(marketId, pair, data, timestamp) {
     const datedProtocolFilename = path.join(DATA_DIR, `clf/morpho/${date}/${date}_${withUniqueId}_morpho_CLFs.json`);
     const objectToWrite = JSON.stringify(data, null, 2);
     console.log('recording results');
-    try {
-        fs.writeFileSync(datedProtocolFilename, objectToWrite, 'utf8');
-    }
-    catch (error) {
-        console.error(error);
-        console.log('Morpho Computer failed to write files');
-    }
+    fs.writeFileSync(datedProtocolFilename, objectToWrite, 'utf8');
 }
 
 function recordResults(results, timestamp) {
@@ -365,14 +334,9 @@ function recordResults(results, timestamp) {
     const latestFullFilename = path.join(DATA_DIR, 'clf/morpho/latest/morpho_CLFs.json');
     const objectToWrite = JSON.stringify(results, null, 2);
     console.log('recording results');
-    try {
-        fs.writeFileSync(datedProtocolFilename, objectToWrite, 'utf8');
-        fs.writeFileSync(latestFullFilename, objectToWrite, 'utf8');
-    }
-    catch (error) {
-        console.error(error);
-        console.log('Morpho Computer failed to write files');
-    }
+    fs.writeFileSync(datedProtocolFilename, objectToWrite, 'utf8');
+    fs.writeFileSync(latestFullFilename, objectToWrite, 'utf8');
+
 }
 
 

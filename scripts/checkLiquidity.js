@@ -16,16 +16,21 @@ async function checkLiquidity() {
     //     }
     // }
 
-    computePairLiquidity('rETH', 'WETH');
+    computePairLiquidity('wstETH', 'USDC');
     
 }
 
 checkLiquidity();
 
 function computePairLiquidity(base, quote) {
-    const newLiquidity = getLiquidityAll(base, quote, 19405598, 19405598);
+    const newLiquidity = getLiquidityAll(base, quote, 19405598, 19405598, false);
+    const newLiquidityJump = getLiquidityAll(base, quote, 19405598, 19405598, true);
+
+
     const newLqty = newLiquidity[19405598].slippageMap[500].base;
+    const newLqtyJump = newLiquidityJump[19405598].slippageMap[500].base;
     console.log(`${base}/${quote} new liquidity: ${newLqty}`);
+    console.log(`${base}/${quote} new liquidity jump: ${newLqtyJump}`);
     const line = `${base},${quote},${newLqty}`;
     console.log(line);
     fs.appendFileSync('liquidityresult.csv', line + '\n');
