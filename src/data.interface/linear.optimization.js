@@ -1,38 +1,39 @@
-const { getLiquidityAll } = require('./data.interface');
+const { getLiquidityAll, getLiquidity } = require('./data.interface');
 const lp_solve = require('lp_solve');
 const glpm = require('../utils/glpm.js');
 const { getPriceAtBlock } = require('./internal/data.interface.price.js');
 const fs = require('fs');
 const humanFormat = require('human-format');
 
-function setLiquidityAndPrice(liquidities, base, quote, block) {
+function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefined) {
     if (!Object.hasOwn(liquidities, base)) liquidities[base] = {};
     if (!Object.hasOwn(liquidities[base], quote)) liquidities[base][quote] = {};
-    liquidities[base][quote] = getLiquidityAll(base, quote, block, block, false);
+    if(platform === undefined) liquidities[base][quote] = getLiquidityAll(base, quote, block, block, false);
+    else liquidities[base][quote] = getLiquidity(platform, base, quote, block, block, false);
 }
 
 function generateSpecForBlock(block, assetsSpecification) {
     let origin = assetsSpecification.origin;
     let intermediaryAssets = assetsSpecification.intermediaryAssets;
     let target = assetsSpecification.target;
+    let platform = assetsSpecification.platform;
 
     let liquidity = {};
-
     let liquidities = {};
 
     for (let intermediaryAsset of intermediaryAssets) {
-        setLiquidityAndPrice(liquidities, origin, intermediaryAsset, block);
+        setLiquidityAndPrice(liquidities, origin, intermediaryAsset, block, platform);
     }
 
     for (let assetIn of intermediaryAssets) {
         for (let assetOut of intermediaryAssets) {
             if (assetIn == assetOut) continue;
-            setLiquidityAndPrice(liquidities, assetIn, assetOut, block);
+            setLiquidityAndPrice(liquidities, assetIn, assetOut, block, platform);
         }
     }
 
     for (let intermediaryAsset of intermediaryAssets) {
-        setLiquidityAndPrice(liquidities, intermediaryAsset, target, block);
+        setLiquidityAndPrice(liquidities, intermediaryAsset, target, block, platform);
     }
 
     for (const base of Object.keys(liquidities)) {
@@ -124,7 +125,8 @@ var gLPMSpec = generateSpecForBlock(
         origin: 'WETH',
         intermediaryAssets: ['DAI', 'WBTC', 'USDC'],
         // intermediaryAssets: ['WETH'],
-        target: 'USDT'
+        target: 'USDT',
+        platform: 'uniswapv3'
     }
 );
 
