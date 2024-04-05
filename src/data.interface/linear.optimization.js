@@ -8,7 +8,7 @@ const humanFormat = require('human-format');
 function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefined) {
     if (!Object.hasOwn(liquidities, base)) liquidities[base] = {};
     if (!Object.hasOwn(liquidities[base], quote)) liquidities[base][quote] = {};
-    if(platform === undefined) liquidities[base][quote] = getLiquidityAll(base, quote, block, block, false);
+    if (platform === undefined) liquidities[base][quote] = getLiquidityAll(base, quote, block, block, false);
     else liquidities[base][quote] = getLiquidity(platform, base, quote, block, block, false);
 }
 
@@ -68,7 +68,7 @@ function generateSpecForBlock(block, assetsSpecification) {
 }
 
 
-async function solve_GLPM(gLPMSpec) {
+async function solve_GLPM(gLPMSpec, origin, target, block) {
     let res = await lp_solve.executeGLPSol(gLPMSpec);
     let columns = res.columns.filter(column => column.activity !== 0);
     let ret = {};
@@ -79,6 +79,14 @@ async function solve_GLPM(gLPMSpec) {
         if (ret[base][quote] == undefined) ret[base][quote] = {};
         ret[base][quote][slippage] = column.activity;
     }
+
+    let slippageMapOriginTarget = getLiquidityAll(origin, target, block, block, false)[block].slippageMap;
+
+    ret[origin][target] = {};
+    Object.keys(slippageMapOriginTarget).filter(key => key <= 500)
+        .map(slippage =>
+            ret[origin][target][slippage] = slippageMapOriginTarget[slippage].base * (origin === 'USDC' ? 1 : getPriceAtBlock('all', origin, 'USDC', block))
+        );
 
     var graph = 'flowchart LR;\n';
     var totals = {};
@@ -107,7 +115,7 @@ async function solve_GLPM(gLPMSpec) {
     }
 
     for (let totalKey of Object.keys(quoteTotals)) {
-        if (! Object.keys(totals).includes(totalKey) ) {
+        if (!Object.keys(totals).includes(totalKey)) {
             graph += '  ' + totalKey + '[ ' + totalKey + ' $' + humanFormat(quoteTotals[totalKey] * 0.95) + ' ]\n';
         }
     }
@@ -130,4 +138,4 @@ var gLPMSpec = generateSpecForBlock(
     }
 );
 
-solve_GLPM(gLPMSpec);
+solve_GLPM(gLPMSpec, 'WETH', 'USDT', 19467267);
