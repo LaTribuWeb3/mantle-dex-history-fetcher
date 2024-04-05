@@ -4,6 +4,7 @@ const glpm = require('../utils/glpm.js');
 const { getPriceAtBlock } = require('./internal/data.interface.price.js');
 const fs = require('fs');
 const humanFormat = require('human-format');
+const Graph = require('graphology');
 
 function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefined) {
     if (!Object.hasOwn(liquidities, base)) liquidities[base] = {};
@@ -75,7 +76,7 @@ async function solve_GLPM(gLPMSpec, origin, target, block) {
 
     var graph = computeGraphFromMatrix(resultMatrix);
 
-    fs.writeFileSync('graph.md', graph);
+    fs.writeFileSync('graph.md', computeMermaidGraph(graph));
 
     console.log(resultMatrix);
 
@@ -83,12 +84,12 @@ async function solve_GLPM(gLPMSpec, origin, target, block) {
 }
 
 function computeGraphFromMatrix(resultMatrix) {
-    var graph = 'flowchart LR;\n';
+    var graph = new Graph();
     var totals = {};
     let quoteTotals = {};
+    let edges = [];
 
     for (let base of Object.keys(resultMatrix)) {
-        let edges = [];
         for (let quote of Object.keys(resultMatrix[base])) {
             let total = 0;
             for (let slippage of Object.keys(resultMatrix[base][quote])) {
@@ -100,21 +101,38 @@ function computeGraphFromMatrix(resultMatrix) {
             if (Object.keys(quoteTotals).includes(quote)) quoteTotals[quote] = quoteTotals[quote] + total;
             else quoteTotals[quote] = total;
         }
-        edges.map(edge => {
-            graph += '  ' + edge.base + '-->|$' + humanFormat(edge.total) + '|' + edge.quote + '\n';
-        });
     }
 
     for (let totalKey of Object.keys(totals)) {
-        graph += '  ' + totalKey + '[ ' + totalKey + ' $' + humanFormat(totals[totalKey]) + ' ]\n';
+        graph.addNode(totalKey, { 'amount': totals[totalKey] });
     }
 
     for (let totalKey of Object.keys(quoteTotals)) {
         if (!Object.keys(totals).includes(totalKey)) {
-            graph += '  ' + totalKey + '[ ' + totalKey + ' $' + humanFormat(quoteTotals[totalKey] * 0.95) + ' ]\n';
+            graph.addNode(totalKey, { 'amount': quoteTotals[totalKey] * 0.95 });
         }
     }
+
+    edges.map(edge => {
+        graph.addEdgeWithKey(edge.base + '/' + edge.quote, edge.base, edge.quote, { 'base': edge.base, 'quote': edge.quote, 'amount': edge.total });
+    });
+
     return graph;
+}
+
+function computeMermaidGraph(graph) {
+    var stringGraph = 'flowchart LR;\n';
+
+    for (let node of graph.nodes()) {
+        stringGraph += '  ' + node + '[ ' + node + ' $' + humanFormat(graph.getNodeAttributes(node).amount) + ' ]\n';
+    }
+
+    for (let node of graph.edges()) {
+        let attrs = graph.getEdgeAttributes(node);
+        stringGraph += '  ' + attrs.base + '-->|$' + humanFormat(attrs.amount) + '|' + attrs.quote + '\n';
+    }
+
+    return stringGraph;
 }
 
 function getResAsMatrix(res, origin, target, block) {
