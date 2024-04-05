@@ -105,7 +105,7 @@ function writeGLPMSpec(spec, liquidity) {
                 if (getInputLiquidity(src, asset, step) === 0) continue;
 
                 const name = getName(src, asset, slippage);
-                objective[name] = (new BigNumber(10000).minus(liquidationBonus)).div(10_000).times(-1); // (1 - liquidationBonus) * (-1) // To convert to BigNumber
+                objective[name] = (new BigNumber(10_000).minus(liquidationBonus)).div(10_000).times(-1); // (1 - liquidationBonus) * (-1) // To convert to BigNumber
             }
         }
 
