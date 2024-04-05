@@ -70,34 +70,29 @@ function generateSpecForBlock(block, assetsSpecification) {
 
 async function solve_GLPM(gLPMSpec, origin, target, block) {
     let res = await lp_solve.executeGLPSol(gLPMSpec);
-    let columns = res.columns.filter(column => column.activity !== 0);
-    let ret = {};
 
-    for (let column of columns) {
-        let [base, slippage, quote] = column.name.split('_');
-        if (ret[base] == undefined) ret[base] = {};
-        if (ret[base][quote] == undefined) ret[base][quote] = {};
-        ret[base][quote][slippage] = column.activity;
-    }
+    let resultMatrix = getResAsMatrix(res, origin, target, block);
 
-    let slippageMapOriginTarget = getLiquidityAll(origin, target, block, block, false)[block].slippageMap;
+    var graph = computeGraphFromMatrix(resultMatrix);
 
-    ret[origin][target] = {};
-    Object.keys(slippageMapOriginTarget).filter(key => key <= 500)
-        .map(slippage =>
-            ret[origin][target][slippage] = slippageMapOriginTarget[slippage].base * (origin === 'USDC' ? 1 : getPriceAtBlock('all', origin, 'USDC', block))
-        );
+    fs.writeFileSync('graph.md', graph);
 
+    console.log(resultMatrix);
+
+    return { detailedMatrix: resultMatrix, graph: graph };
+}
+
+function computeGraphFromMatrix(resultMatrix) {
     var graph = 'flowchart LR;\n';
     var totals = {};
     let quoteTotals = {};
 
-    for (let base of Object.keys(ret)) {
+    for (let base of Object.keys(resultMatrix)) {
         let edges = [];
-        for (let quote of Object.keys(ret[base])) {
+        for (let quote of Object.keys(resultMatrix[base])) {
             let total = 0;
-            for (let slippage of Object.keys(ret[base][quote])) {
-                total += ret[base][quote][slippage];
+            for (let slippage of Object.keys(resultMatrix[base][quote])) {
+                total += resultMatrix[base][quote][slippage];
             }
             edges[edges.length] = { 'base': base, 'total': total, 'quote': quote };
             if (Object.keys(totals).includes(base)) totals[base] = totals[base] + total;
@@ -119,12 +114,28 @@ async function solve_GLPM(gLPMSpec, origin, target, block) {
             graph += '  ' + totalKey + '[ ' + totalKey + ' $' + humanFormat(quoteTotals[totalKey] * 0.95) + ' ]\n';
         }
     }
+    return graph;
+}
 
-    fs.writeFileSync('graph.md', graph);
+function getResAsMatrix(res, origin, target, block) {
+    let columns = res.columns.filter(column => column.activity !== 0);
+    let ret = {};
 
-    console.log(ret);
+    for (let column of columns) {
+        let [base, slippage, quote] = column.name.split('_');
+        if (ret[base] == undefined) ret[base] = {};
+        if (ret[base][quote] == undefined) ret[base][quote] = {};
+        ret[base][quote][slippage] = column.activity;
+    }
 
-    return { detailedMatrix: ret, graph: graph };
+    let slippageMapOriginTarget = getLiquidityAll(origin, target, block, block, false)[block].slippageMap;
+
+    ret[origin][target] = {};
+    Object.keys(slippageMapOriginTarget).filter(key => key <= 500)
+        .map(slippage => ret[origin][target][slippage] = slippageMapOriginTarget[slippage].base * (origin === 'USDC' ? 1 : getPriceAtBlock('all', origin, 'USDC', block))
+        );
+
+    return ret;
 }
 
 var gLPMSpec = generateSpecForBlock(
