@@ -380,18 +380,16 @@ function getPivotUnifiedDataAccrossDexes(pivots, fromSymbol, toSymbol, fromBlock
     return pivotData;
 }
 
-function getSumSlippageMapAcrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock) {
+function getSumSlippageMapAcrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, usedPools= []) {
     let baseData = undefined;
-    const alreadyUsedPools = [];
 
     for (const platform of PLATFORMS) {
-
-        const platformData = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
-        if (platformData.unifiedData) {
+        const platformData = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, usedPools);
+        if (platformData && platformData.unifiedData) {
             if (!baseData) {
                 baseData = getBlankUnifiedData(fromBlock, toBlock, stepBlock);
             }
-            alreadyUsedPools.push(...platformData.usedPools);
+            usedPools.push(...platformData.usedPools);
             // console.log(`[${fromSymbol}/${toSymbol}] | [${platform}] | 5% slippage: ${platformData.unifiedData[fromBlock].slippageMap[500].base}`);
 
             for (const block of Object.keys(baseData)) {
@@ -417,7 +415,7 @@ function getSumSlippageMapAcrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, 
     //     console.log(`[${fromSymbol}/${toSymbol}] | [ALL] | NO DATA FOR ROUTE IN ANY DEXES`);
     // }
 
-    return {unifiedData: baseData, usedPools: alreadyUsedPools};
+    return {unifiedData: baseData, usedPools: usedPools};
 }
 
 

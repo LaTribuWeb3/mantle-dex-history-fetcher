@@ -63,20 +63,35 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
         slippageMap: {}
     };
 
-    const directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, atBlock, atBlock, DEFAULT_STEP_BLOCK, usedPools);
+    let directRouteLiquidity = {};
+    if(platform == 'all') {
+        directRouteLiquidity = getSumSlippageMapAcrossDexes(actualFrom, actualTo, atBlock, atBlock, DEFAULT_STEP_BLOCK, usedPools);
+    } else {
+        directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, atBlock, atBlock, DEFAULT_STEP_BLOCK, usedPools);
+    }
+
+    if(directRouteLiquidity) {
+        usedPools.push(...directRouteLiquidity.usedPools);
+    }
+
     prices[actualFrom] = getLastMedianPriceForBlock('all', actualFrom, 'USDC', atBlock);
     
     // get all the routes liquidities
     const pairData = {};
     for(const pair of allPairs) {
-        const liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, atBlock, atBlock, DEFAULT_STEP_BLOCK, usedPools);
+        let liquidityData = {};
+        if(platform == 'all') { 
+            liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, atBlock, atBlock, DEFAULT_STEP_BLOCK, usedPools);
+        } else {
+            liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, atBlock, atBlock, DEFAULT_STEP_BLOCK, usedPools);
+        }
+        
         if(!prices[pair.from]) {
             prices[pair.from] =  getLastMedianPriceForBlock('all', pair.from, 'USDC', atBlock);
         }
 
         if(!prices[pair.from]) {
-            if(pair.from === 'USDC') prices[pair.from] = 1;
-            else throw new Error(`Cannot find ${pair.from}/USDC price`);
+            throw new Error(`Cannot find ${pair.from}/USDC price`);
         }
 
         if(liquidityData && liquidityData.unifiedData) {
@@ -141,7 +156,7 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
         liquidity.slippageMap[targetSlippage] /= prices[actualFrom];
     }
 
-    console.log(actualFrom, actualTo, liquidity);
+    // console.log(actualFrom, actualTo, liquidity);
     return liquidity;
 }
 
@@ -236,7 +251,7 @@ function checkPlatform(platform) {
     }
 }
 
-// getLiquidityV2('uniswapv3', 'wstETH', 'USDT', 19609694);
+getLiquidityV2('curve', 'WETH', 'WBTC', 19609694);
 
 
 module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll};
