@@ -144,33 +144,28 @@ function computeMatrixFromGLPMResult(res, origin, target, block) {
     return ret;
 }
 
-
-async function test() {
-    let pivots = ['DAI', 'WBTC', 'USDC'];
+async function generateNormalizedGraphForBlock(blockNumber, origin, pivots, target, platform, threshold) {
     let edgesWithNegligibleLiquidities = false;
     var graph = undefined;
-    const threshold = 1 / 20;
+    let resultMatrix = {};
 
     do {
         var gLPMSpec = generateSpecForBlock(
-            19467267,
+            blockNumber,
             {
-                origin: 'WETH',
+                origin: origin,
                 intermediaryAssets: pivots,
-                // intermediaryAssets: ['WETH'],
-                target: 'USDT',
-                platform: 'uniswapv3',
+                target: target,
+                platform: platform,
                 nullEdges: graph === undefined ? [] : graph.edges().filter(edge => graph.getEdgeAttributes(edge).nullLiquidity)
             }
         );
 
         let glpmResult = await lp_solve.executeGLPSol(gLPMSpec);
 
-        let resultMatrix = computeMatrixFromGLPMResult(glpmResult, 'WETH', 'USDT', 19467267);
+        resultMatrix = computeMatrixFromGLPMResult(glpmResult, origin, target, blockNumber);
 
         graph = computeGraphFromResultMatrix(resultMatrix);
-
-        fs.writeFileSync('graph.md', generateMarkDownForMermaidGraph(graph));
 
         edgesWithNegligibleLiquidities = false;
 
@@ -187,6 +182,20 @@ async function test() {
             }
         }
     } while (edgesWithNegligibleLiquidities);
+    return graph;
+}
+
+async function test() {
+    var graph = await generateNormalizedGraphForBlock(
+        19467267,
+        'WETH',
+        ['DAI', 'WBTC', 'USDC', 'rETH'],
+        'USDT',
+        'uniswapv3',
+        0.05 // routes under 5% of the total liquidity will be ignored
+    );
+
+    fs.writeFileSync('graph.md', generateMarkDownForMermaidGraph(graph));
 }
 
 test();
