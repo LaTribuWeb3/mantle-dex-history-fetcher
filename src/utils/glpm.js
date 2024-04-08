@@ -137,39 +137,27 @@ function writeGLPMSpec(spec, liquidity) {
     const constraints = addSlackVariablesToConstraints(buildConstraints(origin, target));
     const objective = addSlackVariables(buildObjective(origin, target, liquidationBonus));
 
-    var GLPMSpec = '';
+    var GLPMSpec = [];
 
-    for (const name of allNames) {
-        GLPMSpec += 'var ' + name + ' >= 0;\n';
-    }
+    GLPMSpec = GLPMSpec.concat(allNames.map(name => 'var ' + name + ' >= 0;'));
 
-    let objectiveString = 'maximize z: ';
-    let i = 0;
-    for (const key in Object(objective)) {
-        if (objective[key] == 0) continue;
-        if (i++ > 0) objectiveString += ' + ';
-        objectiveString += '( ' + objective[key].toString() + ') * ' + key;
-    }
-    objectiveString += ';';
+    const nonNullObjectives = Object.entries(objective).filter(([key, value]) => value != 0);
 
-    GLPMSpec += objectiveString + '\n';
+    GLPMSpec = GLPMSpec.concat(['maximize z: ' + nonNullObjectives
+        .map(([key, value]) => `( ${value} ) * ${key}`)
+        .join(' + ') + ';']);
 
-    for (const constraint of constraints) {
-        let string = 'subject to c' + (i++).toString() + ': ';
-        let j = 0;
-        for (const key in Object(constraint.namedVector)) {
-            if (constraint.namedVector[key] == 0) continue;
-            if (j++ > 0) string += ' + ';
-            string += '(' + constraint.namedVector[key].toString() + ') * ' + key;
-        }
+    GLPMSpec = GLPMSpec.concat(constraints.map((constraint, i) =>
+        'subject to c' + (nonNullObjectives.length + i).toString() + ': ' + Object.entries(constraint.namedVector)
+            .filter(([key, value]) => value != 0)
+            .map(([key, value]) => `(${value}) * ${key}`)
+            .join(' + ')
+        + ' ' + constraint.constraint
+        + ' ' + constraint.constant.toString() + ';'));
 
-        string += ' ' + constraint.constraint + ' ' + constraint.constant.toString() + ';';
-        GLPMSpec += string + '\n';
-    }
+    GLPMSpec.push('end;');
 
-    GLPMSpec += 'end;';
-
-    return GLPMSpec;
+    return GLPMSpec.join('\n');
 }
 
 module.exports = {
