@@ -75,7 +75,8 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
         }
 
         if(!prices[pair.from]) {
-            throw new Error(`Cannot find ${pair.from}/USDC price`);
+            if(pair.from === 'USDC') prices[pair.from] = 1;
+            else throw new Error(`Cannot find ${pair.from}/USDC price`);
         }
 
         if(liquidityData && liquidityData.unifiedData) {

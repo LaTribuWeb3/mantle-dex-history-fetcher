@@ -74,9 +74,11 @@ function writeGLPMSpec(spec, liquidity) {
                 }
             }
 
-            // encode equality with <= and =>
-            constraints.push({ 'namedVector': inEqualsOutvectors, 'constraint': '<=', 'constant': 0.0 });
-            constraints.push({ 'namedVector': inEqualsOutvectors, 'constraint': '>=', 'constant': 0.0 });
+            if(Object.keys(inEqualsOutvectors).length != 0) {
+                // encode equality with <= and =>
+                constraints.push({ 'namedVector': inEqualsOutvectors, 'constraint': '<=', 'constant': 0.0 });
+                constraints.push({ 'namedVector': inEqualsOutvectors, 'constraint': '>=', 'constant': 0.0 });
+            }
         }
 
         //console.log(JSON.stringify(constraints, null, 4))
