@@ -175,6 +175,9 @@ function parseGLPMOutput(glpmOutput, baseToken) {
     // here, in ret, we have all the data for all pairs
     // we only want to have data when base == origin
     let totalAmountOfBase = 0;
+    if(!ret[baseToken]) {
+        return 0;
+    }
     for(const quote of Object.keys(ret[baseToken])) {
         for(const slippage of Object.keys(ret[baseToken][quote])) {
             const amount = ret[baseToken][quote][slippage];

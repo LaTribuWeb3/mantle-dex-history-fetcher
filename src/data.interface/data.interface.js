@@ -127,7 +127,7 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
         // console.log(formattedLiquidity);
 
         const glpmSpec = writeGLPMSpec(solverParameters, formattedLiquidity);
-        // console.log(glpmSpec);
+        console.log(glpmSpec);
         const glpmResult = await lp_solve.executeGLPSol(glpmSpec);
         const liquidityForTargetSlippage = parseGLPMOutput(glpmResult, actualFrom);
         liquidity.slippageMap[targetSlippage] = 0;
@@ -235,7 +235,7 @@ function checkPlatform(platform) {
     }
 }
 
-// getLiquidityV2('uniswapv2', 'WETH', 'USDT', 19609694);
+// getLiquidityV2('uniswapv3', 'wstETH', 'USDT', 19609694);
 
 
-module.exports = { getLiquidity, getRollingVolatility, getLiquidityAll};
+module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll};

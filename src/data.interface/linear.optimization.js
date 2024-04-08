@@ -142,6 +142,14 @@ function computeMatrixFromGLPMResult(res, origin, target, block, platform) {
         liquidityAtBlock = getLiquidity(platform, origin, target, block, block, false);
     }
 
+    if(!liquidityAtBlock) {
+        liquidityAtBlock = {
+            [`${block}`]: {
+                slippageMap: getDefaultSlippageMap()
+            } 
+        };
+    }
+
     let slippageMapOriginTarget = getDefaultSlippageMap();
     for(const slippageBps of Object.keys(liquidityAtBlock[block].slippageMap)) {
         if(slippageBps == 50) {
@@ -209,11 +217,11 @@ module.exports = { generateNormalizedGraphForBlock };
 async function test() {
     var graph = await generateNormalizedGraphForBlock(
         19609694,
-        'WETH',
-        ['DAI', 'WBTC', 'USDC'],
+        'wstETH',
+        ['WETH', 'DAI', 'WBTC', 'USDC'],
         'USDT',
-        'uniswapv2',
-        5/100 // routes under this percentage of the total liquidity will be ignored
+        'uniswapv3',
+        0 // routes under this percentage of the total liquidity will be ignored
     );
 
     fs.writeFileSync('graph.md', generateMarkDownForMermaidGraph(graph));
