@@ -11,6 +11,7 @@ const { logFnDurationWithLabel } = require('../utils/utils');
 const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA } = require('../utils/constants');
 const { rollingBiggestDailyChange } = require('../utils/volatility');
 const { GetPairToUse } = require('../global.config');
+const { getUnifiedDataForInterval } = require('./internal/data.interface.utils');
 
 
 //    _____  _   _  _______  ______  _____   ______        _____  ______     ______  _    _  _   _   _____  _______  _____  ____   _   _   _____ 
@@ -41,6 +42,58 @@ function getLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJu
     const liquidity = getSlippageMapForInterval(actualFrom, actualTo, fromBlock, toBlock, platform, withJumps, stepBlock);
     logFnDurationWithLabel(start, `p: ${platform}, [${fromSymbol}/${toSymbol}], blocks: ${(toBlock-fromBlock)}, jumps: ${withJumps}, step: ${stepBlock}`);
     return liquidity;
+}
+
+const ALL_PIVOTS = ['USDC', 'DAI', 'USDT', 'WETH', 'WBTC'];
+function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
+    const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
+    
+    const pivotsToUse = getPivotsToUse(actualFrom, actualTo);
+
+    // generate list of routes
+    const allPairs = [];
+    // get all the routes liquidities
+    const pairData = {};
+    const usedPools = [];
+    for(const pair of allPairs) {
+        const liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, atBlock, atBlock);
+        const price = getPriceAtBlock(pair.from, 'USDC', atBlock);
+        if(liquidityData) {
+            usedPools.push(...liquidityData.usedPools);
+        }
+
+        if(!pairData[pair.from]) {
+            pairData[pair.from] = {};
+        }
+        if(!pairData[pair.from][pair.to]) {
+            pairData[pair.from][pair.to] = {};
+        }
+
+        pairData[pair.from][pair.to].slippageMap = liquidityData.unifiedData[atBlock].slippageMap;
+        pairData[pair.from][pair.to].price = price;
+    }
+
+    // call the linear programming solver
+    const solverParameters = {
+        from: actualFrom,
+        to: actualTo,
+        pivots: pivotsToUse,
+        data: pairData
+    };
+    
+}
+
+function getPivotsToUse(fromSymbol, toSymbol) {
+    const pivotsToUse = [];
+    for (const pivot of ALL_PIVOTS) {
+        if (pivot == fromSymbol || pivot == toSymbol) {
+            // do nothing
+        } else {
+            pivotsToUse.push(pivot);
+        }
+    }
+
+    return pivotsToUse;
 }
 
 /**
