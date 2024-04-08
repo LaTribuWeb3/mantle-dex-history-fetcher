@@ -18,6 +18,7 @@ function generateSpecForBlock(block, assetsSpecification) {
     let intermediaryAssets = assetsSpecification.intermediaryAssets;
     let target = assetsSpecification.target;
     let platform = assetsSpecification.platform;
+    let nullEdges = assetsSpecification.nullEdges === undefined ? [] : assetsSpecification.nullEdges;
 
     let liquidity = {};
     let liquidities = {};
@@ -45,7 +46,9 @@ function generateSpecForBlock(block, assetsSpecification) {
                 const oneLiquidity = liquidityForBaseQuote[block];
                 if (!Object.hasOwn(liquidity, base)) liquidity[base] = {};
                 if (!Object.hasOwn(liquidity[base], quote)) liquidity[base][quote] = {};
-                liquidity[base][quote] =
+                liquidity[base][quote] = nullEdges.includes(base + '/' + quote) ?
+                    0
+                    :
                     Object.keys(oneLiquidity.slippageMap)
                         .map(slippage =>
                             oneLiquidity.slippageMap[slippage].base
@@ -68,22 +71,7 @@ function generateSpecForBlock(block, assetsSpecification) {
     );
 }
 
-
-async function solve_GLPM(gLPMSpec, origin, target, block) {
-    let res = await lp_solve.executeGLPSol(gLPMSpec);
-
-    let resultMatrix = getResAsMatrix(res, origin, target, block);
-
-    var graph = computeGraphFromMatrix(resultMatrix);
-
-    fs.writeFileSync('graph.md', computeMermaidGraph(graph));
-
-    console.log(resultMatrix);
-
-    return { detailedMatrix: resultMatrix, graph: graph };
-}
-
-function computeGraphFromMatrix(resultMatrix) {
+function computeGraphFromResultMatrix(resultMatrix) {
     var graph = new Graph();
     var totals = {};
     let quoteTotals = {};
@@ -120,7 +108,7 @@ function computeGraphFromMatrix(resultMatrix) {
     return graph;
 }
 
-function computeMermaidGraph(graph) {
+function generateMarkDownForMermaidGraph(graph) {
     var stringGraph = 'flowchart LR;\n';
 
     for (let node of graph.nodes()) {
@@ -135,7 +123,7 @@ function computeMermaidGraph(graph) {
     return stringGraph;
 }
 
-function getResAsMatrix(res, origin, target, block) {
+function computeMatrixFromGLPMResult(res, origin, target, block) {
     let columns = res.columns.filter(column => column.activity !== 0);
     let ret = {};
 
@@ -156,15 +144,49 @@ function getResAsMatrix(res, origin, target, block) {
     return ret;
 }
 
-var gLPMSpec = generateSpecForBlock(
-    19467267,
-    {
-        origin: 'WETH',
-        intermediaryAssets: ['DAI', 'WBTC', 'USDC'],
-        // intermediaryAssets: ['WETH'],
-        target: 'USDT',
-        platform: 'uniswapv3'
-    }
-);
 
-solve_GLPM(gLPMSpec, 'WETH', 'USDT', 19467267);
+async function test() {
+    let pivots = ['DAI', 'WBTC', 'USDC'];
+    let edgesWithNegligibleLiquidities = false;
+    var graph = undefined;
+    const threshold = 1 / 20;
+
+    do {
+        var gLPMSpec = generateSpecForBlock(
+            19467267,
+            {
+                origin: 'WETH',
+                intermediaryAssets: pivots,
+                // intermediaryAssets: ['WETH'],
+                target: 'USDT',
+                platform: 'uniswapv3',
+                nullEdges: graph === undefined ? [] : graph.edges().filter(edge => graph.getEdgeAttributes(edge).nullLiquidity)
+            }
+        );
+
+        let glpmResult = await lp_solve.executeGLPSol(gLPMSpec);
+
+        let resultMatrix = computeMatrixFromGLPMResult(glpmResult, 'WETH', 'USDT', 19467267);
+
+        graph = computeGraphFromResultMatrix(resultMatrix);
+
+        fs.writeFileSync('graph.md', generateMarkDownForMermaidGraph(graph));
+
+        edgesWithNegligibleLiquidities = false;
+
+        for (let base of graph.nodes()) {
+            let baseAmount = graph.getNodeAttributes(base).amount;
+            for (let edge of graph.edges()) {
+                if (edge.startsWith(base)) {
+                    console.log(edge);
+                    if (graph.getEdgeAttributes(edge).amount < baseAmount * threshold) {
+                        graph.getEdgeAttributes(edge).nullLiquidity = true;
+                        edgesWithNegligibleLiquidities = true;
+                    }
+                }
+            }
+        }
+    } while (edgesWithNegligibleLiquidities);
+}
+
+test();
