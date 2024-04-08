@@ -3,8 +3,6 @@ const BigNumber = require('bignumber.js');
 function writeGLPMSpec(spec, liquidity) {
     // Retrieving each field from the structured object
     const { assets, origin, target, slippageStepBps, targetSlippageBps } = spec;
-    // TODO: Limite le maxslippage pour les 5000 - 10000 - 15000, etc.
-
     const numSlippageSteps = targetSlippageBps / slippageStepBps;
     const liquidationBonus = targetSlippageBps;
 
@@ -22,13 +20,7 @@ function writeGLPMSpec(spec, liquidity) {
         const name = assetIn + '_' + slippage.toString() + '_' + assetOut;
         if (!elementInArray(allNames, name)) {
             allNames.push(name);
-
-            //console.log({name})
         }
-
-        //console.log({name})
-        //console.log({name})    
-        //console.log(elementInArray(allNames,"a_5_usdc"))
         return name;
     }
 
@@ -65,7 +57,6 @@ function writeGLPMSpec(spec, liquidity) {
 
                         if (assetIn === src) {
                             constraints.push({ 'namedVector': weightVecotr, 'constraint': '>=', 'constant': 0.0 });
-                            //constraints.push({"namedVector" : weightVecotr, "constraint" : "<=", "constant" : -1.0})                                                
                         }
                     }
 
@@ -121,32 +112,15 @@ function writeGLPMSpec(spec, liquidity) {
             }
         }
 
-        /*
-    // encode the rest with 0 objective, otherwise solver crash
-    for(const assetIn of assets) {
-        if(assetIn === src || assetIn === dst) continue
-        for(const assetOut of assets) {
-            if(assetOut === src) continue
-            for(let step = 0 ; step < numSlippageSteps ; step++) {
-                const slippage = (step + 1) * slippageStep
-                if(getInputLiquidity(assetIn, assetOut, step) === 0) continue
-                objective[getName(assetIn, assetOut, slippage)] = 0
-            }
-        }
-    }*/
-
         return objective;
     }
 
     function addSlackVariables(vector) {
-    //console.log(elementInArray(allNames,"a_5_usdc"))
-    //sd
         for (const name of allNames) {
             if (!(name in vector)) {
                 vector[name] = 0;
             }
         }
-
         return vector;
     }
 
@@ -154,7 +128,6 @@ function writeGLPMSpec(spec, liquidity) {
         const newConstraints = [];
         for (const c of constraints) {
             newConstraints.push({ 'namedVector': addSlackVariables(c.namedVector), 'constraint': c.constraint, 'constant': c.constant });
-            //console.log(newConstraints[newConstraints.length - 1].constraint)
         }
 
         return newConstraints;
