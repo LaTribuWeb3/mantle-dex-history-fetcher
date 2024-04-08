@@ -123,7 +123,7 @@ function generateMarkDownForMermaidGraph(graph) {
     return stringGraph;
 }
 
-function computeMatrixFromGLPMResult(res, origin, target, block) {
+function computeMatrixFromGLPMResult(res, origin, target, block, platform) {
     let columns = res.columns.filter(column => column.activity !== 0);
     let ret = {};
 
@@ -134,7 +134,14 @@ function computeMatrixFromGLPMResult(res, origin, target, block) {
         ret[base][quote][slippage] = column.activity;
     }
 
-    let slippageMapOriginTarget = getLiquidityAll(origin, target, block, block, false)[block].slippageMap;
+    let liquidityAtBlock = {};
+    if(platform == undefined) {
+        liquidityAtBlock = getLiquidityAll(origin, target, block, block, false);
+    } else {
+        liquidityAtBlock = getLiquidity(platform, origin, target, block, block, false);
+    }
+
+    let slippageMapOriginTarget = liquidityAtBlock[block].slippageMap;
 
     ret[origin][target] = {};
     Object.keys(slippageMapOriginTarget).filter(key => key <= 500)
@@ -163,7 +170,7 @@ async function generateNormalizedGraphForBlock(blockNumber, origin, pivots, targ
 
         let glpmResult = await lp_solve.executeGLPSol(gLPMSpec);
 
-        resultMatrix = computeMatrixFromGLPMResult(glpmResult, origin, target, blockNumber);
+        resultMatrix = computeMatrixFromGLPMResult(glpmResult, origin, target, blockNumber, platform);
 
         graph = computeGraphFromResultMatrix(resultMatrix);
 
@@ -185,17 +192,20 @@ async function generateNormalizedGraphForBlock(blockNumber, origin, pivots, targ
     return graph;
 }
 
-// async function test() {
-//     var graph = await generateNormalizedGraphForBlock(
-//         19467267,
-//         'WETH',
-//         ['DAI', 'WBTC', 'USDC'],
-//         'USDT',
-//         'uniswapv3',
-//         0.05 // routes under 5% of the total liquidity will be ignored
-//     );
+async function test() {
+    var graph = await generateNormalizedGraphForBlock(
+        19467267,
+        // 'WETH',
+        // ['DAI', 'WBTC', 'USDC'],
+        // 'USDT',
+        'wstETH',
+        ['WETH', 'DAI', 'USDC'],
+        'SNX',
+        'uniswapv3',
+        0.05 // routes under 5% of the total liquidity will be ignored
+    );
 
-//     fs.writeFileSync('graph.md', generateMarkDownForMermaidGraph(graph));
-// }
+    fs.writeFileSync('graph.md', generateMarkDownForMermaidGraph(graph));
+}
 
-// test();
+test();
