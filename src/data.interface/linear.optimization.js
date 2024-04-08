@@ -1,5 +1,5 @@
 const { getLiquidityAll, getLiquidity } = require('./data.interface');
-const lp_solve = require('lp_solve');
+const lp_solve = require('@3lden/lp_solve');
 const glpm = require('../utils/glpm.js');
 const { getPriceAtBlock } = require('./internal/data.interface.price.js');
 const fs = require('fs');
@@ -194,20 +194,17 @@ async function generateNormalizedGraphForBlock(blockNumber, origin, pivots, targ
 
 module.exports = { generateNormalizedGraphForBlock };
 
-// async function test() {
-//     var graph = await generateNormalizedGraphForBlock(
-//         19467288,
-//         // 'WETH',
-//         // ['DAI', 'WBTC', 'USDC'],
-//         // 'USDT',
-//         'wstETH',
-//         ['WETH', 'DAI', 'USDC'],
-//         'SNX',
-//         'uniswapv3',
-//         0.05 // routes under 5% of the total liquidity will be ignored
-//     );
+async function test() {
+    var graph = await generateNormalizedGraphForBlock(
+        19467267,
+        'WETH',
+        ['DAI', 'WBTC', 'USDC'],
+        'USDT',
+        'uniswapv3',
+        0.1 // routes under this percentage of the total liquidity will be ignored
+    );
 
-//     fs.writeFileSync('graph.md', generateMarkDownForMermaidGraph(graph));
-// }
+    fs.writeFileSync('graph.md', generateMarkDownForMermaidGraph(graph));
+}
 
-// test();
+test();

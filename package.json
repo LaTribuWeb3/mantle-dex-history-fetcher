@@ -13,6 +13,7 @@
     },
     "dependencies": {
         "@0xsequence/multicall": "0.43.34",
+        "@3lden/lp_solve": "^1.0.0",
         "axios": "^1.6.2",
         "base-64": "^1.0.0",
         "bignumber.js": "^9.1.2",
