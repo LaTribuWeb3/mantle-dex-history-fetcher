@@ -6,7 +6,7 @@
 //////////// THE FETCHERS //////////////
 
 const { getPrices } = require('./internal/data.interface.price');
-const { getSlippageMapForInterval, getLiquidityAccrossDexes } = require('./internal/data.interface.liquidity');
+const { getSlippageMapForInterval, getLiquidityAccrossDexes, getSumSlippageMapAcrossDexes } = require('./internal/data.interface.liquidity');
 const { logFnDurationWithLabel } = require('../utils/utils');
 const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA } = require('../utils/constants');
 const { rollingBiggestDailyChange } = require('../utils/volatility');
@@ -52,9 +52,13 @@ function getLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJu
  * @param {number} stepBlock 
  * @returns {{[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}}
  */
-function getLiquidityAll(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock = DEFAULT_STEP_BLOCK) {
+function getLiquidityAll(fromSymbol, toSymbol, fromBlock, toBlock, withJumps = true, stepBlock = DEFAULT_STEP_BLOCK) {
     const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
-    return getLiquidityAccrossDexes(actualFrom, actualTo, fromBlock, toBlock, stepBlock);
+    if(withJumps) {
+        return getLiquidityAccrossDexes(actualFrom, actualTo, fromBlock, toBlock, stepBlock);
+    } else {
+        return getSumSlippageMapAcrossDexes(actualFrom, actualTo, fromBlock, toBlock, stepBlock).unifiedData;
+    }
 }
 
 

@@ -273,7 +273,6 @@ function getLiquidityAccrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, step
     // get the direct route liquidity from all dexes
     const data = getSumSlippageMapAcrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock);
 
-
     // init to 0 if no data
     if (!data.unifiedData) {
         data.unifiedData = getBlankUnifiedData(fromBlock, toBlock, stepBlock);
@@ -422,4 +421,4 @@ function getSumSlippageMapAcrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, 
 }
 
 
-module.exports = { getAverageLiquidityForInterval, getSlippageMapForInterval, getLiquidityAccrossDexes, computeAverageSlippageMap};
+module.exports = { getAverageLiquidityForInterval, getSlippageMapForInterval, getLiquidityAccrossDexes, computeAverageSlippageMap, getSumSlippageMapAcrossDexes};
