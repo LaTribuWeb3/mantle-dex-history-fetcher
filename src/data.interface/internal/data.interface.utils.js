@@ -11,6 +11,65 @@ const { GetPairToUse } = require('../../global.config');
  * @param {string} fromSymbol 
  * @param {string} toSymbol 
  */
+function getLastMedianPriceForBlock(platform, fromSymbol, toSymbol, searchedBlock) {
+    const medianFileName = path.join(DATA_DIR, 'precomputed', 'median', platform, `${fromSymbol}-${toSymbol}-median-prices.csv`);
+    if (!fs.existsSync(medianFileName)) {
+        console.warn(`getLastMedianPriceForBlock: file ${medianFileName} does not exists`);
+        return undefined;
+    }
+
+    const allData = fs.readFileSync(medianFileName, 'utf-8').split('\n');
+
+    let price = allData[1].split(',')[1];
+
+    for (let i = 2; i < allData.length - 1; i++) {
+        const lineSplitted = allData[i].split(',');
+        const block = Number(lineSplitted[0]);
+
+        if(block > searchedBlock) break;
+
+        price = lineSplitted[1];
+    }
+
+    return price;
+}
+
+/**
+ * 
+ * @param {string} platform 
+ * @param {string} fromSymbol 
+ * @param {string} toSymbol 
+ */
+function readMedianPricesFileAtBlock(platform, fromSymbol, toSymbol, targetBlock) {
+    const medianFileName = path.join(DATA_DIR, 'precomputed', 'median', platform, `${fromSymbol}-${toSymbol}-median-prices.csv`);
+    if (!fs.existsSync(medianFileName)) {
+        console.warn(`readMedianPricesFile: file ${medianFileName} does not exists`);
+        return undefined;
+    }
+
+    const allData = fs.readFileSync(medianFileName, 'utf-8').split('\n');
+
+    let lastPrice = undefined;
+    for (let i = 1; i < allData.length - 1; i++) {
+        const lineSplitted = allData[i].split(',');
+        const block = Number(lineSplitted[0]);
+
+        if(block > targetBlock) {
+            return lastPrice;
+        }
+
+        lastPrice = Number(lineSplitted[1]);
+    }
+
+    return lastPrice;
+}
+
+/**
+ * 
+ * @param {string} platform 
+ * @param {string} fromSymbol 
+ * @param {string} toSymbol 
+ */
 function readMedianPricesFile(platform, fromSymbol, toSymbol, fromBlock = undefined, toBlock = undefined) {
     const medianFileName = path.join(DATA_DIR, 'precomputed', 'median', platform, `${fromSymbol}-${toSymbol}-median-prices.csv`);
     if (!fs.existsSync(medianFileName)) {
@@ -577,4 +636,4 @@ function extractDataFromUnifiedLine(line) {
     };
 }
 
-module.exports = { getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, readMedianPricesFile, getPricesAtBlockForIntervalViaPivots, getUnifiedDataForIntervalByFilename, extractDataFromUnifiedLine };
+module.exports = { readMedianPricesFileAtBlock, getLastMedianPriceForBlock, getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, readMedianPricesFile, getPricesAtBlockForIntervalViaPivots, getUnifiedDataForIntervalByFilename, extractDataFromUnifiedLine };

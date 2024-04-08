@@ -13,6 +13,7 @@
     },
     "dependencies": {
         "@0xsequence/multicall": "0.43.34",
+        "@3lden/lp_solve": "^1.0.0",
         "axios": "^1.6.2",
         "base-64": "^1.0.0",
         "bignumber.js": "^9.1.2",
@@ -21,6 +22,8 @@
         "dotenv": "^16.3.1",
         "ethers": "^5.7.2",
         "express": "^4.18.2",
+        "graphology": "^0.25.4",
+        "human-format": "^1.2.0",
         "octokit": "^3.1.2",
         "simple-statistics": "^7.8.3"
     }
