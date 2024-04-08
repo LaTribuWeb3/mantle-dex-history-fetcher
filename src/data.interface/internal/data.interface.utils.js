@@ -31,7 +31,7 @@ function getLastMedianPriceForBlock(platform, fromSymbol, toSymbol, searchedBloc
         price = lineSplitted[1];
     }
 
-    return price;
+    return Number(price);
 }
 
 /**

@@ -5,6 +5,7 @@ const { getPriceAtBlock } = require('./internal/data.interface.price.js');
 const fs = require('fs');
 const humanFormat = require('human-format');
 const Graph = require('graphology');
+const { getDefaultSlippageMap } = require('./internal/data.interface.utils.js');
 
 function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefined) {
     if (!Object.hasOwn(liquidities, base)) liquidities[base] = {};
@@ -141,7 +142,18 @@ function computeMatrixFromGLPMResult(res, origin, target, block, platform) {
         liquidityAtBlock = getLiquidity(platform, origin, target, block, block, false);
     }
 
-    let slippageMapOriginTarget = liquidityAtBlock[block].slippageMap;
+    let slippageMapOriginTarget = getDefaultSlippageMap();
+    for(const slippageBps of Object.keys(liquidityAtBlock[block].slippageMap)) {
+        if(slippageBps == 50) {
+            slippageMapOriginTarget[50].base = liquidityAtBlock[block].slippageMap[50].base;
+        } else {
+            slippageMapOriginTarget[slippageBps].base = liquidityAtBlock[block].slippageMap[slippageBps].base - liquidityAtBlock[block].slippageMap[slippageBps-50].base;
+        }
+    }
+
+    if(!ret[origin]) {
+        ret[origin] = {};
+    }
 
     ret[origin][target] = {};
     Object.keys(slippageMapOriginTarget).filter(key => key <= 500)
@@ -196,12 +208,12 @@ module.exports = { generateNormalizedGraphForBlock };
 
 async function test() {
     var graph = await generateNormalizedGraphForBlock(
-        19467267,
+        19609694,
         'WETH',
         ['DAI', 'WBTC', 'USDC'],
         'USDT',
-        'uniswapv3',
-        0.1 // routes under this percentage of the total liquidity will be ignored
+        'uniswapv2',
+        5/100 // routes under this percentage of the total liquidity will be ignored
     );
 
     fs.writeFileSync('graph.md', generateMarkDownForMermaidGraph(graph));

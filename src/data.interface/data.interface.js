@@ -6,13 +6,17 @@
 //////////// THE FETCHERS //////////////
 
 const { getPrices } = require('./internal/data.interface.price');
+const lp_solve = require('@3lden/lp_solve');
 const { getSlippageMapForInterval, getLiquidityAccrossDexes, getSumSlippageMapAcrossDexes } = require('./internal/data.interface.liquidity');
 const { logFnDurationWithLabel } = require('../utils/utils');
 const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA } = require('../utils/constants');
 const { rollingBiggestDailyChange } = require('../utils/volatility');
 const { GetPairToUse } = require('../global.config');
-const { getUnifiedDataForInterval } = require('./internal/data.interface.utils');
+const { getUnifiedDataForInterval, getLastMedianPriceForBlock } = require('./internal/data.interface.utils');
+const { writeGLPMSpec, parseGLPMOutput } = require('../utils/glpm');
 
+
+const ALL_PIVOTS = ['USDC', 'DAI', 'USDT', 'WETH', 'WBTC'];
 
 //    _____  _   _  _______  ______  _____   ______        _____  ______     ______  _    _  _   _   _____  _______  _____  ____   _   _   _____ 
 //   |_   _|| \ | ||__   __||  ____||  __ \ |  ____|/\    / ____||  ____|   |  ____|| |  | || \ | | / ____||__   __||_   _|/ __ \ | \ | | / ____|
@@ -44,43 +48,100 @@ function getLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJu
     return liquidity;
 }
 
-const ALL_PIVOTS = ['USDC', 'DAI', 'USDT', 'WETH', 'WBTC'];
-function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
+async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
     const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
     
     const pivotsToUse = getPivotsToUse(actualFrom, actualTo);
 
     // generate list of routes
-    const allPairs = [];
+    const allPairs = getAllPairs(actualFrom, actualTo, pivotsToUse);
+
+    const prices = {};
+    prices['USDC'] = 1;
+    const usedPools = [];
+    const liquidity = {
+        slippageMap: {}
+    };
+
+    const directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, atBlock, atBlock, DEFAULT_STEP_BLOCK, usedPools);
+    prices[actualFrom] = getLastMedianPriceForBlock('all', actualFrom, 'USDC', atBlock);
+    
     // get all the routes liquidities
     const pairData = {};
-    const usedPools = [];
     for(const pair of allPairs) {
-        const liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, atBlock, atBlock);
-        const price = getPriceAtBlock(pair.from, 'USDC', atBlock);
-        if(liquidityData) {
+        const liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, atBlock, atBlock, DEFAULT_STEP_BLOCK, usedPools);
+        if(!prices[pair.from]) {
+            prices[pair.from] =  getLastMedianPriceForBlock('all', pair.from, 'USDC', atBlock);
+        }
+
+        if(!prices[pair.from]) {
+            throw new Error(`Cannot find ${pair.from}/USDC price`);
+        }
+
+        if(liquidityData && liquidityData.unifiedData) {
             usedPools.push(...liquidityData.usedPools);
-        }
 
-        if(!pairData[pair.from]) {
-            pairData[pair.from] = {};
+            if(!pairData[pair.from]) {
+                pairData[pair.from] = {};
+            }
+            if(!pairData[pair.from][pair.to]) {
+                pairData[pair.from][pair.to] = {};
+            }
+    
+            pairData[pair.from][pair.to] = liquidityData.unifiedData[atBlock].slippageMap;
         }
-        if(!pairData[pair.from][pair.to]) {
-            pairData[pair.from][pair.to] = {};
-        }
-
-        pairData[pair.from][pair.to].slippageMap = liquidityData.unifiedData[atBlock].slippageMap;
-        pairData[pair.from][pair.to].price = price;
     }
 
-    // call the linear programming solver
-    const solverParameters = {
-        from: actualFrom,
-        to: actualTo,
-        pivots: pivotsToUse,
-        data: pairData
-    };
-    
+    for(let targetSlippage = 100; targetSlippage <= 2000; targetSlippage += 50) {
+        // call the linear programming solver
+        const solverParameters = {
+            assets: pivotsToUse.concat([actualFrom, actualTo]),
+            origin: actualFrom,
+            target: actualTo,
+            slippageStepBps: 50,
+            targetSlippageBps: targetSlippage,
+        };
+
+        
+        const formattedLiquidity = {};
+        
+        for (const base of Object.keys(pairData)) {
+            for (const quote of Object.keys(pairData[base])) {
+                for(const slippageBps of Object.keys(pairData[base][quote])) {
+                    // if(slippageBps > targetSlippage) continue;
+
+                    if(!formattedLiquidity[base]) {
+                        formattedLiquidity[base] = {};
+                    }
+
+                    if(!formattedLiquidity[base][quote]) {
+                        formattedLiquidity[base][quote] = [];
+                    }
+
+                    formattedLiquidity[base][quote].push(pairData[base][quote][slippageBps].base * prices[base]);
+                }
+
+                formattedLiquidity[base][quote] = formattedLiquidity[base][quote].map((e, i, a) => i === 0 ? e : e - a[i - 1]);
+            }
+        }   
+        // console.log(formattedLiquidity);
+
+        const glpmSpec = writeGLPMSpec(solverParameters, formattedLiquidity);
+        // console.log(glpmSpec);
+        const glpmResult = await lp_solve.executeGLPSol(glpmSpec);
+        const liquidityForTargetSlippage = parseGLPMOutput(glpmResult, actualFrom);
+        liquidity.slippageMap[targetSlippage] = 0;
+        if(directRouteLiquidity && directRouteLiquidity.unifiedData) {
+            liquidity.slippageMap[targetSlippage] += directRouteLiquidity.unifiedData[atBlock].slippageMap[targetSlippage].base * prices[actualFrom];
+        }
+
+        liquidity.slippageMap[targetSlippage] += liquidityForTargetSlippage;
+
+        liquidity.slippageMap[targetSlippage] /= prices[actualFrom];
+    }
+
+    console.log(actualFrom, actualTo, liquidity);
+    return liquidity;
 }
 
 function getPivotsToUse(fromSymbol, toSymbol) {
@@ -96,6 +157,34 @@ function getPivotsToUse(fromSymbol, toSymbol) {
     return pivotsToUse;
 }
 
+function getAllPairs(fromSymbol, toSymbol, pivotsToUse) {
+    const allPairs = [];
+    for (const pivot of pivotsToUse) {
+        allPairs.push({
+            from: fromSymbol,
+            to: pivot
+        });
+    }
+
+    for (let assetIn of pivotsToUse) {
+        for (let assetOut of pivotsToUse) {
+            if (assetIn == assetOut) continue;
+            allPairs.push({
+                from: assetIn,
+                to: assetOut
+            });
+        }
+    }
+
+    for (const pivot of pivotsToUse) {
+        allPairs.push({
+            from: pivot,
+            to: toSymbol
+        });
+    }
+
+    return allPairs;
+}
 /**
  * Get the aggregated liquidity (using 'jump routes') from all available platforms (dexes)
  * @param {string} fromSymbol 
@@ -145,6 +234,8 @@ function checkPlatform(platform) {
         throw new Error(`Platform unknown: ${platform}, use one of ${PLATFORMS}`);
     }
 }
+
+// getLiquidityV2('uniswapv2', 'WETH', 'USDT', 19609694);
 
 
 module.exports = { getLiquidity, getRollingVolatility, getLiquidityAll};
