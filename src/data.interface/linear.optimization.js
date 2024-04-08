@@ -192,6 +192,8 @@ async function generateNormalizedGraphForBlock(blockNumber, origin, pivots, targ
     return graph;
 }
 
+module.exports = { generateNormalizedGraphForBlock };
+
 // async function test() {
 //     var graph = await generateNormalizedGraphForBlock(
 //         19467288,
