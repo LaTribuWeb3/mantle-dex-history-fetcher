@@ -62,7 +62,9 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
  * @param {*} toBlock 
  * @returns {Promise<{slippageMap: {[slippageBps: number]: number}}>}
  */
-async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
+async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, toBlock, step = 50) {
+    const startDataFetch = Date.now();
+    const start = Date.now();
     const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
     
     const pivotsToUse = getPivotsToUse(actualFrom, actualTo);
@@ -73,9 +75,6 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
     const prices = {};
     prices['USDC'] = 1;
     const usedPools = [];
-    const liquidity = {
-        slippageMap: {}
-    };
 
     let directRouteLiquidity = {};
     if(platform == 'all') {
@@ -84,9 +83,11 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
         directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
     }
 
-    if(directRouteLiquidity) {
+    if(directRouteLiquidity && directRouteLiquidity.unifiedData) {
         usedPools.push(...directRouteLiquidity.usedPools);
         directRouteLiquidity = computeAverageSlippageMap(directRouteLiquidity.unifiedData);
+    } else {
+        directRouteLiquidity = undefined;
     }
 
     if(!prices[actualFrom]) {
@@ -127,6 +128,152 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
         }
     }
 
+    logFnDurationWithLabel(startDataFetch, 'data fetch duration:');
+    const result = await computeLiquidityWithSolver(pivotsToUse, actualFrom, actualTo, pairData, prices, directRouteLiquidity, step);
+    logFnDurationWithLabel(start, `p: ${platform}, [${fromSymbol}/${toSymbol}], blocks: ${(toBlock - fromBlock + 1)}`);
+    return result;
+
+}
+
+/**
+ * 
+ * @param {*} platform 
+ * @param {*} fromSymbol 
+ * @param {*} toSymbol 
+ * @param {*} fromBlock 
+ * @param {*} toBlock 
+ * @param {*} nbDays 
+ * @param {*} avgOverBlocks 
+ * @returns {Promise<{slippageMap: {[slippageBps: number]: number}[]}>}
+ */
+async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol, fromBlock, toBlock, nbPoints, avgOverBlocks, step = 50) {
+    const start = Date.now();
+    const startDataFetch = Date.now();
+    const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
+    
+    const pivotsToUse = getPivotsToUse(actualFrom, actualTo);
+
+    // generate list of routes
+    const allPairs = getAllPairs(actualFrom, actualTo, pivotsToUse);
+
+    const pricesPerPoint = {};
+    for(let p = 0; p < nbPoints; p++) {
+        pricesPerPoint[p] = {
+            USDC: 1
+        };
+    }
+    const usedPools = [];
+
+    const blocksPerPoint = (toBlock - fromBlock) / nbPoints;
+
+    const directRouteLiquidityPerPoint = {};
+    let directRouteLiquidity = {};
+    if(platform == 'all') {
+        directRouteLiquidity = getSumSlippageMapAcrossDexes(actualFrom, actualTo, fromBlock - avgOverBlocks, toBlock, DEFAULT_STEP_BLOCK, usedPools);
+    } else {
+        directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, fromBlock - avgOverBlocks, toBlock, DEFAULT_STEP_BLOCK, usedPools);
+    }
+
+    if(directRouteLiquidity && directRouteLiquidity.unifiedData) {
+        usedPools.push(...directRouteLiquidity.usedPools);
+
+        for(let p = 0; p < nbPoints; p++) {
+            const pointTo = fromBlock + (p * blocksPerPoint);
+            const pointFrom = pointTo - avgOverBlocks;
+            const liquiditiesForPoint = {};
+            for(const [block, liquidityData] of Object.entries(directRouteLiquidity.unifiedData)) {
+                if(block < pointFrom) {
+                    continue;
+                }
+                if(block > pointTo) {
+                    break;
+                }
+
+                liquiditiesForPoint[block] = liquidityData;
+            }
+
+            if(!pricesPerPoint[p][actualFrom]) {
+                pricesPerPoint[p][actualFrom] = getLastMedianPriceForBlock('all', actualFrom, 'USDC', pointTo);
+            }
+            
+            directRouteLiquidityPerPoint[p] = computeAverageSlippageMap(liquiditiesForPoint);
+        }
+    } else {
+        // if not direct liquidity, stored undefined
+        for(let p = 0; p < nbPoints; p++) {
+            directRouteLiquidityPerPoint[p] = undefined;
+        }
+    }
+    
+    // get all the routes liquidities
+    const pairDataPerPoint = {};
+    for(const pair of allPairs) {
+        let liquidityData = {};
+        if(platform == 'all') { 
+            liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
+        } else {
+            liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
+        }
+
+        if(liquidityData && liquidityData.unifiedData) {
+            usedPools.push(...liquidityData.usedPools);
+
+            for(let p = 0; p < nbPoints; p++) {
+                if(!pairDataPerPoint[p]) {
+                    pairDataPerPoint[p] = {};
+                }
+                const pointFrom = fromBlock + (p * blocksPerPoint);
+                const pointTo = pointFrom + blocksPerPoint;
+                const liquiditiesForPoint = {};
+                for(const [block, liq] of Object.entries(liquidityData.unifiedData)) {
+                    if(block < pointFrom) {
+                        continue;
+                    }
+                    if(block > pointTo) {
+                        break;
+                    }
+    
+                    liquiditiesForPoint[block] = liq;
+                }
+                
+                if(!pairDataPerPoint[p][pair.from]) {
+                    pairDataPerPoint[p][pair.from] = {};
+                }
+                if(!pairDataPerPoint[p][pair.from][pair.to]) {
+                    pairDataPerPoint[p][pair.from][pair.to] = {};
+                }
+            
+                if(!pricesPerPoint[p][pair.from]) {
+                    pricesPerPoint[p][pair.from] = getLastMedianPriceForBlock('all', pair.from, 'USDC', pointTo);
+                }
+                
+                if(!pricesPerPoint[p][pair.from]) {
+                    throw new Error(`Cannot find ${pair.from}/USDC price`);
+                }
+                
+                pairDataPerPoint[p][pair.from][pair.to] = computeAverageSlippageMap(liquiditiesForPoint).slippageMap;
+            }
+        }
+    }
+    
+
+    logFnDurationWithLabel(startDataFetch, 'data fetch duration:');
+    const liquidities = []; // will store the liquidities (solver result) for every point of nbPoints
+    for(let p = 0; p < nbPoints; p++) {
+        const directRouteLiquidity = directRouteLiquidityPerPoint[p];
+        const pairData = pairDataPerPoint[p];
+        const prices = pricesPerPoint[p];
+        const result = await computeLiquidityWithSolver(pivotsToUse, actualFrom, actualTo, pairData, prices, directRouteLiquidity, step);
+        liquidities.push(result);
+    }
+
+
+    logFnDurationWithLabel(start, `p: ${platform}, [${fromSymbol}/${toSymbol}], blocks: ${(toBlock - fromBlock + 1)}`);
+    return liquidities;
+}
+
+
+async function computeLiquidityWithSolver(pivotsToUse, fromSymbol, toSymbol, pairData, prices, directRouteLiquidity, step) {
     // check if routes exists from actualFrom=>anything
     // and from anything=>actualTo
     // if no routes available from or to, ignore solver and return direct route data
@@ -136,15 +283,18 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
             break;
         }
         for(const to of Object.keys(pairData[from])) {
-            if(to == actualTo) {
+            if(to == toSymbol) {
                 atLeastOneExitRoute = true;
                 break;
             }
         }
     }
 
-    if(!pairData[actualFrom] || !atLeastOneExitRoute) {
-        if(!directRouteLiquidity || !directRouteLiquidity.unifiedData) {
+    const liquidity = {
+        slippageMap: {}
+    };
+    if(!pairData[fromSymbol] || !atLeastOneExitRoute) {
+        if(!directRouteLiquidity) {
             return undefined;
         } else {
             for(const slippageBps of Object.keys(directRouteLiquidity.slippageMap)) {
@@ -155,30 +305,28 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
         }
     }
 
-
-    for(let targetSlippage = 50; targetSlippage <= 2000; targetSlippage += 50) {
+    for (let targetSlippage = step; targetSlippage <= 2000; targetSlippage += step) {
         // call the linear programming solver
         const solverParameters = {
-            assets: pivotsToUse.concat([actualFrom, actualTo]),
-            origin: actualFrom,
-            target: actualTo,
+            assets: pivotsToUse.concat([fromSymbol, toSymbol]),
+            origin: fromSymbol,
+            target: toSymbol,
             slippageStepBps: 50,
             targetSlippageBps: targetSlippage,
         };
 
-        
+
         const formattedLiquidity = {};
-        
+
         for (const base of Object.keys(pairData)) {
             for (const quote of Object.keys(pairData[base])) {
-                for(const slippageBps of Object.keys(pairData[base][quote])) {
+                for (const slippageBps of Object.keys(pairData[base][quote])) {
                     // if(slippageBps > targetSlippage) continue;
-
-                    if(!formattedLiquidity[base]) {
+                    if (!formattedLiquidity[base]) {
                         formattedLiquidity[base] = {};
                     }
 
-                    if(!formattedLiquidity[base][quote]) {
+                    if (!formattedLiquidity[base][quote]) {
                         formattedLiquidity[base][quote] = [];
                     }
 
@@ -187,21 +335,20 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
 
                 formattedLiquidity[base][quote] = formattedLiquidity[base][quote].map((e, i, a) => i === 0 ? e : e - a[i - 1]);
             }
-        }   
+        }
         // console.log(formattedLiquidity);
-
         const glpmSpec = writeGLPMSpec(solverParameters, formattedLiquidity);
         // console.log(glpmSpec);
         const glpmResult = await lp_solve.executeGLPSol(glpmSpec);
-        const liquidityForTargetSlippage = parseGLPMOutput(glpmResult, actualFrom);
+        const liquidityForTargetSlippage = parseGLPMOutput(glpmResult, fromSymbol);
         liquidity.slippageMap[targetSlippage] = 0;
-        if(directRouteLiquidity) {
-            liquidity.slippageMap[targetSlippage] += directRouteLiquidity.slippageMap[targetSlippage].base * prices[actualFrom];
+        if (directRouteLiquidity) {
+            liquidity.slippageMap[targetSlippage] += directRouteLiquidity.slippageMap[targetSlippage].base * prices[fromSymbol];
         }
 
         liquidity.slippageMap[targetSlippage] += liquidityForTargetSlippage;
 
-        liquidity.slippageMap[targetSlippage] /= prices[actualFrom];
+        liquidity.slippageMap[targetSlippage] /= prices[fromSymbol];
     }
 
     // console.log(actualFrom, actualTo, liquidity);
@@ -302,8 +449,10 @@ function checkPlatform(platform) {
 // all	WETH	USDT	26040,98853	16412,88528	-36,97%
 async function test() {
     // const result = await getLiquidityV2('all', 'WETH', 'USDT', 19609694);
-    const result = await getLiquidityAverageV2('all', 'WETH', 'USDT', 19609694 - 30 * BLOCK_PER_DAY, 19609694);
-    console.log(`WETH/USDT : ${result.slippageMap[500]}`);
+    const base = 'WETH';
+    const quote = 'USDC';
+    const result = await getLiquidityAverageV2ForDataPoints('uniswapv3', base, quote, 19609694 - 180 * BLOCK_PER_DAY, 19609694, 180, 100);
+    // console.log(`${base}/${quote} : ${result.slippageMap[500]}`);
 
     // const data = getLiquidityAll('WETH', 'USDT', 19609694, 19609694)
     // console.log('lol');
@@ -311,4 +460,4 @@ async function test() {
 // test();
 
 
-module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll, getLiquidityAverageV2};
+module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll, getLiquidityAverageV2, getLiquidityAverageV2ForDataPoints};
