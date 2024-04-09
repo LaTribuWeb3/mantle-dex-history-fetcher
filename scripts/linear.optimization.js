@@ -9,18 +9,18 @@ const { getDefaultSlippageMap, getUnifiedDataForInterval } = require('../src/dat
 const { getSumSlippageMapAcrossDexes } = require('../src/data.interface/internal/data.interface.liquidity.js');
 const { DEFAULT_STEP_BLOCK } = require('../src/utils/constants.js');
 
-function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefined, usedPools= []) {
+function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefined, usedPools = []) {
     if (!Object.hasOwn(liquidities, base)) liquidities[base] = {};
     // if (!Object.hasOwn(liquidities[base], quote)) liquidities[base][quote] = {};
     let liquidity = undefined;
     if (platform === undefined) {
         liquidity = getSumSlippageMapAcrossDexes(base, quote, block, block, DEFAULT_STEP_BLOCK, usedPools);
-    } 
+    }
     else {
         liquidity = getUnifiedDataForInterval(platform, base, quote, block, block, DEFAULT_STEP_BLOCK, usedPools);
-    } 
+    }
 
-    if(liquidity && liquidity.unifiedData) {
+    if (liquidity && liquidity.unifiedData) {
         liquidities[base][quote] = liquidity.unifiedData;
         usedPools.push(...liquidity.usedPools);
     }
@@ -149,26 +149,26 @@ function computeMatrixFromGLPMResult(res, origin, target, block, platform) {
     }
 
     let liquidityAtBlock = {};
-    if(platform == undefined) {
+    if (platform == undefined) {
         liquidityAtBlock = getLiquidityAll(origin, target, block, block, false);
     } else {
         liquidityAtBlock = getLiquidity(platform, origin, target, block, block, false);
     }
 
-    if(!liquidityAtBlock) {
+    if (!liquidityAtBlock) {
         liquidityAtBlock = {
             [`${block}`]: {
                 slippageMap: getDefaultSlippageMap()
-            } 
+            }
         };
     }
 
     let slippageMapOriginTarget = getDefaultSlippageMap();
-    for(const slippageBps of Object.keys(liquidityAtBlock[block].slippageMap)) {
-        if(slippageBps == 50) {
+    for (const slippageBps of Object.keys(liquidityAtBlock[block].slippageMap)) {
+        if (slippageBps == 50) {
             slippageMapOriginTarget[50].base = liquidityAtBlock[block].slippageMap[50].base;
         } else {
-            slippageMapOriginTarget[slippageBps].base = liquidityAtBlock[block].slippageMap[slippageBps].base - liquidityAtBlock[block].slippageMap[slippageBps-50].base;
+            slippageMapOriginTarget[slippageBps].base = liquidityAtBlock[block].slippageMap[slippageBps].base - liquidityAtBlock[block].slippageMap[slippageBps - 50].base;
         }
     }
 
@@ -220,7 +220,7 @@ async function generateNormalizedGraphForBlock(blockNumber, origin, pivots, targ
             for (let edge of graph.edges()) {
                 if (edge.startsWith(base)) {
                     console.log(edge);
-                    if (graph.getEdgeAttributes(edge).amount < baseAmount * threshold) {
+                    if (graph.getEdgeAttributes(edge).amount < baseAmount * threshold /* || graph.getEdgeAttributes(edge).amount == 0 */) {
                         graph.getEdgeAttributes(edge).nullLiquidity = true;
                         edgesWithNegligibleLiquidities = true;
                     }
