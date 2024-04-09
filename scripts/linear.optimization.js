@@ -237,8 +237,8 @@ async function test() {
     const platform = undefined;
     var graph = await generateNormalizedGraphForBlock(
         19609694,
-        'WETH',
-        ['DAI', 'WBTC', 'USDC'],
+        'wstETH',
+        ['DAI', 'WBTC', 'USDC', 'WETH'],
         'USDT',
         platform,
         0 // routes under this percentage of the total liquidity will be ignored
