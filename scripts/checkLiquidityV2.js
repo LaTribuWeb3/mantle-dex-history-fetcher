@@ -9,6 +9,7 @@ async function test() {
     fs.writeFileSync('liquidityresult.csv', 'platform,base,quote,liquidity old, liquidity new\n');
     for(const base of Object.keys(watchedPairs)) {
         for(const quoteCfg of watchedPairs[base]) {
+            if(!quoteCfg.exportToInternalDashboard) continue;
             const quote = quoteCfg.quote;
             for(const platform of PLATFORMS) {
                 console.log(`Working on ${base}/${quote} for ${platform}`);

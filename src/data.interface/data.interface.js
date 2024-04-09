@@ -16,7 +16,8 @@ const { getUnifiedDataForInterval, getLastMedianPriceForBlock } = require('./int
 const { writeGLPMSpec, parseGLPMOutput } = require('../utils/glpm');
 
 
-const ALL_PIVOTS = ['USDC', 'DAI', 'USDT', 'WETH', 'WBTC'];
+// const ALL_PIVOTS = [ 'DAI', 'WBTC','USDC', 'USDT', 'WETH'];
+const ALL_PIVOTS = ['DAI', 'WBTC', 'USDC'];
 
 //    _____  _   _  _______  ______  _____   ______        _____  ______     ______  _    _  _   _   _____  _______  _____  ____   _   _   _____ 
 //   |_   _|| \ | ||__   __||  ____||  __ \ |  ____|/\    / ____||  ____|   |  ____|| |  | || \ | | / ____||__   __||_   _|/ __ \ | \ | | / ____|
@@ -74,7 +75,9 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
         usedPools.push(...directRouteLiquidity.usedPools);
     }
 
-    prices[actualFrom] = getLastMedianPriceForBlock('all', actualFrom, 'USDC', atBlock);
+    if(!prices[actualFrom]) {
+        prices[actualFrom] = getLastMedianPriceForBlock('all', actualFrom, 'USDC', atBlock);
+    }
     
     // get all the routes liquidities
     const pairData = {};
@@ -108,7 +111,36 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
         }
     }
 
-    for(let targetSlippage = 100; targetSlippage <= 2000; targetSlippage += 50) {
+    // check if routes exists from actualFrom=>anything
+    // and from anything=>actualTo
+    // if no routes available from or to, ignore solver and return direct route data
+    let atLeastOneExitRoute = false;
+    for(const from of Object.keys(pairData)) {
+        if(atLeastOneExitRoute) {
+            break;
+        }
+        for(const to of Object.keys(pairData[from])) {
+            if(to == actualTo) {
+                atLeastOneExitRoute = true;
+                break;
+            }
+        }
+    }
+
+    if(!pairData[actualFrom] || !atLeastOneExitRoute) {
+        if(!directRouteLiquidity || !directRouteLiquidity.unifiedData) {
+            return undefined;
+        } else {
+            for(const slippageBps of Object.keys(directRouteLiquidity.unifiedData[atBlock].slippageMap)) {
+                liquidity.slippageMap[slippageBps] = directRouteLiquidity.unifiedData[atBlock].slippageMap[slippageBps].base;
+            }
+
+            return liquidity;
+        }
+    }
+
+
+    for(let targetSlippage = 500; targetSlippage <= 500; targetSlippage += 50) {
         // call the linear programming solver
         const solverParameters = {
             assets: pivotsToUse.concat([actualFrom, actualTo]),
@@ -251,7 +283,15 @@ function checkPlatform(platform) {
     }
 }
 
-getLiquidityV2('curve', 'WETH', 'WBTC', 19609694);
+// all	WETH	USDT	26040,98853	16412,88528	-36,97%
+async function test() {
+    // const result = await getLiquidityV2('all', 'WETH', 'USDT', 19609694);
+    // console.log(`WETH/USDC : ${result.slippageMap[500]}`);
+
+    const data = getLiquidityAll('WETH', 'USDT', 19609694, 19609694)
+    console.log('lol');
+}
+// test();
 
 
 module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll};

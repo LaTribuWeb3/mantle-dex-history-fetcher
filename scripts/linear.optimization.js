@@ -1,17 +1,29 @@
-const { getLiquidityAll, getLiquidity } = require('./data.interface');
+const { getLiquidityAll, getLiquidity } = require('../src/data.interface/data.interface.js');
 const lp_solve = require('@3lden/lp_solve');
-const glpm = require('../utils/glpm.js');
-const { getPriceAtBlock } = require('./internal/data.interface.price.js');
+const glpm = require('../src/utils/glpm.js');
+const { getPriceAtBlock } = require('../src/data.interface/internal/data.interface.price.js');
 const fs = require('fs');
 const humanFormat = require('human-format');
 const Graph = require('graphology');
-const { getDefaultSlippageMap } = require('./internal/data.interface.utils.js');
+const { getDefaultSlippageMap, getUnifiedDataForInterval } = require('../src/data.interface/internal/data.interface.utils.js');
+const { getSumSlippageMapAcrossDexes } = require('../src/data.interface/internal/data.interface.liquidity.js');
+const { DEFAULT_STEP_BLOCK } = require('../src/utils/constants.js');
 
-function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefined) {
+function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefined, usedPools= []) {
     if (!Object.hasOwn(liquidities, base)) liquidities[base] = {};
-    if (!Object.hasOwn(liquidities[base], quote)) liquidities[base][quote] = {};
-    if (platform === undefined) liquidities[base][quote] = getLiquidityAll(base, quote, block, block, false);
-    else liquidities[base][quote] = getLiquidity(platform, base, quote, block, block, false);
+    // if (!Object.hasOwn(liquidities[base], quote)) liquidities[base][quote] = {};
+    let liquidity = undefined;
+    if (platform === undefined) {
+        liquidity = getSumSlippageMapAcrossDexes(base, quote, block, block, DEFAULT_STEP_BLOCK, usedPools);
+    } 
+    else {
+        liquidity = getUnifiedDataForInterval(platform, base, quote, block, block, DEFAULT_STEP_BLOCK, usedPools);
+    } 
+
+    if(liquidity && liquidity.unifiedData) {
+        liquidities[base][quote] = liquidity.unifiedData;
+        usedPools.push(...liquidity.usedPools);
+    }
 }
 
 function generateSpecForBlock(block, assetsSpecification) {
@@ -23,20 +35,21 @@ function generateSpecForBlock(block, assetsSpecification) {
 
     let liquidity = {};
     let liquidities = {};
+    const usedPools = [];
 
     for (let intermediaryAsset of intermediaryAssets) {
-        setLiquidityAndPrice(liquidities, origin, intermediaryAsset, block, platform);
+        setLiquidityAndPrice(liquidities, origin, intermediaryAsset, block, platform, usedPools);
     }
 
     for (let assetIn of intermediaryAssets) {
         for (let assetOut of intermediaryAssets) {
             if (assetIn == assetOut) continue;
-            setLiquidityAndPrice(liquidities, assetIn, assetOut, block, platform);
+            setLiquidityAndPrice(liquidities, assetIn, assetOut, block, platform, usedPools);
         }
     }
 
     for (let intermediaryAsset of intermediaryAssets) {
-        setLiquidityAndPrice(liquidities, intermediaryAsset, target, block, platform);
+        setLiquidityAndPrice(liquidities, intermediaryAsset, target, block, platform, usedPools);
     }
 
     for (const base of Object.keys(liquidities)) {
@@ -215,12 +228,13 @@ async function generateNormalizedGraphForBlock(blockNumber, origin, pivots, targ
 module.exports = { generateNormalizedGraphForBlock };
 
 async function test() {
+    const platform = undefined;
     var graph = await generateNormalizedGraphForBlock(
         19609694,
-        'wstETH',
-        ['WETH', 'DAI', 'WBTC', 'USDC'],
+        'WETH',
+        ['DAI', 'WBTC', 'USDC'],
         'USDT',
-        'uniswapv3',
+        platform,
         0 // routes under this percentage of the total liquidity will be ignored
     );
 
