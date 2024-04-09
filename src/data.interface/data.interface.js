@@ -7,9 +7,9 @@
 
 const { getPrices } = require('./internal/data.interface.price');
 const lp_solve = require('@3lden/lp_solve');
-const { getSlippageMapForInterval, getLiquidityAccrossDexes, getSumSlippageMapAcrossDexes } = require('./internal/data.interface.liquidity');
+const { getSlippageMapForInterval, getLiquidityAccrossDexes, getSumSlippageMapAcrossDexes, computeAverageSlippageMap } = require('./internal/data.interface.liquidity');
 const { logFnDurationWithLabel } = require('../utils/utils');
-const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA } = require('../utils/constants');
+const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA, BLOCK_PER_DAY } = require('../utils/constants');
 const { rollingBiggestDailyChange } = require('../utils/volatility');
 const { GetPairToUse } = require('../global.config');
 const { getUnifiedDataForInterval, getLastMedianPriceForBlock } = require('./internal/data.interface.utils');
@@ -50,6 +50,10 @@ function getLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJu
 }
 
 async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
+    return getLiquidityAverageV2(platform, fromSymbol, toSymbol, atBlock, atBlock);
+}
+
+async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
     const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
     
     const pivotsToUse = getPivotsToUse(actualFrom, actualTo);
@@ -66,17 +70,18 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
 
     let directRouteLiquidity = {};
     if(platform == 'all') {
-        directRouteLiquidity = getSumSlippageMapAcrossDexes(actualFrom, actualTo, atBlock, atBlock, DEFAULT_STEP_BLOCK, usedPools);
+        directRouteLiquidity = getSumSlippageMapAcrossDexes(actualFrom, actualTo, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
     } else {
-        directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, atBlock, atBlock, DEFAULT_STEP_BLOCK, usedPools);
+        directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
     }
 
     if(directRouteLiquidity) {
         usedPools.push(...directRouteLiquidity.usedPools);
+        directRouteLiquidity = computeAverageSlippageMap(directRouteLiquidity.unifiedData);
     }
 
     if(!prices[actualFrom]) {
-        prices[actualFrom] = getLastMedianPriceForBlock('all', actualFrom, 'USDC', atBlock);
+        prices[actualFrom] = getLastMedianPriceForBlock('all', actualFrom, 'USDC', toBlock);
     }
     
     // get all the routes liquidities
@@ -84,13 +89,13 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
     for(const pair of allPairs) {
         let liquidityData = {};
         if(platform == 'all') { 
-            liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, atBlock, atBlock, DEFAULT_STEP_BLOCK, usedPools);
+            liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
         } else {
-            liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, atBlock, atBlock, DEFAULT_STEP_BLOCK, usedPools);
+            liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
         }
         
         if(!prices[pair.from]) {
-            prices[pair.from] =  getLastMedianPriceForBlock('all', pair.from, 'USDC', atBlock);
+            prices[pair.from] =  getLastMedianPriceForBlock('all', pair.from, 'USDC', toBlock);
         }
 
         if(!prices[pair.from]) {
@@ -100,6 +105,8 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
         if(liquidityData && liquidityData.unifiedData) {
             usedPools.push(...liquidityData.usedPools);
 
+            liquidityData = computeAverageSlippageMap(liquidityData.unifiedData);
+
             if(!pairData[pair.from]) {
                 pairData[pair.from] = {};
             }
@@ -107,7 +114,7 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
                 pairData[pair.from][pair.to] = {};
             }
     
-            pairData[pair.from][pair.to] = liquidityData.unifiedData[atBlock].slippageMap;
+            pairData[pair.from][pair.to] = liquidityData.slippageMap;
         }
     }
 
@@ -131,8 +138,8 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
         if(!directRouteLiquidity || !directRouteLiquidity.unifiedData) {
             return undefined;
         } else {
-            for(const slippageBps of Object.keys(directRouteLiquidity.unifiedData[atBlock].slippageMap)) {
-                liquidity.slippageMap[slippageBps] = directRouteLiquidity.unifiedData[atBlock].slippageMap[slippageBps].base;
+            for(const slippageBps of Object.keys(directRouteLiquidity.slippageMap)) {
+                liquidity.slippageMap[slippageBps] = directRouteLiquidity.slippageMap[slippageBps].base;
             }
 
             return liquidity;
@@ -140,7 +147,7 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
     }
 
 
-    for(let targetSlippage = 500; targetSlippage <= 500; targetSlippage += 50) {
+    for(let targetSlippage = 50; targetSlippage <= 2000; targetSlippage += 50) {
         // call the linear programming solver
         const solverParameters = {
             assets: pivotsToUse.concat([actualFrom, actualTo]),
@@ -179,8 +186,8 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
         const glpmResult = await lp_solve.executeGLPSol(glpmSpec);
         const liquidityForTargetSlippage = parseGLPMOutput(glpmResult, actualFrom);
         liquidity.slippageMap[targetSlippage] = 0;
-        if(directRouteLiquidity && directRouteLiquidity.unifiedData) {
-            liquidity.slippageMap[targetSlippage] += directRouteLiquidity.unifiedData[atBlock].slippageMap[targetSlippage].base * prices[actualFrom];
+        if(directRouteLiquidity) {
+            liquidity.slippageMap[targetSlippage] += directRouteLiquidity.slippageMap[targetSlippage].base * prices[actualFrom];
         }
 
         liquidity.slippageMap[targetSlippage] += liquidityForTargetSlippage;
@@ -285,13 +292,14 @@ function checkPlatform(platform) {
 
 // all	WETH	USDT	26040,98853	16412,88528	-36,97%
 async function test() {
-    const result = await getLiquidityV2('all', 'WETH', 'USDT', 19609694);
+    // const result = await getLiquidityV2('all', 'WETH', 'USDT', 19609694);
+    const result = await getLiquidityAverageV2('all', 'WETH', 'USDT', 19609694 - 30 * BLOCK_PER_DAY, 19609694);
     console.log(`WETH/USDT : ${result.slippageMap[500]}`);
 
     // const data = getLiquidityAll('WETH', 'USDT', 19609694, 19609694)
     // console.log('lol');
 }
-// test();
+test();
 
 
 module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll};
