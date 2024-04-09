@@ -233,6 +233,7 @@ async function generateNormalizedGraphForBlock(blockNumber, origin, pivots, targ
 
 module.exports = { generateNormalizedGraphForBlock };
 
+/*
 async function test() {
     const platform = undefined;
     var graph = await generateNormalizedGraphForBlock(
@@ -248,3 +249,4 @@ async function test() {
 }
 
 test();
+*/
