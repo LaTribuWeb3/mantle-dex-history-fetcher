@@ -228,12 +228,12 @@ async function generateNormalizedGraphForBlock(blockNumber, origin, pivots, targ
 module.exports = { generateNormalizedGraphForBlock };
 
 async function test() {
-    const platform = undefined;
+    const platform = 'curve';
     var graph = await generateNormalizedGraphForBlock(
         19609694,
         'WETH',
-        ['DAI', 'WBTC', 'USDC'],
-        'USDT',
+        ['DAI', 'WBTC', 'USDC', 'USDT'],
+        'rETH',
         platform,
         0 // routes under this percentage of the total liquidity will be ignored
     );

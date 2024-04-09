@@ -16,8 +16,8 @@ const { getUnifiedDataForInterval, getLastMedianPriceForBlock } = require('./int
 const { writeGLPMSpec, parseGLPMOutput } = require('../utils/glpm');
 
 
-// const ALL_PIVOTS = [ 'DAI', 'WBTC','USDC', 'USDT', 'WETH'];
-const ALL_PIVOTS = ['DAI', 'WBTC', 'USDC'];
+const ALL_PIVOTS = [ 'DAI', 'WBTC','USDC', 'USDT', 'WETH'];
+// const ALL_PIVOTS = ['DAI', 'WBTC', 'USDC'];
 
 //    _____  _   _  _______  ______  _____   ______        _____  ______     ______  _    _  _   _   _____  _______  _____  ____   _   _   _____ 
 //   |_   _|| \ | ||__   __||  ____||  __ \ |  ____|/\    / ____||  ____|   |  ____|| |  | || \ | | / ____||__   __||_   _|/ __ \ | \ | | / ____|
@@ -175,7 +175,7 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
         // console.log(formattedLiquidity);
 
         const glpmSpec = writeGLPMSpec(solverParameters, formattedLiquidity);
-        console.log(glpmSpec);
+        // console.log(glpmSpec);
         const glpmResult = await lp_solve.executeGLPSol(glpmSpec);
         const liquidityForTargetSlippage = parseGLPMOutput(glpmResult, actualFrom);
         liquidity.slippageMap[targetSlippage] = 0;
@@ -285,11 +285,11 @@ function checkPlatform(platform) {
 
 // all	WETH	USDT	26040,98853	16412,88528	-36,97%
 async function test() {
-    // const result = await getLiquidityV2('all', 'WETH', 'USDT', 19609694);
-    // console.log(`WETH/USDC : ${result.slippageMap[500]}`);
+    const result = await getLiquidityV2('all', 'WETH', 'USDT', 19609694);
+    console.log(`WETH/USDT : ${result.slippageMap[500]}`);
 
-    const data = getLiquidityAll('WETH', 'USDT', 19609694, 19609694)
-    console.log('lol');
+    // const data = getLiquidityAll('WETH', 'USDT', 19609694, 19609694)
+    // console.log('lol');
 }
 // test();
 
