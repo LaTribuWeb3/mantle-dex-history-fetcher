@@ -172,14 +172,20 @@ function computeMatrixFromGLPMResult(res, origin, target, block, platform) {
         }
     }
 
-    if(!ret[origin]) {
-        ret[origin] = {};
-    }
-
-    ret[origin][target] = {};
     Object.keys(slippageMapOriginTarget).filter(key => key <= 500)
-        .map(slippage => ret[origin][target][slippage] = slippageMapOriginTarget[slippage].base * (origin === 'USDC' ? 1 : getPriceAtBlock('all', origin, 'USDC', block))
-        );
+        .map(slippageBps => [slippageBps, slippageMapOriginTarget[slippageBps].base * (origin === 'USDC' ? 1 : getPriceAtBlock('all', origin, 'USDC', block))])
+        .filter(([, slippageInUSDC]) => slippageInUSDC != 0)
+        .map(([slippageBps, slippageInUSDC]) => {
+            if (!ret[origin]) {
+                ret[origin] = {};
+            }
+
+            if (!ret[origin][target]) {
+                ret[origin][target] = {};
+            }
+
+            ret[origin][target][slippageBps] = slippageInUSDC;
+        });
 
     return ret;
 }
