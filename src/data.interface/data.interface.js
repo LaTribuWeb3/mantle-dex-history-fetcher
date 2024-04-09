@@ -53,6 +53,15 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
     return getLiquidityAverageV2(platform, fromSymbol, toSymbol, atBlock, atBlock);
 }
 
+/**
+ * 
+ * @param {*} platform 
+ * @param {*} fromSymbol 
+ * @param {*} toSymbol 
+ * @param {*} fromBlock 
+ * @param {*} toBlock 
+ * @returns {Promise<{slippageMap: {[slippageBps: number]: number}}>}
+ */
 async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, toBlock) {
     const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
     
@@ -299,7 +308,7 @@ async function test() {
     // const data = getLiquidityAll('WETH', 'USDT', 19609694, 19609694)
     // console.log('lol');
 }
-test();
+// test();
 
 
-module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll};
+module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll, getLiquidityAverageV2};
