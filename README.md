@@ -17,6 +17,8 @@ Documentation available [here](./docs/README.md)
 ```
 #!/bin/bash
 
+apt install -y gcc make libglpk-dev
+
 # Step 1: Download the file from the URL to /tmp
 wget -P /tmp https://ftp.gnu.org/gnu/glpk/glpk-5.0.tar.gz
 
