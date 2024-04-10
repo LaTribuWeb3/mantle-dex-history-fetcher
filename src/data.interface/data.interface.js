@@ -9,7 +9,7 @@ const { getPrices } = require('./internal/data.interface.price');
 const lp_solve = require('@3lden/lp_solve');
 const { getSlippageMapForInterval, getLiquidityAccrossDexes, getSumSlippageMapAcrossDexes, computeAverageSlippageMap } = require('./internal/data.interface.liquidity');
 const { logFnDurationWithLabel } = require('../utils/utils');
-const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA, BLOCK_PER_DAY } = require('../utils/constants');
+const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA } = require('../utils/constants');
 const { rollingBiggestDailyChange } = require('../utils/volatility');
 const { GetPairToUse } = require('../global.config');
 const { getUnifiedDataForInterval, getLastMedianPriceForBlock } = require('./internal/data.interface.utils');
@@ -266,7 +266,6 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
         const result = await computeLiquidityWithSolver(pivotsToUse, actualFrom, actualTo, pairData, prices, directRouteLiquidity, step);
         liquidities.push(result);
     }
-
 
     logFnDurationWithLabel(start, `p: ${platform}, [${fromSymbol}/${toSymbol}], blocks: ${(toBlock - fromBlock + 1)}`);
     return liquidities;
