@@ -6,12 +6,11 @@ const { DATA_DIR, PLATFORMS } = require('../utils/constants');
 const fs = require('fs');
 const path = require('path');
 const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
-const { getLiquidity, getRollingVolatility, getLiquidityAll, getLiquidityAverageV2, getLiquidityAverageV2ForDataPoints } = require('../data.interface/data.interface');
+const { getLiquidityAverageV2ForDataPoints, getRollingVolatilityAndPrices } = require('../data.interface/data.interface');
 const { getDefaultSlippageMap } = require('../data.interface/internal/data.interface.utils');
 const { median } = require('simple-statistics');
 const { watchedPairs } = require('../global.config');
 const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
-const { getPrices } = require('../data.interface/internal/data.interface.price');
 const { default: axios } = require('axios');
 const { morphoDashboardSummaryComputer } = require('../clf/morpho/morphoDashboardComputer');
 
@@ -19,7 +18,7 @@ const RUN_EVERY_MINUTES = 6 * 60; // in minutes
 const MONITORING_NAME = 'Dashboard Precomputer';
 const RPC_URL = process.env.RPC_URL;
 const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
-const NB_DAYS = 10;
+const NB_DAYS = 180;
 const TARGET_DATA_POINTS = NB_DAYS;
 const NB_DAYS_AVG = 30;
 const BLOCKINFO_URL = process.env.BLOCKINFO_URL;
@@ -73,10 +72,20 @@ async function PrecomputeDashboardData() {
             // find all blocktimes for each display block
             const blockTimeStamps = {};
             console.log(`${fnName()}: getting all block timestamps`);
+            const blockPromises = [];
             for(const blockNumber of displayBlocks) {
-                const blockTimestampResp = await retry(axios.get, [BLOCKINFO_URL + `/api/getblocktimestamp?blocknumber=${blockNumber}`], 0, 100);
-                blockTimeStamps[blockNumber] = blockTimestampResp.data.timestamp;
+                // const blockTimestampResp = await retry(axios.get, [BLOCKINFO_URL + `/api/getblocktimestamp?blocknumber=${blockNumber}`], 0, 100);
+                // blockTimeStamps[blockNumber] = blockTimestampResp.data.timestamp;
+
+                blockPromises.push(retry(axios.get, [BLOCKINFO_URL + `/api/getblocktimestamp?blocknumber=${blockNumber}`], 0, 100));
                 // blockTimeStamps[blockNumber] = Date.now();
+            }
+
+            const blockResults = await Promise.all(blockPromises);
+            for(let i = 0; i < displayBlocks.length; i++) {
+                const blockNumber = displayBlocks[i];
+                const timestamp = blockResults[i].data.timestamp;
+                blockTimeStamps[blockNumber] = timestamp;
             }
 
             // AVG step is the amount of blocks to be used when computing average liquidity
@@ -113,20 +122,16 @@ async function PrecomputeDashboardData() {
             for(const pair of pairsToCompute) {
                 await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
                 console.log(`${fnName()}: precomputing for pair ${pair.base}/${pair.quote}`);
-                for(const platform of ['curve']) {
-                    console.log(`${fnName()}[${pair.base}/${pair.quote}]: precomputing for platform ${platform}`);
-                    const startDate = Date.now();
-                    await generateDashboardDataFromLiquidityDataForPlatform(platform, displayBlocks, avgStep, pair, dirPath, blockTimeStamps);
-                    logFnDurationWithLabel(startDate, `generateDashboardDataFromLiquidityDataForPlatform[${platform}]`);
+                for(const platform of PLATFORMS) {
                     const startDateNew = Date.now();
-                    await generateDashboardDataFromLiquidityDataForPlatformNew(platform, displayBlocks, avgStep, pair, dirPath, blockTimeStamps);
-                    logFnDurationWithLabel(startDateNew, `generateDashboardDataFromLiquidityDataForPlatformNew[${platform}]`);
+                    await generateDashboardDataForPlatorm(platform, displayBlocks, pair, dirPath, blockTimeStamps);
+                    logFnDurationWithLabel(startDateNew, `generateDashboardDataForPlatorm[${platform}]`);
                 }
 
-                // here, need to compute avg price and volatility for each block for 'all' platforms
+                // do another for 'all' platforms
                 const startDate = Date.now();
-                await generateDashboardDataFromLiquidityDataForPlatform('all', displayBlocks, avgStep, pair, dirPath, blockTimeStamps);
-                logFnDurationWithLabel(startDate, 'generateDashboardDataFromLiquidityDataForPlatform[all]');
+                await generateDashboardDataForPlatorm('all', displayBlocks, pair, dirPath, blockTimeStamps);
+                logFnDurationWithLabel(startDate, 'generateDashboardDataForPlatorm[all]');
             }
 
             await morphoDashboardSummaryComputer(RUN_EVERY_MINUTES);
@@ -162,20 +167,22 @@ async function PrecomputeDashboardData() {
 
 }
 
-async function generateDashboardDataFromLiquidityDataForPlatformNew(platform, displayBlocks, avgStep, pair, dirPath, blockTimeStamps) {
-    console.log(`generateDashboardDataFromLiquidityDataForPlatform: starting for ${pair.base}/${pair.quote}`);
+async function generateDashboardDataForPlatorm(platform, displayBlocks, pair, dirPath, blockTimeStamps) {
+    console.log(`generateDashboardDataFromLiquidityDataForPlatform: starting for ${platform} ${pair.base}/${pair.quote}`);
     const platformOutputResult = {};
     const timeOutputResult = {};
-    let pricesAtBlock = getPrices(platform, pair.base, pair.quote)?.filter(_ => _.block >= displayBlocks[0] - BLOCK_PER_DAY);
+    const volatilityAndPrices = await getRollingVolatilityAndPrices(platform, pair.base, pair.quote, web3Provider);
+
+    let pricesAtBlock = volatilityAndPrices.prices;
+    const rollingVolatility = volatilityAndPrices.volatility;
     if(!pricesAtBlock) {
         pricesAtBlock = [];
         console.warn(`no price at block for ${platform} ${pair.base} ${pair.quote}`);
     }
-    const rollingVolatility = await getRollingVolatility(platform, pair.base, pair.quote, web3Provider);
 
     // check if any data for that pair
     const liquidities = await getLiquidityAverageV2ForDataPoints(platform, pair.base, pair.quote, displayBlocks[0], displayBlocks.at(-1), displayBlocks.length, 30 * BLOCK_PER_DAY , 100);
-    if(!liquidities) {
+    if(!liquidities || liquidities.every(_ => _ == undefined)) {
         // if not, just ignore the pair
         console.log(`no data for ${platform} ${pair.base} ${pair.quote}`);
         return;
@@ -233,179 +240,6 @@ async function generateDashboardDataFromLiquidityDataForPlatformNew(platform, di
         } else {
             platformOutputResult[block].volatility = -1;
         }
-        previousBlock = block;
-        timeOutputResult[blockTimeStamps[block]] = platformOutputResult[block];
-    }
-
-    const fullFilename = path.join(dirPath, `${pair.base}-${pair.quote}-${platform}-new.json`);
-    fs.writeFileSync(fullFilename, JSON.stringify({ updated: Date.now(), liquidity: timeOutputResult }));
-}
-
-async function generateDashboardDataFromLiquidityDataForPlatform(platform, displayBlocks, avgStep, pair, dirPath, blockTimeStamps) {
-    console.log(`generateDashboardDataFromLiquidityDataForPlatform: starting for ${pair.base}/${pair.quote}`);
-    const platformOutputResult = {};
-    const timeOutputResult = {};
-    let pricesAtBlock = getPrices(platform, pair.base, pair.quote)?.filter(_ => _.block >= displayBlocks[0] - BLOCK_PER_DAY);
-    if(!pricesAtBlock) {
-        pricesAtBlock = [];
-        console.warn(`no price at block for ${platform} ${pair.base} ${pair.quote}`);
-    }
-    const rollingVolatility = await getRollingVolatility(platform, pair.base, pair.quote, web3Provider);
-
-    // check if any data for that pair
-    const liquidityAll = await getLiquidityAverageV2(platform, pair.base, pair.quote, displayBlocks[0] - 30 * BLOCK_PER_DAY, displayBlocks.at(-1), 100);
-    if(!liquidityAll) {
-        // if not, just ignore the pair
-        console.log(`no data for ${platform} ${pair.base} ${pair.quote}`);
-        return;
-    }
-
-    let previousBlock = undefined;
-    for (const block of displayBlocks) {
-        const fromBlock = block - 30 * BLOCK_PER_DAY;
-        const avg30DLiquidityForDay = await getLiquidityAverageV2(platform, pair.base, pair.quote, fromBlock, block, 100);
-
-        platformOutputResult[block] = {};
-        platformOutputResult[block].avgSlippageMap = 
-        avg30DLiquidityForDay && avg30DLiquidityForDay.slippageMap 
-            ? avg30DLiquidityForDay.slippageMap 
-            : getDefaultSlippageMap();
-
-        const prices = pricesAtBlock.filter(_ => _.block >= block - BLOCK_PER_DAY && _.block <= block).map(_ => _.price);
-        if (prices.length == 0) {
-            if(previousBlock) {
-                platformOutputResult[block].priceMedian = platformOutputResult[previousBlock].priceMedian;
-                platformOutputResult[block].priceMin = platformOutputResult[previousBlock].priceMin;
-                platformOutputResult[block].priceMax =  platformOutputResult[previousBlock].priceMax;
-            } else {
-                platformOutputResult[block].priceMedian = 0;
-                platformOutputResult[block].priceMin = 0;
-                platformOutputResult[block].priceMax = 0;
-            }
-        } else {
-            platformOutputResult[block].priceMedian = median(prices);
-            platformOutputResult[block].priceMin = Math.min(...prices);
-            platformOutputResult[block].priceMax = Math.max(...prices);
-        }
-
-        // const parkinsonsVolatility = computeParkinsonVolatility(pricesAtBlock, pair.base, pair.quote, startBlockForAvg, block, NB_DAYS_AVG);
-        // platformOutputResult[block].parkinsonsVolatility = parkinsonsVolatility;
-
-        // find the rolling volatility for the block
-        if(rollingVolatility) {
-            const volatilityAtBlock = rollingVolatility.history.filter(_ => _.blockStart <= block && _.blockEnd >= block)[0];
-            if(!volatilityAtBlock) {
-                if (block < rollingVolatility.latest.blockEnd) {
-                    // block too early
-                    platformOutputResult[block].volatility = 0;
-                }
-                else if (block - 7200 > rollingVolatility.latest.blockEnd) {
-                    console.warn(`last volatility data is more than 1 day older than block ${block}`);
-                    platformOutputResult[block].volatility = 0;
-                } else {
-                    console.log(`blockdiff: ${block - rollingVolatility.latest.blockEnd}`);
-                    platformOutputResult[block].volatility = rollingVolatility.latest.current;
-                }
-            } else {
-                platformOutputResult[block].volatility = volatilityAtBlock.current;
-            }
-        } else {
-            platformOutputResult[block].volatility = -1;
-        }
-        previousBlock = block;
-        timeOutputResult[blockTimeStamps[block]] = platformOutputResult[block];
-    }
-
-    const fullFilename = path.join(dirPath, `${pair.base}-${pair.quote}-${platform}.json`);
-    fs.writeFileSync(fullFilename, JSON.stringify({ updated: Date.now(), liquidity: timeOutputResult }));
-}
-
-function generateDashboardDataFromLiquidityData(platformLiquidity, pricesAtBlock, displayBlocks, avgStep, pair, dirPath, platform, rollingVolatility, blockTimeStamps) {
-    console.log(`generateDashboardDataFromLiquidityData: starting for ${pair.base}/${pair.quote}`);
-    const platformOutputResult = {};
-    // compute average liquidity over ~= 30 days for all the display blocks
-    const liquidityBlocks = Object.keys(platformLiquidity).map(_ => Number(_));
-    // const pricesBlocks = Object.keys(pricesAtBlock).map(_ => Number(_));
-
-    const timeOutputResult = {};
-    let previousBlock = undefined;
-    for (const block of displayBlocks) {
-        platformOutputResult[block] = {};
-        const nearestBlockBefore = liquidityBlocks.filter(_ => _ <= block).at(-1);
-        if (!nearestBlockBefore) {
-            throw new Error(`Could not find blocks <= ${block} in liquidity data`);
-        }
-
-        // platformOutputResult[block].slippageMap = platformLiquidity[nearestBlockBefore].slippageMap;
-        const prices = pricesAtBlock.filter(_ => _.block >= block - BLOCK_PER_DAY && _.block <= block).map(_ => _.price);
-        if (prices.length == 0) {
-            if(previousBlock) {
-                platformOutputResult[block].priceMedian = platformOutputResult[previousBlock].priceMedian;
-                platformOutputResult[block].priceMin = platformOutputResult[previousBlock].priceMin;
-                platformOutputResult[block].priceMax =  platformOutputResult[previousBlock].priceMax;
-            } else {
-                platformOutputResult[block].priceMedian = 0;
-                platformOutputResult[block].priceMin = 0;
-                platformOutputResult[block].priceMax = 0;
-            }
-        } else {
-            platformOutputResult[block].priceMedian = median(prices);
-            platformOutputResult[block].priceMin = Math.min(...prices);
-            platformOutputResult[block].priceMax = Math.max(...prices);
-        }
-        
-        // compute avg slippage based on trade price (amount of base sold vs amount of quote obtained)
-        // for (const slippageBps of Object.keys(platformOutputResult[block].slippageMap)) {
-        //     if(platformOutputResult[block].price > 0) {
-        //         const tradePrice = platformOutputResult[block].slippageMap[slippageBps].quote / platformOutputResult[block].slippageMap[slippageBps].base;
-        //         platformOutputResult[block].slippageMap[slippageBps].avgSlippage =  1 - (tradePrice / platformOutputResult[block].price);
-        //     } else {
-        //         platformOutputResult[block].slippageMap[slippageBps].avgSlippage = 0;
-        //     }
-        // }
-
-        const startBlockForAvg = block - avgStep;
-        // average for all blocks in interval [startBlockForAvg -> block]
-        const blocksToAverage = liquidityBlocks.filter(_ => _ <= block && _ >= startBlockForAvg);
-        const avgSlippage = getDefaultSlippageMap();
-        for (const blockToAvg of blocksToAverage) {
-            for (const slippageBps of Object.keys(avgSlippage)) {
-                avgSlippage[slippageBps].base += platformLiquidity[blockToAvg].slippageMap[slippageBps].base;
-                avgSlippage[slippageBps].quote += platformLiquidity[blockToAvg].slippageMap[slippageBps].quote;
-            }
-        }
-
-        for (const slippageBps of Object.keys(avgSlippage)) {
-            avgSlippage[slippageBps].base = avgSlippage[slippageBps].base / blocksToAverage.length;
-            avgSlippage[slippageBps].quote = avgSlippage[slippageBps].quote / blocksToAverage.length;
-        }
-
-        // const parkinsonsVolatility = computeParkinsonVolatility(pricesAtBlock, pair.base, pair.quote, startBlockForAvg, block, NB_DAYS_AVG);
-        // platformOutputResult[block].parkinsonsVolatility = parkinsonsVolatility;
-
-        // find the rolling volatility for the block
-        if(rollingVolatility) {
-            const volatilityAtBlock = rollingVolatility.history.filter(_ => _.blockStart <= block && _.blockEnd >= block)[0];
-            if(!volatilityAtBlock) {
-                if (block < rollingVolatility.latest.blockEnd) {
-                    // block too early
-                    platformOutputResult[block].volatility = 0;
-                }
-                else if (block - 7200 > rollingVolatility.latest.blockEnd) {
-                    console.warn(`last volatility data is more than 1 day older than block ${block}`);
-                    platformOutputResult[block].volatility = 0;
-                } else {
-                    console.log(`blockdiff: ${block - rollingVolatility.latest.blockEnd}`);
-                    platformOutputResult[block].volatility = rollingVolatility.latest.current;
-                }
-            } else {
-                platformOutputResult[block].volatility = volatilityAtBlock.current;
-            }
-        } else {
-            platformOutputResult[block].volatility = -1;
-        }
-
-        platformOutputResult[block].avgSlippageMap = avgSlippage;
         previousBlock = block;
         timeOutputResult[blockTimeStamps[block]] = platformOutputResult[block];
     }

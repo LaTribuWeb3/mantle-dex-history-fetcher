@@ -430,7 +430,7 @@ async function getRollingVolatilityAndPrices(platform, fromSymbol, toSymbol, web
     const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
     // find the median file
     const medianPrices = getPrices(platform, actualFrom, actualTo);
-    if(!medianPrices) {
+    if(!medianPrices || medianPrices.length == 0) {
         console.warn(`No median prices for ${platform}, ${actualFrom}, ${actualTo}`);
         return {
             volatility: undefined,
@@ -464,19 +464,5 @@ function checkPlatform(platform) {
         throw new Error(`Platform unknown: ${platform}, use one of ${PLATFORMS}`);
     }
 }
-
-// all	WETH	USDT	26040,98853	16412,88528	-36,97%
-async function test() {
-    // const result = await getLiquidityV2('all', 'WETH', 'USDT', 19609694);
-    const base = 'WETH';
-    const quote = 'USDC';
-    const result = await getLiquidityAverageV2ForDataPoints('uniswapv3', base, quote, 19609694 - 180 * BLOCK_PER_DAY, 19609694, 180, 100);
-    // console.log(`${base}/${quote} : ${result.slippageMap[500]}`);
-
-    // const data = getLiquidityAll('WETH', 'USDT', 19609694, 19609694)
-    // console.log('lol');
-}
-// test();
-
 
 module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll, getLiquidityAverageV2, getLiquidityAverageV2ForDataPoints, getRollingVolatilityAndPrices};
