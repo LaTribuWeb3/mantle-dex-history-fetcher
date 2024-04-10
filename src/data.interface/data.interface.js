@@ -144,7 +144,7 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
  * @param {*} toBlock 
  * @param {*} nbDays 
  * @param {*} avgOverBlocks 
- * @returns {Promise<{slippageMap: {[slippageBps: number]: number}[]}>}
+ * @returns {Promise<{slippageMap: {[slippageBps: number]: number}}[]>}
  */
 async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol, fromBlock, toBlock, nbPoints, avgOverBlocks, step = 50) {
     const start = Date.now();
@@ -414,7 +414,6 @@ function getLiquidityAll(fromSymbol, toSymbol, fromBlock, toBlock, withJumps = t
     }
 }
 
-
 async function getRollingVolatility(platform, fromSymbol, toSymbol, web3Provider, lambda = LAMBDA) {
     const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
     // find the median file
@@ -425,6 +424,26 @@ async function getRollingVolatility(platform, fromSymbol, toSymbol, web3Provider
     }
 
     return await rollingBiggestDailyChange(medianPrices, web3Provider, lambda);
+}
+
+async function getRollingVolatilityAndPrices(platform, fromSymbol, toSymbol, web3Provider, lambda = LAMBDA) {
+    const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
+    // find the median file
+    const medianPrices = getPrices(platform, actualFrom, actualTo);
+    if(!medianPrices) {
+        console.warn(`No median prices for ${platform}, ${actualFrom}, ${actualTo}`);
+        return {
+            volatility: undefined,
+            prices: undefined,
+        };
+    }
+
+    const volatilityObj = await rollingBiggestDailyChange(medianPrices, web3Provider, lambda);
+
+    return {
+        volatility: volatilityObj,
+        prices: medianPrices
+    };
 }
 
 //    _    _  _______  _____  _        _____ 
@@ -460,4 +479,4 @@ async function test() {
 // test();
 
 
-module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll, getLiquidityAverageV2, getLiquidityAverageV2ForDataPoints};
+module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll, getLiquidityAverageV2, getLiquidityAverageV2ForDataPoints, getRollingVolatilityAndPrices};
