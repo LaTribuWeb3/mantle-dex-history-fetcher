@@ -220,7 +220,7 @@ async function generateNormalizedGraphForBlock(blockNumber, origin, pivots, targ
             for (let edge of graph.edges()) {
                 if (edge.startsWith(base)) {
                     console.log(edge);
-                    if (graph.getEdgeAttributes(edge).amount < baseAmount * threshold /* || graph.getEdgeAttributes(edge).amount == 0 */) {
+                    if (graph.getEdgeAttributes(edge).amount < baseAmount * threshold) {
                         graph.getEdgeAttributes(edge).nullLiquidity = true;
                         edgesWithNegligibleLiquidities = true;
                     }
