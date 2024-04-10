@@ -10,7 +10,7 @@ const { normalize, getConfTokenBySymbol, getTokenSymbolByAddress } = require('..
 const { config, morphoBlueAbi, metamorphoAbi } = require('./morphoFlagshipComputer.config');
 const { RecordMonitoring } = require('../../utils/monitoring');
 const { DATA_DIR } = require('../../utils/constants');
-const { getRollingVolatility, getLiquidityAll } = require('../../data.interface/data.interface');
+const { getRollingVolatility, getLiquidityAll, getLiquidityAverageV2 } = require('../../data.interface/data.interface');
 const spans = [7, 30, 180];
 
 // morphoFlagshipComputer(60);
@@ -149,7 +149,7 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
             // max(config cap from metamorpho vault, current market supply)
             const configCap = normalize(marketConfig.cap, baseToken.decimals);
             const currentSupply = normalize(blueMarket.totalSupplyAssets, baseToken.decimals);
-            const supplyCap = Math.max(configCap, currentSupply);
+            const supplyCap = Math.max(configCap, currentSupply); // SUPPLY CAP IS IN BASE ASSET. FOR THE ETH VAULT IT'S IN ETH
             const assetParameters = {
                 liquidationBonusBPS,
                 supplyCap,
@@ -159,12 +159,13 @@ async function computeCLFForVault(blueAddress, vaultAddress, vaultName, baseAsse
             resultsData.collateralsData[uniqueId] = {};
             // collateral data { inKindSupply: 899999.9260625947, usdSupply: 45764996.240282945 }
             const basePrice = await getHistoricalPrice(baseToken.address, startDateUnixSec);
+            const quotePrice = await getHistoricalPrice(collateralToken.address, startDateUnixSec);
             resultsData.collateralsData[uniqueId].collateral = {
                 inKindSupply: currentSupply,
                 usdSupply: currentSupply * basePrice
             };
 
-            resultsData.collateralsData[uniqueId].clfs = await computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralToken.symbol, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider, vaultName);
+            resultsData.collateralsData[uniqueId].clfs = await computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralToken.symbol, baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider, vaultName, basePrice, quotePrice);
         }
     }
 
@@ -349,16 +350,14 @@ function recordResults(results, timestamp) {
  * @param {number} endBlock 
  * @returns {Promise<{7: {volatility: number, liquidity: number}, 30: {volatility: number, liquidity: number}, 180: {volatility: number, liquidity: number}}>}
  */
-async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralSymbol , baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider, vaultname) {
+async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, collateralSymbol , baseAsset, fromBlocks, endBlock, startDateUnixSec, web3Provider, vaultname, basePrice, quotePrice) {
+    // for ETH vault, for the wstETH/WETH market, collateralSymbol = wstETH, baseAsset = WETH
     const startDate = new Date(startDateUnixSec * 1000);
-    const from = collateralSymbol;
 
     const parameters = {};
 
     // for each platform, compute the volatility and the avg liquidity
-    // only request one data (the biggest span) and recompute the avg for each spans
-    const maxSpan = Math.max(...spans);
-    const rollingVolatility = await getRollingVolatility('all', from, baseAsset, web3Provider);
+    const rollingVolatility = await getRollingVolatility('all', collateralSymbol, baseAsset, web3Provider);
     const volatilityAtBlock = rollingVolatility.history.filter(_ => _.blockStart <= endBlock && _.blockEnd >= endBlock)[0];
     
     let volatility = 0;
@@ -371,50 +370,46 @@ async function computeMarketCLFBiggestDailyChange(marketId, assetParameters, col
         throw new Error('CANNOT FIND VOLATILITY');
     }
 
-    console.log(`[${from}-${baseAsset}] volatility: ${roundTo(volatility*100)}%`);
+    console.log(`[${collateralSymbol}-${baseAsset}] volatility: ${roundTo(volatility*100)}%`);
 
     for (const span of spans) {
         parameters[span] = {
             volatility,
-            liquidity: 0,
+            liquidityUsd: 0,
         };
     }
-
-    
-    const oldestBlock = fromBlocks[maxSpan];
-    const fullLiquidity = getLiquidityAll(from, baseAsset, oldestBlock, endBlock);
-    const allBlockNumbers = Object.keys(fullLiquidity).map(_ => Number(_));
-
     
     // compute the liquidity data for each spans
     for (const span of spans) {
         const fromBlock = fromBlocks[span];
-        const blockNumberForSpan = allBlockNumbers.filter(_ => _ >= fromBlock); 
-
-        let liquidityToAdd = 0;
-        if(blockNumberForSpan.length > 0) {
-            let sumLiquidityForTargetSlippageBps = 0;
-            for(const blockNumber of blockNumberForSpan) {
-                sumLiquidityForTargetSlippageBps += fullLiquidity[blockNumber].slippageMap[assetParameters.liquidationBonusBPS].quote;
-            }
-
-            liquidityToAdd = sumLiquidityForTargetSlippageBps / blockNumberForSpan.length;
-        }
-
-        parameters[span].liquidity += liquidityToAdd;
-        console.log(`[${from}-${baseAsset}] [${span}d] all dexes liquidity: ${liquidityToAdd}`);
+        const avgLiquidity = await getLiquidityAverageV2('all', collateralSymbol, baseAsset, fromBlock, endBlock);
+        const liquidityToAdd = avgLiquidity.slippageMap[assetParameters.liquidationBonusBPS];
+        // FOR wstETH/ETH market, this liquidity is in wstETH, need to change to usd before calling the risk compute function
+        parameters[span].liquidityUsd = liquidityToAdd * quotePrice; 
+        console.log(`[${collateralSymbol}-${baseAsset}] [${span}d] all dexes liquidity: ${liquidityToAdd}`);
     }
 
     console.log('parameters', parameters);
 
 
-    recordParameters(marketId, `${from}-${baseAsset}`, { parameters, assetParameters }, startDate, vaultname);
+    recordParameters(marketId, `${collateralSymbol}-${baseAsset}`, { parameters, assetParameters }, startDate, vaultname);
     /// compute CLFs for all spans and all volatilities
     const results = {};
     for(const volatilitySpan of spans) {
         results[volatilitySpan] = {};
         for(const liquiditySpan of spans) {
-            results[volatilitySpan][liquiditySpan] = findRiskLevelFromParameters(parameters[volatilitySpan].volatility, parameters[liquiditySpan].liquidity, assetParameters.liquidationBonusBPS / 10000, assetParameters.LTV, assetParameters.supplyCap);
+
+            // supplyCap is in baseAsset (WETH for the WETH vault)
+            // and liquidity is in collateral (wstETH for the wstETH/WETH market)
+            // so we need to translate everything to $ before computing the risk level
+            const capInUSD = assetParameters.supplyCap * basePrice;
+            const liquidityInUSD = parameters[liquiditySpan].liquidityUsd;
+            results[volatilitySpan][liquiditySpan] = findRiskLevelFromParameters(
+                parameters[volatilitySpan].volatility,
+                liquidityInUSD,
+                assetParameters.liquidationBonusBPS / 10000,
+                assetParameters.LTV,
+                capInUSD);
         }
     }
     
