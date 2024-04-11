@@ -9,7 +9,7 @@ const { getDefaultSlippageMap, getUnifiedDataForInterval } = require('../src/dat
 const { getSumSlippageMapAcrossDexes } = require('../src/data.interface/internal/data.interface.liquidity.js');
 const { DEFAULT_STEP_BLOCK } = require('../src/utils/constants.js');
 
-function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefined, usedPools= []) {
+function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefined, usedPools = []) {
     if (!Object.hasOwn(liquidities, base)) liquidities[base] = {};
     // if (!Object.hasOwn(liquidities[base], quote)) liquidities[base][quote] = {};
     let liquidity = undefined;
@@ -20,7 +20,7 @@ function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefi
         liquidity = getUnifiedDataForInterval(platform, base, quote, block, block, DEFAULT_STEP_BLOCK, []);
     } 
 
-    if(liquidity && liquidity.unifiedData) {
+    if (liquidity && liquidity.unifiedData) {
         liquidities[base][quote] = liquidity.unifiedData;
         usedPools.push(...liquidity.usedPools);
     }
@@ -149,37 +149,43 @@ function computeMatrixFromGLPMResult(res, origin, target, block, platform) {
     }
 
     let liquidityAtBlock = {};
-    if(platform == undefined) {
+    if (platform == undefined) {
         liquidityAtBlock = getLiquidityAll(origin, target, block, block, false);
     } else {
         liquidityAtBlock = getLiquidity(platform, origin, target, block, block, false);
     }
 
-    if(!liquidityAtBlock) {
+    if (!liquidityAtBlock) {
         liquidityAtBlock = {
             [`${block}`]: {
                 slippageMap: getDefaultSlippageMap()
-            } 
+            }
         };
     }
 
     let slippageMapOriginTarget = getDefaultSlippageMap();
-    for(const slippageBps of Object.keys(liquidityAtBlock[block].slippageMap)) {
-        if(slippageBps == 50) {
+    for (const slippageBps of Object.keys(liquidityAtBlock[block].slippageMap)) {
+        if (slippageBps == 50) {
             slippageMapOriginTarget[50].base = liquidityAtBlock[block].slippageMap[50].base;
         } else {
-            slippageMapOriginTarget[slippageBps].base = liquidityAtBlock[block].slippageMap[slippageBps].base - liquidityAtBlock[block].slippageMap[slippageBps-50].base;
+            slippageMapOriginTarget[slippageBps].base = liquidityAtBlock[block].slippageMap[slippageBps].base - liquidityAtBlock[block].slippageMap[slippageBps - 50].base;
         }
     }
 
-    if(!ret[origin]) {
-        ret[origin] = {};
-    }
-
-    ret[origin][target] = {};
     Object.keys(slippageMapOriginTarget).filter(key => key <= 500)
-        .map(slippage => ret[origin][target][slippage] = slippageMapOriginTarget[slippage].base * (origin === 'USDC' ? 1 : getPriceAtBlock('all', origin, 'USDC', block))
-        );
+        .map(slippageBps => [slippageBps, slippageMapOriginTarget[slippageBps].base * (origin === 'USDC' ? 1 : getPriceAtBlock('all', origin, 'USDC', block))])
+        .filter(([, slippageInUSDC]) => slippageInUSDC != 0)
+        .map(([slippageBps, slippageInUSDC]) => {
+            if (!ret[origin]) {
+                ret[origin] = {};
+            }
+
+            if (!ret[origin][target]) {
+                ret[origin][target] = {};
+            }
+
+            ret[origin][target][slippageBps] = slippageInUSDC;
+        });
 
     return ret;
 }
@@ -233,6 +239,7 @@ async function generateNormalizedGraphForBlock(blockNumber, origin, pivots, targ
 
 module.exports = { generateNormalizedGraphForBlock };
 
+/*
 async function test() {
     const platform = 'curve';
     var graph = await generateNormalizedGraphForBlock(
@@ -248,3 +255,4 @@ async function test() {
 }
 
 test();
+*/
