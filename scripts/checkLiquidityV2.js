@@ -3,10 +3,14 @@ const { getLiquidity, getLiquidityAll, getLiquidityV2 } = require('../src/data.i
 const { PLATFORMS } = require('../src/utils/constants');
 const fs = require('fs');
 const { roundTo } = require('../src/utils/utils');
+const { getConfTokenBySymbol, normalize } = require('../src/utils/token.utils');
+const { default: axios } = require('axios');
+const { default: BigNumber } = require('bignumber.js');
+const { getPriceAtBlock } = require('../src/data.interface/internal/data.interface.price');
 
 async function test() {
     const block = 19609694;
-    fs.writeFileSync('liquidityresult.csv', 'platform,base,quote,liquidity old, liquidity new\n');
+    fs.writeFileSync('liquidityresult.csv', 'platform,base,quote,liquidity old, liquidity new,1Inch avg slippage\n');
 
     const pairsToFetch = [];
     for(const base of Object.keys(watchedPairs)) {
@@ -29,21 +33,21 @@ async function test() {
         const base = pairToFetch.base;
         const quote = pairToFetch.quote;
 
-        for(const platform of PLATFORMS) {
-            console.log(`Working on ${base}/${quote} for ${platform}`);
-            const oldLiquidity = getLiquidity(platform, base, quote, block, block);
-            let liquidityOld = 0;
-            if(oldLiquidity) {
-                liquidityOld = oldLiquidity[block].slippageMap[500].base;
-            }
+        // for(const platform of PLATFORMS) {
+        //     console.log(`Working on ${base}/${quote} for ${platform}`);
+        //     const oldLiquidity = getLiquidity(platform, base, quote, block, block);
+        //     let liquidityOld = 0;
+        //     if(oldLiquidity) {
+        //         liquidityOld = oldLiquidity[block].slippageMap[500].base;
+        //     }
 
-            const newLiquidity = await getLiquidityV2(platform, base, quote, block);
-            let liquidityNew = 0;
-            if(newLiquidity) {
-                liquidityNew = newLiquidity.slippageMap[500];
-            }
-            fs.appendFileSync('liquidityresult.csv', `${platform},${base},${quote},${liquidityOld},${liquidityNew}\n`); 
-        }
+        //     const newLiquidity = await getLiquidityV2(platform, base, quote, block);
+        //     let liquidityNew = 0;
+        //     if(newLiquidity) {
+        //         liquidityNew = newLiquidity.slippageMap[500];
+        //     }
+        //     fs.appendFileSync('liquidityresult.csv', `${platform},${base},${quote},${liquidityOld},${liquidityNew},N/A\n`); 
+        // }
 
         const oldLiquidity = getLiquidityAll(base, quote, block, block);
         let liquidityOld = 0;
@@ -56,7 +60,31 @@ async function test() {
         if(newLiquidity) {
             liquidityNew = newLiquidity.slippageMap[500];
         }
-        fs.appendFileSync('liquidityresult.csv', `all,${base},${quote},${liquidityOld},${liquidityNew}\n`); 
+
+        const baseToken = getConfTokenBySymbol(base);
+        const baseTokenPrice = getPriceAtBlock('uniswapv3', baseToken.symbol, 'USDC', block);
+        const quoteToken = getConfTokenBySymbol(quote);
+        const quoteTokenPrice = getPriceAtBlock('uniswapv3', quoteToken.symbol, 'USDC', block);
+        const baseAmount = new BigNumber(roundTo(liquidityNew, 8)).times(new BigNumber(10).pow(baseToken.decimals)).toString(10).split('.')[0];
+        // fetch data 1inch
+        const oneInchApiUrl =
+        `https://api.1inch.dev/swap/v6.0/${1}/quote?` +
+        `src=${baseToken.address}` +
+        `&dst=${quoteToken.address}` +
+        `&amount=${baseAmount}` + 
+        '&protocols=BALANCER_V2,CURVE_3CRV,CURVE_STABLE_NG,CURVE_V2_ETH_CRV,CURVE_V2_ETH_CVX,CURVE_V2_ETH_PAL,CURVE_V2_EURS_2_ASSET,CURVE_V2_LLAMMA,CURVE_V2_SGT_2_ASSET,CURVE_V2_SPELL_2_ASSET,CURVE_V2_THRESHOLDNETWORK_2_ASSET,CURVE_V2_TRICRYPTO_NG,CURVE_V2_TWO_CRYPTO,CURVE_V2_TWOCRYPTO_META,CURVE_V2,CURVE,SUSHI,UNISWAP_V2,UNISWAP_V3';
+
+        const oneInchSwapResponse = await axios.get(oneInchApiUrl, {
+            headers: {
+                Authorization: 'Bearer Nu1t2Yw1fhiVD5sktj42ZUxvxtHTkaG4'
+            }
+        });
+
+        // console.log(oneInchSwapResponse.data);
+        const quoteAmount = oneInchSwapResponse.data.dstAmount;
+        const quoteAmountNorm = normalize(quoteAmount, quoteToken.decimals);
+        const slippage = 1 - (quoteAmountNorm * quoteTokenPrice) / (liquidityNew * baseTokenPrice);
+        fs.appendFileSync('liquidityresult.csv', `all,${base},${quote},${liquidityOld},${liquidityNew},${roundTo(slippage * 100, 2)}%\n`); 
     }
 }
 

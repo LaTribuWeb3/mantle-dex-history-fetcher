@@ -233,7 +233,7 @@ const tokens = {
         decimals: 18,
         address: '0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0',
         dustAmount: 0.1
-    },
+    }
 };
 
 // goes both ways

@@ -78,9 +78,9 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
 
     let directRouteLiquidity = {};
     if(platform == 'all') {
-        directRouteLiquidity = getSumSlippageMapAcrossDexes(actualFrom, actualTo, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
+        directRouteLiquidity = getSumSlippageMapAcrossDexes(actualFrom, actualTo, fromBlock, toBlock, DEFAULT_STEP_BLOCK, []);
     } else {
-        directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
+        directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, fromBlock, toBlock, DEFAULT_STEP_BLOCK, []);
     }
 
     if(directRouteLiquidity && directRouteLiquidity.unifiedData) {
@@ -99,9 +99,9 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
     for(const pair of allPairs) {
         let liquidityData = {};
         if(platform == 'all') { 
-            liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
+            liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, []);
         } else {
-            liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
+            liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, []);
         }
         
         if(!prices[pair.from]) {
@@ -169,9 +169,9 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
     const directRouteLiquidityPerPoint = {};
     let directRouteLiquidity = {};
     if(platform == 'all') {
-        directRouteLiquidity = getSumSlippageMapAcrossDexes(actualFrom, actualTo, fromBlock - avgOverBlocks, toBlock, DEFAULT_STEP_BLOCK, usedPools);
+        directRouteLiquidity = getSumSlippageMapAcrossDexes(actualFrom, actualTo, fromBlock - avgOverBlocks, toBlock, DEFAULT_STEP_BLOCK, []);
     } else {
-        directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, fromBlock - avgOverBlocks, toBlock, DEFAULT_STEP_BLOCK, usedPools);
+        directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, fromBlock - avgOverBlocks, toBlock, DEFAULT_STEP_BLOCK, []);
     }
 
     if(directRouteLiquidity && directRouteLiquidity.unifiedData) {
@@ -210,9 +210,9 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
     for(const pair of allPairs) {
         let liquidityData = {};
         if(platform == 'all') { 
-            liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
+            liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, []);
         } else {
-            liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
+            liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, []);
         }
 
         if(liquidityData && liquidityData.unifiedData) {
@@ -304,7 +304,7 @@ async function computeLiquidityWithSolver(pivotsToUse, fromSymbol, toSymbol, pai
         }
     }
 
-    for (let targetSlippage = step; targetSlippage <= 2000; targetSlippage += step) {
+    for (let targetSlippage = 500; targetSlippage <= 500; targetSlippage += step) {
         // call the linear programming solver
         const solverParameters = {
             assets: pivotsToUse.concat([fromSymbol, toSymbol]),

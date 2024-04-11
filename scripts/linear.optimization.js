@@ -14,10 +14,10 @@ function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefi
     // if (!Object.hasOwn(liquidities[base], quote)) liquidities[base][quote] = {};
     let liquidity = undefined;
     if (platform === undefined) {
-        liquidity = getSumSlippageMapAcrossDexes(base, quote, block, block, DEFAULT_STEP_BLOCK, usedPools);
+        liquidity = getSumSlippageMapAcrossDexes(base, quote, block, block, DEFAULT_STEP_BLOCK, []);
     } 
     else {
-        liquidity = getUnifiedDataForInterval(platform, base, quote, block, block, DEFAULT_STEP_BLOCK, usedPools);
+        liquidity = getUnifiedDataForInterval(platform, base, quote, block, block, DEFAULT_STEP_BLOCK, []);
     } 
 
     if(liquidity && liquidity.unifiedData) {
@@ -188,20 +188,26 @@ async function generateNormalizedGraphForBlock(blockNumber, origin, pivots, targ
     let edgesWithNegligibleLiquidities = false;
     var graph = undefined;
     let resultMatrix = {};
+    const realPivotToUse = [];
+    for(const pivot of pivots) {
+        if(pivot == origin || pivot == target) continue;
+
+        realPivotToUse.push(pivot);
+    }
 
     do {
         var gLPMSpec = generateSpecForBlock(
             blockNumber,
             {
                 origin: origin,
-                intermediaryAssets: pivots,
+                intermediaryAssets: realPivotToUse,
                 target: target,
                 platform: platform,
                 nullEdges: graph === undefined ? [] : graph.edges().filter(edge => graph.getEdgeAttributes(edge).nullLiquidity)
             }
         );
 
-        let glpmResult = await lp_solve.executeGLPSol(gLPMSpec);
+        let glpmResult = await lp_solve.executeGLPSol(gLPMSpec, true);
 
         resultMatrix = computeMatrixFromGLPMResult(glpmResult, origin, target, blockNumber, platform);
 
@@ -230,10 +236,10 @@ module.exports = { generateNormalizedGraphForBlock };
 async function test() {
     const platform = 'curve';
     var graph = await generateNormalizedGraphForBlock(
-        19609694,
-        'WETH',
-        ['DAI', 'WBTC', 'USDC', 'USDT'],
-        'rETH',
+        19624911,
+        'USDT',
+        ['USDC', 'WBTC', 'DAI', 'WETH', 'USDT'],
+        'DAI',
         platform,
         0 // routes under this percentage of the total liquidity will be ignored
     );

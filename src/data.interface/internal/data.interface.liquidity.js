@@ -332,7 +332,7 @@ function getLiquidityAccrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, step
         }
     }
 
-    console.log(`${fnName()}[${fromSymbol}/${toSymbol}]: used pivots ${pivots} and pools ${data.usedPools}`);
+    // console.log(`${fnName()}[${fromSymbol}/${toSymbol}]: used pivots ${pivots} and pools ${data.usedPools}`);
     // console.log(`[${fromSymbol}/${toSymbol}] | [ALL] | 5% slippage: ${liquidityData[fromBlock].slippageMap[500].base}`);
 
     return liquidityData;
