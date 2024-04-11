@@ -7,6 +7,8 @@ const { getConfTokenBySymbol, normalize } = require('../src/utils/token.utils');
 const { default: axios } = require('axios');
 const { default: BigNumber } = require('bignumber.js');
 const { getPriceAtBlock } = require('../src/data.interface/internal/data.interface.price');
+const dotenv = require('dotenv');
+dotenv.config();
 
 async function test() {
     const block = 19609694;
@@ -71,12 +73,11 @@ async function test() {
         `https://api.1inch.dev/swap/v6.0/${1}/quote?` +
         `src=${baseToken.address}` +
         `&dst=${quoteToken.address}` +
-        `&amount=${baseAmount}` + 
-        '&protocols=BALANCER_V2,CURVE_3CRV,CURVE_STABLE_NG,CURVE_V2_ETH_CRV,CURVE_V2_ETH_CVX,CURVE_V2_ETH_PAL,CURVE_V2_EURS_2_ASSET,CURVE_V2_LLAMMA,CURVE_V2_SGT_2_ASSET,CURVE_V2_SPELL_2_ASSET,CURVE_V2_THRESHOLDNETWORK_2_ASSET,CURVE_V2_TRICRYPTO_NG,CURVE_V2_TWO_CRYPTO,CURVE_V2_TWOCRYPTO_META,CURVE_V2,CURVE,SUSHI,UNISWAP_V2,UNISWAP_V3';
+        `&amount=${baseAmount}`;
 
         const oneInchSwapResponse = await axios.get(oneInchApiUrl, {
             headers: {
-                Authorization: 'Bearer Nu1t2Yw1fhiVD5sktj42ZUxvxtHTkaG4'
+                Authorization: `Bearer ${process.env.ONE_INCH_KEY}`
             }
         });
 
