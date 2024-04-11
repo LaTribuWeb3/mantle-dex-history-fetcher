@@ -175,6 +175,18 @@ const pairsToFetch = [
     "token0": "COMP",
     "token1": "WETH"
   },
+  {
+    "token0": "ezETH",
+    "token1": "WETH"
+  },
+  {
+    "token0": "WETH",
+    "token1": "pufETH"
+  },
+  {
+    "token0": "rsETH",
+    "token1": "WETH"
+  }
 ]
 
 module.exports = {
