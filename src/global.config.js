@@ -233,7 +233,22 @@ const tokens = {
         decimals: 18,
         address: '0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0',
         dustAmount: 0.1
-    }
+    },
+    rsETH: {
+        decimals: 18,
+        address: '0xA1290d69c65A6Fe4DF752f95823fae25cB99e5A7',
+        dustAmount: 0.001
+    },
+    pufETH: {
+        decimals: 18,
+        address: '0xD9A442856C234a39a81a089C06451EBAa4306a72',
+        dustAmount: 0.001
+    },
+    ezETH: {
+        decimals: 18,
+        address: '0xbf5495Efe5DB9ce00f80364C8B423567e58d2110',
+        dustAmount: 0.001
+    },
 };
 
 // goes both ways
@@ -326,6 +341,21 @@ const watchedPairs = {
         },
         {
             quote: 'sDAI',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'rsETH',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'ezETH',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'pufETH',
             pivots: undefined,
             exportToInternalDashboard: true
         },
