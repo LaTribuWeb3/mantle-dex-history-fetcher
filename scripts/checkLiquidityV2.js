@@ -12,7 +12,7 @@ dotenv.config();
 
 async function test() {
     const block = 19609694;
-    fs.writeFileSync('liquidityresult.csv', 'platform,base,quote,liquidity old, liquidity new,1Inch avg slippage\n');
+    fs.writeFileSync('liquidityresult.csv', 'platform,base,quote,liquidity old, liquidity new,diff,1Inch avg slippage\n');
 
     const pairsToFetch = [];
     for(const base of Object.keys(watchedPairs)) {
@@ -63,29 +63,40 @@ async function test() {
             liquidityNew = newLiquidity.slippageMap[500];
         }
 
-        const baseToken = getConfTokenBySymbol(base);
-        const baseTokenPrice = getPriceAtBlock('uniswapv3', baseToken.symbol, 'USDC', block);
-        const quoteToken = getConfTokenBySymbol(quote);
-        const quoteTokenPrice = getPriceAtBlock('uniswapv3', quoteToken.symbol, 'USDC', block);
-        const baseAmount = new BigNumber(roundTo(liquidityNew, 8)).times(new BigNumber(10).pow(baseToken.decimals)).toString(10).split('.')[0];
-        // fetch data 1inch
-        const oneInchApiUrl =
+        let diff = 0;
+        if(liquidityOld != 0) {
+            diff = roundTo(((liquidityNew - liquidityOld)/liquidityOld)*100, 2);
+        }
+        let slippage = 0;
+        if(liquidityNew != 0) {
+            const baseToken = getConfTokenBySymbol(base);
+            const baseTokenPrice = getPriceAtBlock('uniswapv3', baseToken.symbol, 'USDC', block);
+            const quoteToken = getConfTokenBySymbol(quote);
+            const quoteTokenPrice = getPriceAtBlock('uniswapv3', quoteToken.symbol, 'USDC', block);
+            const baseAmount = new BigNumber(roundTo(liquidityNew, 8)).times(new BigNumber(10).pow(baseToken.decimals)).toString(10).split('.')[0];
+            // fetch data 1inch
+            const oneInchApiUrl =
         `https://api.1inch.dev/swap/v6.0/${1}/quote?` +
         `src=${baseToken.address}` +
         `&dst=${quoteToken.address}` +
         `&amount=${baseAmount}`;
 
-        const oneInchSwapResponse = await axios.get(oneInchApiUrl, {
-            headers: {
-                Authorization: `Bearer ${process.env.ONE_INCH_KEY}`
-            }
-        });
+            const oneInchSwapResponse = await axios.get(oneInchApiUrl, {
+                headers: {
+                    Authorization: `Bearer ${process.env.ONE_INCH_KEY}`
+                }
+            });
 
-        // console.log(oneInchSwapResponse.data);
-        const quoteAmount = oneInchSwapResponse.data.dstAmount;
-        const quoteAmountNorm = normalize(quoteAmount, quoteToken.decimals);
-        const slippage = 1 - (quoteAmountNorm * quoteTokenPrice) / (liquidityNew * baseTokenPrice);
-        fs.appendFileSync('liquidityresult.csv', `all,${base},${quote},${liquidityOld},${liquidityNew},${roundTo(slippage * 100, 2)}%\n`); 
+            // console.log(oneInchSwapResponse.data);
+            const quoteAmount = oneInchSwapResponse.data.dstAmount;
+            const quoteAmountNorm = normalize(quoteAmount, quoteToken.decimals);
+
+            const newPrice = quoteAmountNorm * quoteTokenPrice;
+            const oldPrice = liquidityNew * baseTokenPrice;
+            slippage = Math.abs(roundTo(((newPrice - oldPrice)/oldPrice)*100, 2));
+        }
+
+        fs.appendFileSync('liquidityresult.csv', `all,${base},${quote},${liquidityOld},${liquidityNew},${diff}%,${roundTo(slippage * 100, 2)}%\n`); 
     }
 }
 
