@@ -71,7 +71,6 @@ async function getRollingVolatility(platform, fromSymbol, toSymbol, web3Provider
         return undefined;
     }
 
-
     const rollingVolatility = await rollingBiggestDailyChange(medianPrices, web3Provider, lambda);
     if(newAssetsForMinVolatility.includes(fromSymbol) || newAssetsForMinVolatility.includes(toSymbol)) {
         // set min volatility to 10%
@@ -82,6 +81,8 @@ async function getRollingVolatility(platform, fromSymbol, toSymbol, web3Provider
             rollingVolatility.history[i].yesterday = Math.max(0.1, rollingVolatility.history[i].yesterday);
         }
     }
+
+    return rollingVolatility;
 }
 
 //    _    _  _______  _____  _        _____ 
