@@ -11,9 +11,9 @@ const { getSlippageMapForInterval, getLiquidityAccrossDexes, getSumSlippageMapAc
 const { logFnDurationWithLabel } = require('../utils/utils');
 const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA } = require('../utils/constants');
 const { rollingBiggestDailyChange } = require('../utils/volatility');
-const { GetPairToUse } = require('../global.config');
 const { getUnifiedDataForInterval, getLastMedianPriceForBlock } = require('./internal/data.interface.utils');
 const { writeGLPMSpec, parseGLPMOutput } = require('../utils/glpm');
+const { GetPairToUse, newAssetsForMinVolatility } = require('../global.config');
 
 
 const ALL_PIVOTS = [ 'DAI', 'WBTC','USDC', 'USDT', 'WETH'];
@@ -423,7 +423,17 @@ async function getRollingVolatility(platform, fromSymbol, toSymbol, web3Provider
         return undefined;
     }
 
-    return await rollingBiggestDailyChange(medianPrices, web3Provider, lambda);
+
+    const rollingVolatility = await rollingBiggestDailyChange(medianPrices, web3Provider, lambda);
+    if(newAssetsForMinVolatility.includes(fromSymbol) || newAssetsForMinVolatility.includes(toSymbol)) {
+        // set min volatility to 10%
+        rollingVolatility.latest.current = Math.max(0.1, rollingVolatility.latest.current);
+        rollingVolatility.latest.yesterday = Math.max(0.1, rollingVolatility.latest.yesterday);
+        for(let i = 0; i < rollingVolatility.history.length; i++) {
+            rollingVolatility.history[i].current = Math.max(0.1, rollingVolatility.history[i].current);
+            rollingVolatility.history[i].yesterday = Math.max(0.1, rollingVolatility.history[i].yesterday);
+        }
+    }
 }
 
 async function getRollingVolatilityAndPrices(platform, fromSymbol, toSymbol, web3Provider, lambda = LAMBDA) {
