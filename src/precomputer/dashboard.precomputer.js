@@ -54,11 +54,11 @@ async function PrecomputeDashboardData() {
             for(const pair of pairsToCompute) {
                 await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
                 console.log(`${fnName()}: precomputing for pair ${pair.base}/${pair.quote}`);
-                // for(const platform of PLATFORMS) {
-                //     const startDateNew = Date.now();
-                //     await generateDashboardDataForPlatorm(platform, displayBlocks, pair, dirPath, blockTimeStamps);
-                //     logFnDurationWithLabel(startDateNew, `generateDashboardDataForPlatorm[${platform}]`);
-                // }
+                for(const platform of PLATFORMS) {
+                    const startDateNew = Date.now();
+                    await generateDashboardDataForPlatorm(platform, displayBlocks, pair, dirPath, blockTimeStamps);
+                    logFnDurationWithLabel(startDateNew, `generateDashboardDataForPlatorm[${platform}]`);
+                }
 
                 // do another for 'all' platforms
                 const startDate = Date.now();

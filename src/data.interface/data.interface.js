@@ -9,7 +9,7 @@ const { getPrices } = require('./internal/data.interface.price');
 const lp_solve = require('@3lden/lp_solve');
 const { getSlippageMapForInterval, getLiquidityAccrossDexes, getSumSlippageMapAcrossDexes, computeAverageSlippageMap } = require('./internal/data.interface.liquidity');
 const { logFnDurationWithLabel } = require('../utils/utils');
-const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA } = require('../utils/constants');
+const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA, BLOCK_PER_DAY } = require('../utils/constants');
 const { rollingBiggestDailyChange } = require('../utils/volatility');
 const { getUnifiedDataForInterval, getLastMedianPriceForBlock } = require('./internal/data.interface.utils');
 const { writeGLPMSpec, parseGLPMOutput } = require('../utils/glpm');
@@ -147,6 +147,7 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
  * @returns {Promise<{slippageMap: {[slippageBps: number]: number}}[]>}
  */
 async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol, fromBlock, toBlock, nbPoints, avgOverBlocks, step = 50) {
+    const stepBlock = 1200;
     const start = Date.now();
     const startDataFetch = Date.now();
     const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
@@ -173,9 +174,9 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
     const directRouteLiquidityPerPoint = {};
     let directRouteLiquidity = {};
     if(platform == 'all') {
-        directRouteLiquidity = getSumSlippageMapAcrossDexes(actualFrom, actualTo, fromBlock - avgOverBlocks, toBlock, DEFAULT_STEP_BLOCK, []);
+        directRouteLiquidity = getSumSlippageMapAcrossDexes(actualFrom, actualTo, fromBlock - avgOverBlocks, toBlock, stepBlock, []);
     } else {
-        directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, fromBlock - avgOverBlocks, toBlock, DEFAULT_STEP_BLOCK, []);
+        directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, fromBlock - avgOverBlocks, toBlock, stepBlock, []);
     }
 
     if(directRouteLiquidity && directRouteLiquidity.unifiedData) {
@@ -214,9 +215,9 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
     for(const pair of allPairs) {
         let liquidityData = {};
         if(platform == 'all') { 
-            liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, []);
+            liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, fromBlock, toBlock, stepBlock, []);
         } else {
-            liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, []);
+            liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, fromBlock, toBlock, stepBlock, []);
         }
 
         if(liquidityData && liquidityData.unifiedData) {
@@ -264,7 +265,9 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
         const directRouteLiquidity = directRouteLiquidityPerPoint[p];
         const pairData = pairDataPerPoint[p];
         const prices = pricesPerPoint[p];
+        // console.time('computeLiquidityWithSolver');
         const result = await computeLiquidityWithSolver(pivotsToUse, actualFrom, actualTo, pairData, prices, directRouteLiquidity, step);
+        // console.timeEnd('computeLiquidityWithSolver');
         liquidities.push(result);
     }
 
@@ -311,7 +314,7 @@ async function computeLiquidityWithSolver(pivotsToUse, fromSymbol, toSymbol, pai
             assets: pivotsToUse.concat([fromSymbol, toSymbol]),
             origin: fromSymbol,
             target: toSymbol,
-            slippageStepBps: 50,
+            slippageStepBps: step,
             targetSlippageBps: targetSlippage,
         };
 
@@ -339,7 +342,9 @@ async function computeLiquidityWithSolver(pivotsToUse, fromSymbol, toSymbol, pai
         // console.log(formattedLiquidity);
         const glpmSpec = writeGLPMSpec(solverParameters, formattedLiquidity);
         // console.log(glpmSpec);
+        // console.time('executeGLPSol');
         const glpmResult = await lp_solve.executeGLPSol(glpmSpec);
+        // console.timeEnd('executeGLPSol');
         const liquidityForTargetSlippage = parseGLPMOutput(glpmResult, fromSymbol);
         liquidity.slippageMap[targetSlippage] = 0;
         if (directRouteLiquidity) {
@@ -448,10 +453,19 @@ async function getRollingVolatilityAndPrices(platform, fromSymbol, toSymbol, web
         };
     }
 
-    const volatilityObj = await rollingBiggestDailyChange(medianPrices, web3Provider, lambda);
+    const rollingVolatility = await rollingBiggestDailyChange(medianPrices, web3Provider, lambda);
+    if(newAssetsForMinVolatility.includes(fromSymbol) || newAssetsForMinVolatility.includes(toSymbol)) {
+        // set min volatility to 10%
+        rollingVolatility.latest.current = Math.max(0.1, rollingVolatility.latest.current);
+        rollingVolatility.latest.yesterday = Math.max(0.1, rollingVolatility.latest.yesterday);
+        for(let i = 0; i < rollingVolatility.history.length; i++) {
+            rollingVolatility.history[i].current = Math.max(0.1, rollingVolatility.history[i].current);
+            rollingVolatility.history[i].yesterday = Math.max(0.1, rollingVolatility.history[i].yesterday);
+        }
+    }
 
     return {
-        volatility: volatilityObj,
+        volatility: rollingVolatility,
         prices: medianPrices
     };
 }
@@ -474,5 +488,14 @@ function checkPlatform(platform) {
         throw new Error(`Platform unknown: ${platform}, use one of ${PLATFORMS}`);
     }
 }
+
+async function test() {
+
+    //Will compute block from 18355539 to 19638579
+    const res = await getLiquidityAverageV2ForDataPoints('all', 'wstETH', 'WETH', 18355539, 19638579, 180, 30 * BLOCK_PER_DAY, 100);
+    console.log(res);
+}
+
+// test();
 
 module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll, getLiquidityAverageV2, getLiquidityAverageV2ForDataPoints, getRollingVolatilityAndPrices};
