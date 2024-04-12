@@ -547,4 +547,7 @@ function GetPairToUse(from, to) {
     return {actualFrom, actualTo};
 }
 
-module.exports = { tokens, watchedPairs, GetPairToUse };
+
+const newAssetsForMinVolatility = [ 'ezETH', 'pufETH', 'rsETH' ];
+
+module.exports = { tokens, watchedPairs, GetPairToUse, newAssetsForMinVolatility };
