@@ -155,12 +155,16 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
 
     // generate list of routes
     const allPairs = getAllPairs(actualFrom, actualTo, pivotsToUse);
-
+    const pairDataPerPoint = {};
     const pricesPerPoint = {};
     for(let p = 0; p < nbPoints; p++) {
         pricesPerPoint[p] = {
             USDC: 1
         };
+        
+        if(!pairDataPerPoint[p]) {
+            pairDataPerPoint[p] = {};
+        }
     }
     const usedPools = [];
 
@@ -197,16 +201,16 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
             }
             
             directRouteLiquidityPerPoint[p] = computeAverageSlippageMap(liquiditiesForPoint);
+            // console.log(`${p}: ${directRouteLiquidityPerPoint[p].slippageMap[500].base}`);
         }
     } else {
-        // if not direct liquidity, stored undefined
+        // if no direct liquidity, stored undefined
         for(let p = 0; p < nbPoints; p++) {
             directRouteLiquidityPerPoint[p] = undefined;
         }
     }
     
     // get all the routes liquidities
-    const pairDataPerPoint = {};
     for(const pair of allPairs) {
         let liquidityData = {};
         if(platform == 'all') { 
@@ -219,11 +223,8 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
             usedPools.push(...liquidityData.usedPools);
 
             for(let p = 0; p < nbPoints; p++) {
-                if(!pairDataPerPoint[p]) {
-                    pairDataPerPoint[p] = {};
-                }
-                const pointFrom = fromBlock + (p * blocksPerPoint);
-                const pointTo = pointFrom + blocksPerPoint;
+                const pointTo = fromBlock + (p * blocksPerPoint);
+                const pointFrom = pointTo - avgOverBlocks;
                 const liquiditiesForPoint = {};
                 for(const [block, liq] of Object.entries(liquidityData.unifiedData)) {
                     if(block < pointFrom) {
@@ -304,7 +305,7 @@ async function computeLiquidityWithSolver(pivotsToUse, fromSymbol, toSymbol, pai
         }
     }
 
-    for (let targetSlippage = 500; targetSlippage <= 500; targetSlippage += step) {
+    for (let targetSlippage = step; targetSlippage <= 2000; targetSlippage += step) {
         // call the linear programming solver
         const solverParameters = {
             assets: pivotsToUse.concat([fromSymbol, toSymbol]),
