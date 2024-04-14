@@ -347,7 +347,7 @@ function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, to
     const fullFilename = path.join(DATA_DIR, 'precomputed', platform, filename);
 
     if(alreadyUsedPools.includes(poolName)) {
-        // console.log(`pool ${poolName} already used, cannot reuse it`);
+        console.log(`pool ${poolName} already used, cannot reuse it`);
         return undefined;
     }
 
@@ -470,9 +470,10 @@ function getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBl
     const usedPools = [];
     const unifiedDataForPools = [];
     for(const matchingFile of matchingFiles) {
-        const poolName = matchingFile.split('-')[2];
+        const curvePool = matchingFile.split('-')[2];
+        const poolName = [fromSymbol, toSymbol].sort((a,b) => a.localeCompare(b)).join('-') + `-${curvePool}-curve-pool`;
         if(alreadyUsedPools.includes(poolName)) {
-            // console.log(`pool ${poolName} already used, cannot reuse it`);
+            console.log(`pool ${poolName} already used, cannot reuse it`);
             continue;
         }
         const fullFilename = path.join(directory, matchingFile);
@@ -533,9 +534,12 @@ function getUnifiedDataForIntervalForBalancer(fromSymbol, toSymbol, fromBlock, t
         // where "ezETH-rswETH" is the searchString
         // "Balancer-weETH-ezETH-rswETH" is the pool name
         // and unified-data is always at the end
-        const poolName = matchingFile.replace(searchString + '-', '').replace('-unified-data.csv', '');
+        const balancerPool = matchingFile.replace(searchString + '-', '').replace('-unified-data.csv', '');
+        
+        const poolName = [fromSymbol, toSymbol].sort((a,b) => a.localeCompare(b)).join('-') + `-${balancerPool}-balancer-pool`;
+
         if(alreadyUsedPools.includes(poolName)) {
-            // console.log(`pool ${poolName} already used, cannot reuse it`);
+            console.log(`pool ${poolName} already used, cannot reuse it`);
             continue;
         }
         const fullFilename = path.join(directory, matchingFile);

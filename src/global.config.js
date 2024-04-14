@@ -474,7 +474,22 @@ const watchedPairs = {
             quote:'cbETH',
             pivots: ['WETH'],
             exportToInternalDashboard: false
-        }
+        },
+        {
+            quote: 'rsETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: false
+        },
+        {
+            quote: 'ezETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: false
+        },
+        {
+            quote: 'pufETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: false
+        },
     ],
     'WBTC': [
         {

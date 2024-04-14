@@ -16,7 +16,7 @@ const { writeGLPMSpec, parseGLPMOutput } = require('../utils/glpm');
 const { GetPairToUse, newAssetsForMinVolatility } = require('../global.config');
 
 
-const ALL_PIVOTS = [ 'DAI', 'WBTC','USDC', 'USDT', 'WETH'];
+const ALL_PIVOTS = ['WETH', 'WBTC', 'USDT','USDC', 'DAI'];
 // const ALL_PIVOTS = ['DAI', 'WBTC', 'USDC'];
 
 //    _____  _   _  _______  ______  _____   ______        _____  ______     ______  _    _  _   _   _____  _______  _____  ____   _   _   _____ 
@@ -78,9 +78,9 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
 
     let directRouteLiquidity = {};
     if(platform == 'all') {
-        directRouteLiquidity = getSumSlippageMapAcrossDexes(actualFrom, actualTo, fromBlock, toBlock, DEFAULT_STEP_BLOCK, []);
+        directRouteLiquidity = getSumSlippageMapAcrossDexes(actualFrom, actualTo, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
     } else {
-        directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, fromBlock, toBlock, DEFAULT_STEP_BLOCK, []);
+        directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
     }
 
     if(directRouteLiquidity && directRouteLiquidity.unifiedData) {
@@ -99,9 +99,9 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
     for(const pair of allPairs) {
         let liquidityData = {};
         if(platform == 'all') { 
-            liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, []);
+            liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
         } else {
-            liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, []);
+            liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
         }
         
         if(!prices[pair.from]) {
@@ -174,9 +174,9 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
     const directRouteLiquidityPerPoint = {};
     let directRouteLiquidity = {};
     if(platform == 'all') {
-        directRouteLiquidity = getSumSlippageMapAcrossDexes(actualFrom, actualTo, fromBlock - avgOverBlocks, toBlock, stepBlock, []);
+        directRouteLiquidity = getSumSlippageMapAcrossDexes(actualFrom, actualTo, fromBlock - avgOverBlocks, toBlock, stepBlock, usedPools);
     } else {
-        directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, fromBlock - avgOverBlocks, toBlock, stepBlock, []);
+        directRouteLiquidity = getUnifiedDataForInterval(platform, actualFrom, actualTo, fromBlock - avgOverBlocks, toBlock, stepBlock, usedPools);
     }
 
     if(directRouteLiquidity && directRouteLiquidity.unifiedData) {
@@ -215,9 +215,9 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
     for(const pair of allPairs) {
         let liquidityData = {};
         if(platform == 'all') { 
-            liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, fromBlock, toBlock, stepBlock, []);
+            liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, fromBlock, toBlock, stepBlock, usedPools);
         } else {
-            liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, fromBlock, toBlock, stepBlock, []);
+            liquidityData = getUnifiedDataForInterval(platform, pair.from, pair.to, fromBlock, toBlock, stepBlock, usedPools);
         }
 
         if(liquidityData && liquidityData.unifiedData) {
@@ -314,7 +314,7 @@ async function computeLiquidityWithSolver(pivotsToUse, fromSymbol, toSymbol, pai
             assets: pivotsToUse.concat([fromSymbol, toSymbol]),
             origin: fromSymbol,
             target: toSymbol,
-            slippageStepBps: step,
+            slippageStepBps: 50,
             targetSlippageBps: targetSlippage,
         };
 
@@ -491,8 +491,11 @@ function checkPlatform(platform) {
 
 async function test() {
 
+    const base = 'wstETH';
+    const quote = 'USDT';
+    const platform = 'uniswapv3';
     //Will compute block from 18355539 to 19638579
-    const res = await getLiquidityAverageV2ForDataPoints('all', 'wstETH', 'WETH', 18355539, 19638579, 180, 30 * BLOCK_PER_DAY, 100);
+    const res = await getLiquidityAverageV2ForDataPoints(platform, base, quote, 18355539, 19638579, 180, 30 * BLOCK_PER_DAY, 100);
     console.log(res);
 }
 
