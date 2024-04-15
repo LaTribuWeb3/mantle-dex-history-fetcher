@@ -31,7 +31,7 @@ function getLastMedianPriceForBlock(platform, fromSymbol, toSymbol, searchedBloc
         price = lineSplitted[1];
     }
 
-    return price;
+    return Number(price);
 }
 
 /**
@@ -470,7 +470,8 @@ function getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBl
     const usedPools = [];
     const unifiedDataForPools = [];
     for(const matchingFile of matchingFiles) {
-        const poolName = matchingFile.split('-')[2];
+        const curvePool = matchingFile.split('-')[2];
+        const poolName = [fromSymbol, toSymbol].sort((a,b) => a.localeCompare(b)).join('-') + `-${curvePool}-curve-pool`;
         if(alreadyUsedPools.includes(poolName)) {
             console.log(`pool ${poolName} already used, cannot reuse it`);
             continue;
@@ -533,7 +534,10 @@ function getUnifiedDataForIntervalForBalancer(fromSymbol, toSymbol, fromBlock, t
         // where "ezETH-rswETH" is the searchString
         // "Balancer-weETH-ezETH-rswETH" is the pool name
         // and unified-data is always at the end
-        const poolName = matchingFile.replace(searchString + '-', '').replace('-unified-data.csv', '');
+        const balancerPool = matchingFile.replace(searchString + '-', '').replace('-unified-data.csv', '');
+        
+        const poolName = [fromSymbol, toSymbol].sort((a,b) => a.localeCompare(b)).join('-') + `-${balancerPool}-balancer-pool`;
+
         if(alreadyUsedPools.includes(poolName)) {
             console.log(`pool ${poolName} already used, cannot reuse it`);
             continue;
@@ -596,6 +600,18 @@ function getDefaultSlippageMap() {
 }
 
 /**
+ * Instanciate a default slippage map: from 50 bps to 2000, containing only 0 volume
+ * @returns {{[slippageBps: number]: {base: number, quote: number}}}
+ */
+function getDefaultSlippageMapSimple() {
+    const slippageMap = {};
+    for(let i = 50; i <= 2000; i+=50) {
+        slippageMap[i] = 0;
+    }
+    return slippageMap;
+}
+
+/**
  * This function returns an object preinstanciated with all the blocks that will need to be filled
  * @param {number} startBlock 
  * @param {number} endBlock 
@@ -636,4 +652,4 @@ function extractDataFromUnifiedLine(line) {
     };
 }
 
-module.exports = { readMedianPricesFileAtBlock, getLastMedianPriceForBlock, getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, readMedianPricesFile, getPricesAtBlockForIntervalViaPivots, getUnifiedDataForIntervalByFilename, extractDataFromUnifiedLine };
+module.exports = { readMedianPricesFileAtBlock, getLastMedianPriceForBlock, getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, readMedianPricesFile, getPricesAtBlockForIntervalViaPivots, getUnifiedDataForIntervalByFilename, extractDataFromUnifiedLine, getDefaultSlippageMapSimple };

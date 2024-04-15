@@ -25,10 +25,10 @@ function writeGLPMSpec(spec, liquidity) {
     }
 
     function getInputLiquidity(assetIn, assetOut, slippage) {
-        if (!liquidity.hasOwnProperty(assetIn)) return 0;
+        if (!liquidity[assetIn]) return 0;
         const srcLiquidity = liquidity[assetIn]; // UNDERSTAND WHYU ITS
         //console.log(Object.keys(srcLiquidity))
-        if (!srcLiquidity.hasOwnProperty(assetOut)) return 0;
+        if (!srcLiquidity[assetOut]) return 0;
 
         return srcLiquidity[assetOut][slippage];
     }
@@ -74,9 +74,11 @@ function writeGLPMSpec(spec, liquidity) {
                 }
             }
 
-            // encode equality with <= and =>
-            constraints.push({ 'namedVector': inEqualsOutvectors, 'constraint': '<=', 'constant': 0.0 });
-            constraints.push({ 'namedVector': inEqualsOutvectors, 'constraint': '>=', 'constant': 0.0 });
+            if(Object.keys(inEqualsOutvectors).length != 0) {
+                // encode equality with <= and =>
+                constraints.push({ 'namedVector': inEqualsOutvectors, 'constraint': '<=', 'constant': 0.0 });
+                constraints.push({ 'namedVector': inEqualsOutvectors, 'constraint': '>=', 'constant': 0.0 });
+            }
         }
 
         //console.log(JSON.stringify(constraints, null, 4))
@@ -141,7 +143,7 @@ function writeGLPMSpec(spec, liquidity) {
 
     GLPMSpec = GLPMSpec.concat(allNames.map(name => 'var ' + name + ' >= 0;'));
 
-    const nonNullObjectives = Object.entries(objective).filter(([key, value]) => value != 0);
+    const nonNullObjectives = Object.entries(objective).filter(([, value]) => value != 0);
 
     GLPMSpec = GLPMSpec.concat(['maximize z: ' + nonNullObjectives
         .map(([key, value]) => `( ${value} ) * ${key}`)
@@ -149,7 +151,7 @@ function writeGLPMSpec(spec, liquidity) {
 
     GLPMSpec = GLPMSpec.concat(constraints.map((constraint, i) =>
         'subject to c' + (nonNullObjectives.length + i).toString() + ': ' + Object.entries(constraint.namedVector)
-            .filter(([key, value]) => value != 0)
+            .filter(([, value]) => value != 0)
             .map(([key, value]) => `(${value}) * ${key}`)
             .join(' + ')
         + ' ' + constraint.constraint
@@ -160,6 +162,35 @@ function writeGLPMSpec(spec, liquidity) {
     return GLPMSpec.join('\n');
 }
 
+
+function parseGLPMOutput(glpmOutput, baseToken) {
+    let columns = glpmOutput.columns.filter(column => column.activity !== 0);
+    let ret = {};
+
+    for (let column of columns) {
+        let [base, slippage, quote] = column.name.split('_');
+        if (ret[base] == undefined) ret[base] = {};
+        if (ret[base][quote] == undefined) ret[base][quote] = {};
+        ret[base][quote][slippage] = column.activity;
+    }
+
+    // here, in ret, we have all the data for all pairs
+    // we only want to have data when base == origin
+    let totalAmountOfBase = 0;
+    if(!ret[baseToken]) {
+        return 0;
+    }
+    for(const quote of Object.keys(ret[baseToken])) {
+        for(const slippage of Object.keys(ret[baseToken][quote])) {
+            const amount = ret[baseToken][quote][slippage];
+            totalAmountOfBase += amount;
+        }
+    }
+
+    return totalAmountOfBase;
+}
+
 module.exports = {
-    writeGLPMSpec
+    writeGLPMSpec,
+    parseGLPMOutput
 };

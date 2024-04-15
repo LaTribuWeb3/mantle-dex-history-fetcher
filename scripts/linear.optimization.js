@@ -1,16 +1,29 @@
-const { getLiquidityAll, getLiquidity } = require('./data.interface');
+const { getLiquidityAll, getLiquidity } = require('../src/data.interface/data.interface.js');
 const lp_solve = require('@3lden/lp_solve');
-const glpm = require('../utils/glpm.js');
-const { getPriceAtBlock } = require('./internal/data.interface.price.js');
+const glpm = require('../src/utils/glpm.js');
+const { getPriceAtBlock } = require('../src/data.interface/internal/data.interface.price.js');
 const fs = require('fs');
 const humanFormat = require('human-format');
 const Graph = require('graphology');
+const { getDefaultSlippageMap, getUnifiedDataForInterval } = require('../src/data.interface/internal/data.interface.utils.js');
+const { getSumSlippageMapAcrossDexes } = require('../src/data.interface/internal/data.interface.liquidity.js');
+const { DEFAULT_STEP_BLOCK } = require('../src/utils/constants.js');
 
-function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefined) {
+function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefined, usedPools = []) {
     if (!Object.hasOwn(liquidities, base)) liquidities[base] = {};
-    if (!Object.hasOwn(liquidities[base], quote)) liquidities[base][quote] = {};
-    if (platform === undefined) liquidities[base][quote] = getLiquidityAll(base, quote, block, block, false);
-    else liquidities[base][quote] = getLiquidity(platform, base, quote, block, block, false);
+    // if (!Object.hasOwn(liquidities[base], quote)) liquidities[base][quote] = {};
+    let liquidity = undefined;
+    if (platform === undefined) {
+        liquidity = getSumSlippageMapAcrossDexes(base, quote, block, block, DEFAULT_STEP_BLOCK, []);
+    } 
+    else {
+        liquidity = getUnifiedDataForInterval(platform, base, quote, block, block, DEFAULT_STEP_BLOCK, []);
+    } 
+
+    if (liquidity && liquidity.unifiedData) {
+        liquidities[base][quote] = liquidity.unifiedData;
+        usedPools.push(...liquidity.usedPools);
+    }
 }
 
 function generateSpecForBlock(block, assetsSpecification) {
@@ -22,20 +35,21 @@ function generateSpecForBlock(block, assetsSpecification) {
 
     let liquidity = {};
     let liquidities = {};
+    const usedPools = [];
 
     for (let intermediaryAsset of intermediaryAssets) {
-        setLiquidityAndPrice(liquidities, origin, intermediaryAsset, block, platform);
+        setLiquidityAndPrice(liquidities, origin, intermediaryAsset, block, platform, usedPools);
     }
 
     for (let assetIn of intermediaryAssets) {
         for (let assetOut of intermediaryAssets) {
             if (assetIn == assetOut) continue;
-            setLiquidityAndPrice(liquidities, assetIn, assetOut, block, platform);
+            setLiquidityAndPrice(liquidities, assetIn, assetOut, block, platform, usedPools);
         }
     }
 
     for (let intermediaryAsset of intermediaryAssets) {
-        setLiquidityAndPrice(liquidities, intermediaryAsset, target, block, platform);
+        setLiquidityAndPrice(liquidities, intermediaryAsset, target, block, platform, usedPools);
     }
 
     for (const base of Object.keys(liquidities)) {
@@ -135,18 +149,43 @@ function computeMatrixFromGLPMResult(res, origin, target, block, platform) {
     }
 
     let liquidityAtBlock = {};
-    if(platform == undefined) {
+    if (platform == undefined) {
         liquidityAtBlock = getLiquidityAll(origin, target, block, block, false);
     } else {
         liquidityAtBlock = getLiquidity(platform, origin, target, block, block, false);
     }
 
-    let slippageMapOriginTarget = liquidityAtBlock[block].slippageMap;
+    if (!liquidityAtBlock) {
+        liquidityAtBlock = {
+            [`${block}`]: {
+                slippageMap: getDefaultSlippageMap()
+            }
+        };
+    }
 
-    ret[origin][target] = {};
+    let slippageMapOriginTarget = getDefaultSlippageMap();
+    for (const slippageBps of Object.keys(liquidityAtBlock[block].slippageMap)) {
+        if (slippageBps == 50) {
+            slippageMapOriginTarget[50].base = liquidityAtBlock[block].slippageMap[50].base;
+        } else {
+            slippageMapOriginTarget[slippageBps].base = liquidityAtBlock[block].slippageMap[slippageBps].base - liquidityAtBlock[block].slippageMap[slippageBps - 50].base;
+        }
+    }
+
     Object.keys(slippageMapOriginTarget).filter(key => key <= 500)
-        .map(slippage => ret[origin][target][slippage] = slippageMapOriginTarget[slippage].base * (origin === 'USDC' ? 1 : getPriceAtBlock('all', origin, 'USDC', block))
-        );
+        .map(slippageBps => [slippageBps, slippageMapOriginTarget[slippageBps].base * (origin === 'USDC' ? 1 : getPriceAtBlock('all', origin, 'USDC', block))])
+        .filter(([, slippageInUSDC]) => slippageInUSDC != 0)
+        .map(([slippageBps, slippageInUSDC]) => {
+            if (!ret[origin]) {
+                ret[origin] = {};
+            }
+
+            if (!ret[origin][target]) {
+                ret[origin][target] = {};
+            }
+
+            ret[origin][target][slippageBps] = slippageInUSDC;
+        });
 
     return ret;
 }
@@ -155,20 +194,26 @@ async function generateNormalizedGraphForBlock(blockNumber, origin, pivots, targ
     let edgesWithNegligibleLiquidities = false;
     var graph = undefined;
     let resultMatrix = {};
+    const realPivotToUse = [];
+    for(const pivot of pivots) {
+        if(pivot == origin || pivot == target) continue;
+
+        realPivotToUse.push(pivot);
+    }
 
     do {
         var gLPMSpec = generateSpecForBlock(
             blockNumber,
             {
                 origin: origin,
-                intermediaryAssets: pivots,
+                intermediaryAssets: realPivotToUse,
                 target: target,
                 platform: platform,
                 nullEdges: graph === undefined ? [] : graph.edges().filter(edge => graph.getEdgeAttributes(edge).nullLiquidity)
             }
         );
 
-        let glpmResult = await lp_solve.executeGLPSol(gLPMSpec);
+        let glpmResult = await lp_solve.executeGLPSol(gLPMSpec, true);
 
         resultMatrix = computeMatrixFromGLPMResult(glpmResult, origin, target, blockNumber, platform);
 
@@ -194,14 +239,16 @@ async function generateNormalizedGraphForBlock(blockNumber, origin, pivots, targ
 
 module.exports = { generateNormalizedGraphForBlock };
 
+
 async function test() {
+    const platform = 'uniswapv3';
     var graph = await generateNormalizedGraphForBlock(
-        19467267,
-        'WETH',
-        ['DAI', 'WBTC', 'USDC'],
-        'USDT',
-        'uniswapv3',
-        0.1 // routes under this percentage of the total liquidity will be ignored
+        19624911,
+        'RPL',
+        ['WETH', 'WBTC', 'DAI','USDC', 'USDT'],
+        'SNX',
+        platform,
+        0 // routes under this percentage of the total liquidity will be ignored
     );
 
     fs.writeFileSync('graph.md', generateMarkDownForMermaidGraph(graph));

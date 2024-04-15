@@ -13,8 +13,8 @@ async function compoundV3ComputerDebug() {
     try {
 
         for(const startDate of startDates) {
-            // await compoundV3Computer(0);
-            await compoundV3Computer(0, startDate.getTime());
+            await compoundV3Computer(0);
+            // await compoundV3Computer(0, startDate.getTime());
         }
     } catch(e) {
         console.error(e);

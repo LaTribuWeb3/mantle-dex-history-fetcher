@@ -3,6 +3,7 @@ const path = require('path');
 const { DATA_DIR, PLATFORMS } = require('../utils/constants');
 const dirPath = path.join(DATA_DIR, 'precomputed', 'dashboard');
 const overviewFile = path.join(DATA_DIR, 'precomputed', 'morpho-dashboard', 'morpho-summary.json');
+const kinzaEthOverviewFile = path.join(DATA_DIR, 'precomputed', 'kinza-dashboard', 'kinza-summary.json');
 
 
 function getFetcherResults() {
@@ -37,6 +38,14 @@ function getMorphoOverview() {
     return JSON.parse(fs.readFileSync(overviewFile, 'utf-8'));
 }
 
+function getKinzaOverview() {
+    if (!fs.existsSync(kinzaEthOverviewFile)) {
+        throw new Error(`Cannot find ${kinzaEthOverviewFile}`);
+    }
+
+    return JSON.parse(fs.readFileSync(kinzaEthOverviewFile, 'utf-8'));
+}
+
 function getDataForPairAndPlatform(platform, base, quote) {
     const searchFilename = path.join(dirPath, `${base}-${quote}-${platform}.json`);
     if (!fs.existsSync(searchFilename)) {
@@ -53,4 +62,4 @@ function checkPlatform(platform) {
     }
 }
 
-module.exports = { getAvailableForDashboard, getDataForPairAndPlatform, checkPlatform, getFetcherResults, getMorphoOverview };
+module.exports = { getAvailableForDashboard, getDataForPairAndPlatform, checkPlatform, getFetcherResults, getMorphoOverview, getKinzaOverview };

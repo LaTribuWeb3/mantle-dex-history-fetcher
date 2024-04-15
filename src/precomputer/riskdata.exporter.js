@@ -9,14 +9,13 @@ const { RecordMonitoring } = require('../utils/monitoring');
 const { fnName, roundTo, sleep } = require('../utils/utils');
 const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
 const { uploadJsonFile } = require('../utils/githubPusher');
-const { PLATFORMS, MORPHO_RISK_PARAMETERS_ARRAY } = require('../utils/constants');
+const { MORPHO_RISK_PARAMETERS_ARRAY } = require('../utils/constants');
 const { signData, generateTypedData } = require('../../scripts/signTypedData');
-const { getRollingVolatility, getLiquidity, getLiquidityAll } = require('../data.interface/data.interface');
+const { getRollingVolatility, getLiquidityAverageV2 } = require('../data.interface/data.interface');
 const { getConfTokenBySymbol } = require('../utils/token.utils');
 const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
 const { getStagingConfTokenBySymbol, riskDataTestNetConfig, riskDataConfig } = require('./precomputer.config');
 const { default: axios } = require('axios');
-const { morphoMarketTranslator } = require('../utils/morpho.utils');
 
 // Constants
 const RUN_EVERY_MINUTES = 6 * 60; // 6 hours in minutes
@@ -167,11 +166,9 @@ async function fetchLiquidity(base, quote) {
 
     console.log(`Precomputing for pair ${base.symbol}/${quote.symbol}`);
 
-    const allPlatformsLiquidity = getLiquidityAll(base.symbol, quote.symbol, startBlock, currentBlock);
+    const avgLiquidity = await getLiquidityAverageV2('all', base.symbol, quote.symbol, startBlock, currentBlock);
     
-    // Calculate averaged liquidity and fetch volatility data
-    const averagedLiquidity = calculateSlippageBaseAverages(allPlatformsLiquidity);
-    return averagedLiquidity;
+    return avgLiquidity.slippageMap;
 }
 
 /**
