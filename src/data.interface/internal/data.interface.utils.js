@@ -600,6 +600,18 @@ function getDefaultSlippageMap() {
 }
 
 /**
+ * Instanciate a default slippage map: from 50 bps to 2000, containing only 0 volume
+ * @returns {{[slippageBps: number]: {base: number, quote: number}}}
+ */
+function getDefaultSlippageMapSimple() {
+    const slippageMap = {};
+    for(let i = 50; i <= 2000; i+=50) {
+        slippageMap[i] = 0;
+    }
+    return slippageMap;
+}
+
+/**
  * This function returns an object preinstanciated with all the blocks that will need to be filled
  * @param {number} startBlock 
  * @param {number} endBlock 
@@ -640,4 +652,4 @@ function extractDataFromUnifiedLine(line) {
     };
 }
 
-module.exports = { readMedianPricesFileAtBlock, getLastMedianPriceForBlock, getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, readMedianPricesFile, getPricesAtBlockForIntervalViaPivots, getUnifiedDataForIntervalByFilename, extractDataFromUnifiedLine };
+module.exports = { readMedianPricesFileAtBlock, getLastMedianPriceForBlock, getUnifiedDataForInterval, getBlankUnifiedData, getDefaultSlippageMap, readMedianPricesFile, getPricesAtBlockForIntervalViaPivots, getUnifiedDataForIntervalByFilename, extractDataFromUnifiedLine, getDefaultSlippageMapSimple };

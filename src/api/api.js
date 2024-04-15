@@ -7,7 +7,7 @@ var cors = require('cors');
 var path = require('path');
 const { roundTo, getDay } = require('../utils/utils');
 const { DATA_DIR } = require('../utils/constants');
-const { getAvailableForDashboard, getDataForPairAndPlatform, checkPlatform, getFetcherResults, getMorphoOverview } = require('./dashboardUtils');
+const { getAvailableForDashboard, getDataForPairAndPlatform, checkPlatform, getFetcherResults, getMorphoOverview, getKinzaOverview } = require('./dashboardUtils');
 const app = express();
 
 app.use(cors());
@@ -17,6 +17,16 @@ const port = process.env.API_PORT || 3000;
 
 const cache = {};
 const cacheDuration = 30 * 60 * 1000; // 30 min cache duration
+
+app.get('/api/dashboard/kinza-overview', async (req, res, next) => {
+    try {
+        const ov = getKinzaOverview();
+        res.json(ov);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+        next();
+    }
+});
 
 app.get('/api/dashboard/morpho-overview', async (req, res, next) => {
     try {

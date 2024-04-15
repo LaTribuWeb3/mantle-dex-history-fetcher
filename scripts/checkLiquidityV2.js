@@ -1,6 +1,6 @@
 const { watchedPairs } = require('../src/global.config');
-const { getLiquidity, getLiquidityAll, getLiquidityV2 } = require('../src/data.interface/data.interface');
-const { PLATFORMS } = require('../src/utils/constants');
+const { getLiquidity, getLiquidityAll, getLiquidityV2, getLiquidityAverageV2 } = require('../src/data.interface/data.interface');
+const { PLATFORMS, BLOCK_PER_DAY } = require('../src/utils/constants');
 const fs = require('fs');
 const { roundTo } = require('../src/utils/utils');
 const { getConfTokenBySymbol, normalize } = require('../src/utils/token.utils');
@@ -8,10 +8,11 @@ const { default: axios } = require('axios');
 const { default: BigNumber } = require('bignumber.js');
 const { getPriceAtBlock } = require('../src/data.interface/internal/data.interface.price');
 const dotenv = require('dotenv');
+const { computeAverageSlippageMap } = require('../src/data.interface/internal/data.interface.liquidity');
 dotenv.config();
 
 async function test() {
-    const block = 19609694;
+    const block = 19659592;
     fs.writeFileSync('liquidityresult.csv', 'platform,base,quote,liquidity old, liquidity new,diff,1Inch avg slippage\n');
 
     const pairsToFetch = [];
@@ -51,13 +52,13 @@ async function test() {
         //     fs.appendFileSync('liquidityresult.csv', `${platform},${base},${quote},${liquidityOld},${liquidityNew},N/A\n`); 
         // }
 
-        const oldLiquidity = getLiquidityAll(base, quote, block, block);
+        const oldLiquidity = getLiquidityAll(base, quote, block - 30 * BLOCK_PER_DAY, block);
         let liquidityOld = 0;
         if(oldLiquidity) {
-            liquidityOld = oldLiquidity[block].slippageMap[500].base;
+            liquidityOld = computeAverageSlippageMap(oldLiquidity).slippageMap[500].base;
         }
 
-        const newLiquidity = await getLiquidityV2('all', base, quote, block);
+        const newLiquidity = await getLiquidityAverageV2('all', base, quote, block - 30 * BLOCK_PER_DAY, block);
         let liquidityNew = 0;
         if(newLiquidity) {
             liquidityNew = newLiquidity.slippageMap[500];
