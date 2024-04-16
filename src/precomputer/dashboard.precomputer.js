@@ -184,6 +184,7 @@ async function getBlockTimestamps(displayBlocks) {
         // const blockTimestampResp = await retry(axios.get, [BLOCKINFO_URL + `/api/getblocktimestamp?blocknumber=${blockNumber}`], 0, 100);
         // blockTimeStamps[blockNumber] = blockTimestampResp.data.timestamp;
         blockPromises.push(retry(axios.get, [BLOCKINFO_URL + `/api/getblocktimestamp?blocknumber=${blockNumber}`], 0, 100));
+        await sleep(200);
         // blockTimeStamps[blockNumber] = Date.now();
     }
 

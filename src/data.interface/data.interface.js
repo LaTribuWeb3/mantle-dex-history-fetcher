@@ -268,7 +268,7 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
         liquidities[b] =  result;
     }
 
-    logFnDurationWithLabel(start, `p: ${platform}, [${fromSymbol}/${toSymbol}], blocks: ${(blocks.at(-1) - blocks[0] -  + 1)}`);
+    logFnDurationWithLabel(start, `p: ${platform}, [${fromSymbol}/${toSymbol}], blocks: ${(blocks.at(-1) - blocks[0] + 1)}`);
     return liquidities;
 }
 
