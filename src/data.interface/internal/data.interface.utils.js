@@ -347,7 +347,7 @@ function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, to
     const fullFilename = path.join(DATA_DIR, 'precomputed', platform, filename);
 
     if(alreadyUsedPools.includes(poolName)) {
-        console.log(`pool ${poolName} already used, cannot reuse it`);
+        // console.log(`pool ${poolName} already used, cannot reuse it`);
         return undefined;
     }
 
@@ -473,7 +473,7 @@ function getUnifiedDataForIntervalForCurve(fromSymbol, toSymbol, fromBlock, toBl
         const curvePool = matchingFile.split('-')[2];
         const poolName = [fromSymbol, toSymbol].sort((a,b) => a.localeCompare(b)).join('-') + `-${curvePool}-curve-pool`;
         if(alreadyUsedPools.includes(poolName)) {
-            console.log(`pool ${poolName} already used, cannot reuse it`);
+            // console.log(`pool ${poolName} already used, cannot reuse it`);
             continue;
         }
         const fullFilename = path.join(directory, matchingFile);
@@ -539,7 +539,7 @@ function getUnifiedDataForIntervalForBalancer(fromSymbol, toSymbol, fromBlock, t
         const poolName = [fromSymbol, toSymbol].sort((a,b) => a.localeCompare(b)).join('-') + `-${balancerPool}-balancer-pool`;
 
         if(alreadyUsedPools.includes(poolName)) {
-            console.log(`pool ${poolName} already used, cannot reuse it`);
+            // console.log(`pool ${poolName} already used, cannot reuse it`);
             continue;
         }
         const fullFilename = path.join(directory, matchingFile);

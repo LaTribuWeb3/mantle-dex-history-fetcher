@@ -343,7 +343,7 @@ async function generateDashboardDataForPlatormFull(platform, displayBlocks, pair
     console.log(`startindex: ${startBlockIndex} = ${displayBlocks[startBlockIndex]}`);
     
 
-    const liquidities = await getLiquidityAverageV2ForDataPoints(platform, pair.base, pair.quote, displayBlocks.slice(startBlockIndex), NB_DAYS_AVG * BLOCK_PER_DAY, 100);
+    const liquidities = await getLiquidityAverageV2ForDataPoints(platform, pair.base, pair.quote, displayBlocks.slice(startBlockIndex), NB_DAYS_AVG * BLOCK_PER_DAY, 50);
 
     for(let blockNum = startBlockIndex; blockNum < displayBlocks.length; blockNum++) {
         const block = displayBlocks[blockNum];

@@ -1,5 +1,7 @@
 const fs = require('fs');
 const dotenv = require('dotenv');
+const path = require('path');
+const { DATA_DIR } = require('./constants');
 dotenv.config();
 
 // various utils fct
@@ -187,4 +189,17 @@ function arrayAverage(array) {
     return array.reduce((a, b) => a + b, 0) / array.length;
 }
 
-module.exports = { retry, sleep, fnName, roundTo, getDay, logFnDuration, logFnDurationWithLabel, readLastLine, arrayAverage, retrySync };
+
+
+function getLiquidityAndVolatilityFromDashboardData(base, quote, liquidationBonusBPS) {
+    const filePath = path.join(DATA_DIR, 'precomputed', 'dashboard', `${base}-${quote}-all.json`);
+    const dashboardData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const dataKeys = Object.keys(dashboardData.liquidity);
+    const latestKey = dataKeys[dataKeys.length - 1];
+    const liquidityData = dashboardData.liquidity[latestKey];
+    const volatilityData = liquidityData.volatility;
+    const slippageMap = liquidityData.avgSlippageMap;
+    return {volatility: volatilityData, liquidityInKind: slippageMap[liquidationBonusBPS].base ? slippageMap[liquidationBonusBPS].base : slippageMap[liquidationBonusBPS]};
+}
+
+module.exports = { retry, sleep, fnName, roundTo, getDay, logFnDuration, logFnDurationWithLabel, readLastLine, arrayAverage, retrySync, getLiquidityAndVolatilityFromDashboardData };

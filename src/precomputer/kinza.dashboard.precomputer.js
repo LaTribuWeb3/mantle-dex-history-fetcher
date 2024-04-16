@@ -7,7 +7,7 @@ dotenv.config();
 const { kinzaConfig } = require('./kinza.dashboard.precomputer.config');
 const { findRiskLevelFromParameters } = require('../utils/smartLTV');
 const { RecordMonitoring } = require('../utils/monitoring');
-const { fnName, retry } = require('../utils/utils');
+const { fnName, retry, getLiquidityAndVolatilityFromDashboardData } = require('../utils/utils');
 const { getConfTokenBySymbol } = require('../utils/token.utils');
 const { DATA_DIR } = require('../utils/constants');
 
@@ -117,17 +117,6 @@ async function getPrice(tokenAddress) {
     const apiUrl = `https://coins.llama.fi/prices/current/ethereum:${tokenAddress}?searchWidth=12h`;
     const priceResponse = await retry(axios.get, [apiUrl], 0, 100);
     return priceResponse.data.coins[`ethereum:${tokenAddress}`].price;
-}
-
-function getLiquidityAndVolatilityFromDashboardData(base, quote, liquidationBonusBPS) {
-    const filePath = path.join(DATA_DIR, 'precomputed', 'dashboard', `${base}-${quote}-all.json`);
-    const dashboardData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    const dataKeys = Object.keys(dashboardData.liquidity);
-    const latestKey = dataKeys[dataKeys.length - 1];
-    const liquidityData = dashboardData.liquidity[latestKey];
-    const volatilityData = liquidityData.volatility;
-    const slippageMap = liquidityData.avgSlippageMap;
-    return {volatility: volatilityData, liquidityInKind: slippageMap[liquidationBonusBPS].base ? slippageMap[liquidationBonusBPS].base : slippageMap[liquidationBonusBPS]};
 }
 
 // kinzaDashboardPrecomputer(60);

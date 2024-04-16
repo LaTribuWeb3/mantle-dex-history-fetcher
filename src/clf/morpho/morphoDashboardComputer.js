@@ -1,7 +1,7 @@
 const { ethers } = require('ethers');
 const dotenv = require('dotenv');
 const path = require('path');
-const { fnName, roundTo, retry } = require('../../utils/utils');
+const { fnName, roundTo, retry, getLiquidityAndVolatilityFromDashboardData } = require('../../utils/utils');
 const fs = require('fs');
 const { default: axios } = require('axios');
 dotenv.config();
@@ -289,16 +289,5 @@ async function computeMarketRiskLevel(assetParameters, collateralSymbol, baseAss
     return toReturn;
 }
 
-function getLiquidityAndVolatilityFromDashboardData(base, quote, liquidationBonusBPS) {
-    const filePath = path.join(DATA_DIR, 'precomputed', 'dashboard', `${base}-${quote}-all.json`);
-    const dashboardData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    const dataKeys = Object.keys(dashboardData.liquidity);
-    const latestKey = dataKeys[dataKeys.length - 1];
-    const liquidityData = dashboardData.liquidity[latestKey];
-    const volatilityData = liquidityData.volatility;
-    const slippageMap = liquidityData.avgSlippageMap;
-    return {volatility: volatilityData, liquidityInKind: slippageMap[liquidationBonusBPS]};
-}
-
-
+// morphoDashboardSummaryComputer(30);
 module.exports = { morphoDashboardSummaryComputer };
