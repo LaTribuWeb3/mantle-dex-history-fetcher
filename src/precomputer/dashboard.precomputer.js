@@ -14,7 +14,7 @@ const { default: axios } = require('axios');
 const { morphoDashboardSummaryComputer } = require('../clf/morpho/morphoDashboardComputer');
 const { kinzaDashboardPrecomputer } = require('./kinza.dashboard.precomputer');
 
-const RUN_EVERY_MINUTES = 6 * 60; // in minutes
+const RUN_EVERY_MINUTES = 12 * 60; // in minutes
 const MONITORING_NAME = 'Dashboard Precomputer';
 const RPC_URL = process.env.RPC_URL;
 const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
