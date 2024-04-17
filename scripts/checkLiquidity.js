@@ -1,41 +1,32 @@
-const { getLiquidity, getLiquidityAll } = require('../src/data.interface/data.interface');
+const { getLiquidity, getLiquidityAll, getLiquidityV2, getLiquidityAverageV2 } = require('../src/data.interface/data.interface');
 const { watchedPairs } = require('../src/global.config');
-const { PLATFORMS } = require('../src/utils/constants');
+const { PLATFORMS, BLOCK_PER_DAY } = require('../src/utils/constants');
 const fs = require('fs');
 const { roundTo } = require('../src/utils/utils');
 const { getPriceAtBlock } = require('../src/data.interface/internal/data.interface.price');
 
 async function checkLiquidity() {
 
-    fs.writeFileSync('liquidityresult.csv', 'base,quote,liquidity\n');
+    const block = 19673524;
+    const base = 'pufETH';
+    const quote = 'WETH';
+    const platform = 'all';
 
-    // for(const base of Object.keys(watchedPairs)) {
-    //     for(const quoteCfg of watchedPairs[base]) {
-    //         const quote = quoteCfg.quote;
-    //         computePairLiquidity(base, quote);
-    //         computePairLiquidity(quote, base);
-    //     }
-    // }
+    const liquidity = await getLiquidityV2(platform, base, quote, block);
+    let valueFor5Pct = 0;
+    if(liquidity) {
+        valueFor5Pct = liquidity.slippageMap[500];
+    }
 
-    computePairLiquidity('WETH', 'USDT');
-    
+    console.log(`platform ${platform} ${base} ${quote} : ${valueFor5Pct}`);
+
+    const liquidityAvg30d = await getLiquidityAverageV2(platform, base, quote, block - 30 * BLOCK_PER_DAY, block);
+    let valueFor5PctAvg = 0;
+    if(liquidityAvg30d) {
+        valueFor5PctAvg = liquidityAvg30d.slippageMap[500];
+    }
+
+    console.log(`platform ${platform} ${base} ${quote} avg 30d : ${valueFor5PctAvg}`);
 }
 
 checkLiquidity();
-
-function computePairLiquidity(base, quote) {
-    const block = 19609694;
-    // const newLiquidity = getLiquidityAll(base, quote, block, block, false);
-    // const newLqty = newLiquidity[block].slippageMap[500].base;
-    // console.log(`${base}/${quote} new liquidity: ${newLqty}`);
-    const newLiquidityJump = getLiquidityAll(base, quote, block, block, true);
-    const priceWETH = getPriceAtBlock('uniswapv3', 'WETH', 'USDC', block);
-    const priceWBTC = getPriceAtBlock('uniswapv3', 'WBTC', 'USDC', block);
-    console.log({priceWETH}, {priceWBTC});
-    const newLqtyJump = newLiquidityJump[block].slippageMap[500].base;
-    console.log(`${base}/${quote} new liquidity jump: ${newLqtyJump}`);
-
-    // // const line = `${base},${quote},${newLqty}`;
-    // console.log(line);
-    // fs.appendFileSync('liquidityresult.csv', line + '\n');
-}
