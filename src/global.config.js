@@ -251,6 +251,10 @@ const tokens = {
     },
 };
 
+const specificPivotsOverride = {
+    'pufETH': ['wstETH', 'WETH', 'WBTC', 'USDT', 'USDC', 'DAI']
+};
+
 // goes both ways
 const watchedPairs = {
     'WETH': [
@@ -570,4 +574,4 @@ function GetPairToUse(from, to) {
 
 const newAssetsForMinVolatility = [ 'ezETH', 'pufETH', 'rsETH' ];
 
-module.exports = { tokens, watchedPairs, GetPairToUse, newAssetsForMinVolatility };
+module.exports = { tokens, watchedPairs, GetPairToUse, newAssetsForMinVolatility, specificPivotsOverride };

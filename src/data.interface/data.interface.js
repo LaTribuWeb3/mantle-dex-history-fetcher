@@ -13,10 +13,10 @@ const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA, BLOCK_PER_DAY } = require('../uti
 const { rollingBiggestDailyChange } = require('../utils/volatility');
 const { getUnifiedDataForInterval, getLastMedianPriceForBlock } = require('./internal/data.interface.utils');
 const { writeGLPMSpec, parseGLPMOutput } = require('../utils/glpm');
-const { GetPairToUse, newAssetsForMinVolatility } = require('../global.config');
+const { GetPairToUse, newAssetsForMinVolatility, specificPivotsOverride } = require('../global.config');
 
 
-const ALL_PIVOTS = ['WETH', 'WBTC', 'USDT','USDC', 'DAI'];
+const ALL_PIVOTS = ['WETH', 'WBTC', 'USDT', 'USDC', 'DAI'];
 // const ALL_PIVOTS = ['DAI', 'WBTC', 'USDC'];
 
 //    _____  _   _  _______  ______  _____   ______        _____  ______     ______  _    _  _   _   _____  _______  _____  ____   _   _   _____ 
@@ -373,6 +373,18 @@ function getPivotsToUse(fromSymbol, toSymbol) {
         } else {
             pivotsToUse.push(pivot);
         }
+    }
+
+    let pivotsOverride = specificPivotsOverride[fromSymbol];
+
+    if (pivotsOverride !== undefined) {
+        return pivotsOverride;
+    }
+
+    pivotsOverride = specificPivotsOverride[toSymbol];
+
+    if (pivotsOverride !== undefined) {
+        return pivotsOverride;
     }
 
     return pivotsToUse;
