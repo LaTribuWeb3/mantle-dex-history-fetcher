@@ -375,11 +375,16 @@ function getPivotsToUse(fromSymbol, toSymbol) {
         }
     }
 
-    const additionalPivotsToUse = additionalPivots[fromSymbol];
+    let pivotsOverride = additionalPivots[fromSymbol];
 
-    if (additionalPivotsToUse !== undefined) {
-        for (const pivot of additionalPivotsToUse)
-            pivotsToUse.push(pivot);
+    if (pivotsOverride !== undefined) {
+        return pivotsOverride;
+    }
+
+    pivotsOverride = additionalPivots[toSymbol];
+
+    if (pivotsOverride !== undefined) {
+        return pivotsOverride;
     }
 
     return pivotsToUse;

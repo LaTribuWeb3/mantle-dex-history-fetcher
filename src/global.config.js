@@ -252,7 +252,7 @@ const tokens = {
 };
 
 const additionalPivots = {
-    'pufETH': [ 'wstETH' ]
+    'pufETH': ['wstETH', 'WETH', 'WBTC', 'USDT', 'USDC', 'DAI']
 };
 
 // goes both ways
