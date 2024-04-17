@@ -15,7 +15,7 @@ const fetchersToStart = [
     // SushiswapV2HistoryFetcher,
     // CurveHistoryFetcher,
     // CurvePriceHistoryFetcher,
-    UniswapV3HistoryFetcher,
+    // UniswapV3HistoryFetcher,
     UniswapV3PriceHistoryFetcher,
     PrecomputeMedianPrices,
     AdditionalLiquidityComputer,
