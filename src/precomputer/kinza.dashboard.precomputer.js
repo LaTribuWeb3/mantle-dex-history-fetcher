@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { default: axios } = require('axios');
 dotenv.config();
-const { kinzaConfig } = require('./kinza.dashboard.precomputer.config');
+const { kinzaConfig, pairsToCompute, protocolDataProviderAddress, protocolDataProviderABI } = require('./kinza.dashboard.precomputer.config');
 const { findRiskLevelFromParameters } = require('../utils/smartLTV');
 const { RecordMonitoring } = require('../utils/monitoring');
 const { fnName, retry, getLiquidityAndVolatilityFromDashboardData } = require('../utils/utils');
@@ -34,55 +34,19 @@ async function kinzaDashboardPrecomputer(fetchEveryMinutes) {
         const web3Provider = new ethers.providers.StaticJsonRpcProvider(process.env.RPC_URL);
         const currentBlock = await web3Provider.getBlockNumber();
 
-        const results = {};
+        const promises = [];
+        for (const base of Object.keys(pairsToCompute)) {
+            const promise = computeDataForPair(base, pairsToCompute[base], web3Provider);
+            await promise;
+            promises.push(promise);
+        }
 
-        for(const base of Object.keys(kinzaConfig)) {
-            results[base] = {
-                riskLevel: 0,
-                subMarkets: []
-            };
-            const baseToken = getConfTokenBySymbol(base);
-            for(const quoteConfig of kinzaConfig[base]) {
-                const quote = quoteConfig.quote;
-                const quoteToken = getConfTokenBySymbol(quote);
-                console.log(`Working on ${base}/${quote}`);
+        const allPairs = await Promise.all(promises);
 
-                const basePrice = await getPrice(baseToken.address);
-                const quotePrice = await getPrice(quoteToken.address);
-
-                const liquidityAndVolatility = getLiquidityAndVolatilityFromDashboardData(base, quote, quoteConfig.liquidationBonusBPS);
-                const liquidityInKind = liquidityAndVolatility.liquidityInKind;
-                const liquidityUsd = liquidityAndVolatility.liquidityInKind * basePrice;
-                const supplyCapInKind = quoteConfig.supplyCap;
-                const supplyCapUsd = supplyCapInKind * basePrice;
-                const borrowCapInKind = quoteConfig.borrowCap;
-                const borrowCapUsd = borrowCapInKind * quotePrice;
-                const capToUseUsd = Math.min(supplyCapUsd, borrowCapUsd);
-
-                const subMarketRiskLevel = findRiskLevelFromParameters(liquidityAndVolatility.volatility, 
-                    liquidityUsd,
-                    quoteConfig.liquidationBonusBPS / 10000,
-                    quoteConfig.ltv,
-                    capToUseUsd);
-
-                results[base].subMarkets.push({
-                    quote: quote,
-                    riskLevel: subMarketRiskLevel,
-                    LTV: quoteConfig.ltv,
-                    liquidationBonus: quoteConfig.liquidationBonusBPS/10000,
-                    supplyCapUsd: supplyCapUsd,
-                    supplyCapInKind: supplyCapInKind,
-                    borrowCapUsd: borrowCapUsd,
-                    borrowCapInKind: borrowCapInKind,
-                    volatility: liquidityAndVolatility.volatility,
-                    liquidity: liquidityInKind,
-                    basePrice: basePrice,
-                    quotePrice: quotePrice
-                });
-
-                if(results[base].riskLevel < subMarketRiskLevel) {
-                    results[base].riskLevel = subMarketRiskLevel;
-                }
+        const kinzaOverview = {};
+        for (const pair of allPairs) {
+            for (const base of Object.keys(pair)) {
+                kinzaOverview[base] = pair[base];
             }
         }
         
@@ -90,7 +54,7 @@ async function kinzaDashboardPrecomputer(fetchEveryMinutes) {
             fs.mkdirSync(`${DATA_DIR}/precomputed/kinza-dashboard/`, { recursive: true });
         }
         const summaryFilePath = path.join(DATA_DIR, 'precomputed/kinza-dashboard/kinza-summary.json');
-        const objectToWrite = JSON.stringify(results, null, 2);
+        const objectToWrite = JSON.stringify(kinzaOverview, null, 2);
         fs.writeFileSync(summaryFilePath, objectToWrite, 'utf8');
         console.log('Kinza Dashboard Summary Computer: ending');
 
@@ -117,6 +81,89 @@ async function getPrice(tokenAddress) {
     const apiUrl = `https://coins.llama.fi/prices/current/ethereum:${tokenAddress}?searchWidth=12h`;
     const priceResponse = await retry(axios.get, [apiUrl], 0, 100);
     return priceResponse.data.coins[`ethereum:${tokenAddress}`].price;
+}
+
+
+
+async function computeDataForPair(base, quotes, web3Provider) {
+    // const subMarkets = await Promise.all(quotes.map(async (quote) => await computeSubMarket(base, quote)));
+    const subMarkets = [];
+    for (let quote of quotes) {
+        const newSubMarket = await computeSubMarket(base, quote, web3Provider);
+        subMarkets.push(newSubMarket);
+    }
+  
+    let riskLevel = Math.max(...subMarkets.map((_) => _.riskLevel));
+    let data = {};
+    data[base] = {
+        riskLevel: riskLevel,
+        subMarkets: subMarkets
+    };
+    return data;
+}
+  
+async function computeSubMarket(base, quote, web3Provider) {
+    console.log(`computeSubMarket[${base}/${quote}]: starting`);
+    const baseConf = getConfTokenBySymbol(base);
+    const quoteConf = getConfTokenBySymbol(quote);
+    const baseTokenAddress = baseConf.address;
+    const quoteTokenAddress = quoteConf.address;
+    const protocolDataProviderContract = new ethers.Contract(
+        protocolDataProviderAddress,
+        protocolDataProviderABI,
+        web3Provider
+    );
+  
+    // if wBETH/USDC, baseReserveCaps is for wBETH
+    const baseReserveCaps = await retry(protocolDataProviderContract.getReserveCaps, [baseConf.address]);
+    // if wBETH/USDC, quoteReserveCaps is for USDC
+    const quoteReserveCaps = await retry(protocolDataProviderContract.getReserveCaps, [quoteConf.address]);
+    const reserveDataConfigurationBase = await retry(protocolDataProviderContract.getReserveConfigurationData, [
+        baseTokenAddress
+    ]);
+  
+    const baseTokenInfo = await axios.get(
+        'https://coins.llama.fi/prices/current/ethereum:' + baseTokenAddress + ',ethereum:' + quoteTokenAddress
+    );
+  
+    let riskLevel = 0.0;
+  
+    const liquidationBonusBps = reserveDataConfigurationBase.liquidationBonus.toNumber() - 10000;
+  
+    const baseSupplyCapUSD = baseReserveCaps.supplyCap.toNumber() * baseTokenInfo.data.coins['ethereum:' + baseTokenAddress].price;
+    const quoteBorrowCapUSD = quoteReserveCaps.borrowCap.toNumber() * baseTokenInfo.data.coins['ethereum:' + quoteTokenAddress].price;
+    const capToUseUsd = Math.min(baseSupplyCapUSD, quoteBorrowCapUSD);
+    const ltvBps = reserveDataConfigurationBase.ltv.toNumber();
+  
+    const {volatility, liquidityInKind} = getLiquidityAndVolatilityFromDashboardData(base, quote, liquidationBonusBps);
+  
+    const liquidity = liquidityInKind;
+    const liquidityUsd = liquidity * baseTokenInfo.data.coins['ethereum:' + baseTokenAddress].price;
+    const selectedVolatility = volatility;
+    riskLevel = findRiskLevelFromParameters(
+        selectedVolatility,
+        liquidityUsd,
+        liquidationBonusBps / 10000,
+        ltvBps / 10000,
+        capToUseUsd
+    );
+    const pairValue = {
+        quote: quote,
+        riskLevel: riskLevel,
+        LTV: ltvBps / 10000,
+        liquidationBonus: liquidationBonusBps / 10000,
+        supplyCapUsd: baseSupplyCapUSD,
+        supplyCapInKind: baseReserveCaps.supplyCap.toNumber(),
+        borrowCapUsd: quoteBorrowCapUSD,
+        borrowCapInKind: quoteReserveCaps.borrowCap.toNumber(),
+        volatility: selectedVolatility,
+        liquidity: liquidity,
+        basePrice: baseTokenInfo.data.coins['ethereum:' + baseTokenAddress].price,
+        quotePrice: baseTokenInfo.data.coins['ethereum:' + quoteTokenAddress].price
+    };
+  
+    console.log(`computeSubMarket[${base}/${quote}]: result:`, pairValue);
+    return pairValue;
 }
 
 // kinzaDashboardPrecomputer(60);

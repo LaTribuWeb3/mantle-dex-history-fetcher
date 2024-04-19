@@ -553,6 +553,23 @@ const watchedPairs = {
             pivots: undefined,
             exportToInternalDashboard: true
         },
+    ],
+    'wstETH': [
+        {
+            quote: 'rsETH',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'ezETH',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'pufETH',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
     ]
 };
 
