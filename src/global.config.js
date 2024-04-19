@@ -557,17 +557,17 @@ const watchedPairs = {
     'wstETH': [
         {
             quote: 'rsETH',
-            pivots: undefined,
+            pivots: ['WETH'],
             exportToInternalDashboard: true
         },
         {
             quote: 'ezETH',
-            pivots: undefined,
+            pivots: ['WETH'],
             exportToInternalDashboard: true
         },
         {
             quote: 'pufETH',
-            pivots: undefined,
+            pivots: ['WETH'],
             exportToInternalDashboard: true
         },
     ]
