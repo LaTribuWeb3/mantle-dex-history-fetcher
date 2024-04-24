@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const univ3Config = require('./uniswap.v3.config');
-const { GetContractCreationBlockNumber, getBlocknumberForTimestamp } = require('../utils/web3.utils');
+const { GetContractCreationBlockNumber, getBlocknumberForTimestamp, getCurrentBlock } = require('../utils/web3.utils');
 const { fnName, logFnDuration, sleep, roundTo } = require('../utils/utils');
 const { getConfTokenBySymbol } = require('../utils/token.utils');
 const { getPriceNormalized, getSlippages } = require('./uniswap.v3.utils');
@@ -54,7 +54,7 @@ async function UniswapV3HistoryFetcher(onlyOnce = false) {
             const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
             const multicallProvider = new providers.MulticallProvider(web3Provider);
             const univ3Factory = new Contract(univ3Config.uniswapFactoryV3Address, univ3Config.uniswapFactoryV3Abi, multicallProvider);
-            const currentBlock = await web3Provider.getBlockNumber() - 10;
+            const currentBlock = await getCurrentBlock();
 
             // this is used to only keep 380 days of data, but still need to fetch trade data since the pool initialize block
             // computing the data is CPU heavy so this avoid computing too old data that we don't use

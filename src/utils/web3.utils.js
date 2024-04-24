@@ -1,6 +1,7 @@
 const axios = require('axios');
 const dotenv = require('dotenv');
 const { retry, fnName, sleep } = require('./utils');
+const { ethers } = require('ethers');
 dotenv.config();
 
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || 'YourApiKeyToken';
@@ -16,7 +17,7 @@ let lastCallEtherscan = 0;
 async function GetContractCreationBlockNumber(web3Provider, contractAddress) {
     console.log(`${fnName()}: fetching data for contract ${contractAddress}`);
     const msToWait = 10000 - (Date.now() - lastCallEtherscan);
-    if(msToWait > 0) {
+    if (msToWait > 0) {
         console.log(`${fnName()}: Sleeping ${msToWait} before calling etherscan`);
         await sleep(msToWait);
     }
@@ -44,4 +45,10 @@ async function getBlocknumberForTimestamp(timestamp) {
     return blockNumber;
 }
 
-module.exports = { GetContractCreationBlockNumber, getBlocknumberForTimestamp };
+
+async function getCurrentBlock() {
+    const web3Provider = new ethers.providers.StaticJsonRpcProvider(process.env.RPC_URL);
+    return await web3Provider.getBlockNumber() - 10;
+}
+
+module.exports = { GetContractCreationBlockNumber, getBlocknumberForTimestamp, getCurrentBlock };

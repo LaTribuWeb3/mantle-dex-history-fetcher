@@ -1,6 +1,6 @@
 const { ethers, Contract } = require('ethers');
 const dotenv = require('dotenv');
-const { GetContractCreationBlockNumber, getBlocknumberForTimestamp } = require('../utils/web3.utils');
+const { getBlocknumberForTimestamp, getCurrentBlock } = require('../utils/web3.utils');
 const curveConfig = require('./curve.config');
 const fs = require('fs');
 const path = require('path');
@@ -45,7 +45,7 @@ async function CurveHistoryFetcher(onlyOnce = false) {
             const lastResults = {};
             const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
 
-            const currentBlock = await web3Provider.getBlockNumber() - 10;
+            const currentBlock = await getCurrentBlock();
             const poolsData = [];
             let fetchPromises = [];
             for(const fetchConfig of curveConfig.curvePairs) {
