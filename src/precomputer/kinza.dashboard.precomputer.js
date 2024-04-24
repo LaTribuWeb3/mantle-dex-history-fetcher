@@ -133,8 +133,9 @@ async function computeSubMarket(base, quote, web3Provider) {
     const baseSupplyCapUSD = baseReserveCaps.supplyCap.toNumber() * baseTokenInfo.data.coins['ethereum:' + baseTokenAddress].price;
     const quoteBorrowCapUSD = quoteReserveCaps.borrowCap.toNumber() * baseTokenInfo.data.coins['ethereum:' + quoteTokenAddress].price;
     const capToUseUsd = Math.min(baseSupplyCapUSD, quoteBorrowCapUSD);
+    const liquidationThresholdBps = reserveDataConfigurationBase.liquidationThreshold.toNumber();
     const ltvBps = reserveDataConfigurationBase.ltv.toNumber();
-  
+
     const {volatility, liquidityInKind} = getLiquidityAndVolatilityFromDashboardData(base, quote, liquidationBonusBps);
   
     const liquidity = liquidityInKind;
@@ -144,12 +145,13 @@ async function computeSubMarket(base, quote, web3Provider) {
         selectedVolatility,
         liquidityUsd,
         liquidationBonusBps / 10000,
-        ltvBps / 10000,
+        liquidationThresholdBps / 10000,
         capToUseUsd
     );
     const pairValue = {
         quote: quote,
         riskLevel: riskLevel,
+        liquidationThreshold: liquidationThresholdBps / 10000,
         LTV: ltvBps / 10000,
         liquidationBonus: liquidationBonusBps / 10000,
         supplyCapUsd: baseSupplyCapUSD,
