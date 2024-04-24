@@ -1,6 +1,7 @@
 const axios = require('axios');
 const dotenv = require('dotenv');
 const { retry, fnName, sleep } = require('./utils');
+const { ethers } = require('ethers');
 dotenv.config();
 
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || 'YourApiKeyToken';
@@ -44,4 +45,14 @@ async function getBlocknumberForTimestamp(timestamp) {
     return blockNumber;
 }
 
-module.exports = { GetContractCreationBlockNumber, getBlocknumberForTimestamp };
+let currentBlock;
+
+async function getCurrentBlock() {
+    if(currentBlock == undefined) {
+        const web3Provider = new ethers.providers.StaticJsonRpcProvider(process.env.RPC_URL);
+        currentBlock = await web3Provider.getBlockNumber() - 10;
+    }
+    return currentBlock;
+}
+
+module.exports = { GetContractCreationBlockNumber, getBlocknumberForTimestamp, getCurrentBlock };

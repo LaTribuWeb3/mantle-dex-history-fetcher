@@ -5,7 +5,7 @@ dotenv.config();
 
 const univ2Config = require('./uniswap.v2.config');
 const { tokens } = require('../global.config');
-const { GetContractCreationBlockNumber, getBlocknumberForTimestamp } = require('../utils/web3.utils');
+const { GetContractCreationBlockNumber, getCurrentBlock } = require('../utils/web3.utils');
 const { sleep, fnName, roundTo, readLastLine, retry } = require('../utils/utils');
 const { RecordMonitoring } = require('../utils/monitoring');
 const { generateUnifiedFileUniv2 } = require('./uniswap.v2.unified.generator');
@@ -42,7 +42,8 @@ async function UniswapV2HistoryFetcher(onlyOnce = false) {
 
             console.log(`${fnName()}: starting`);
             const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
-            const currentBlock = await web3Provider.getBlockNumber() - 10;
+            const currentBlock = await getCurrentBlock();
+            
             const stalePools = [];
             const poolsData = [];
             for(const pairKey of univ2Config.uniswapV2Pairs) {

@@ -1,6 +1,6 @@
 const { ethers, Contract } = require('ethers');
 const dotenv = require('dotenv');
-const { GetContractCreationBlockNumber } = require('../utils/web3.utils');
+const { GetContractCreationBlockNumber, getCurrentBlock } = require('../utils/web3.utils');
 const curveConfig = require('./curve.config');
 const fs = require('fs');
 const path = require('path');
@@ -36,7 +36,7 @@ async function CurvePriceHistoryFetcher(onlyOnce = false) {
 
             const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
 
-            const currentBlock = await web3Provider.getBlockNumber() - 10;
+            const currentBlock = await getCurrentBlock();
             for(const fetchConfig of curveConfig.curvePricePairs) {
                 await FetchPriceHistory(fetchConfig, currentBlock, web3Provider);
             }

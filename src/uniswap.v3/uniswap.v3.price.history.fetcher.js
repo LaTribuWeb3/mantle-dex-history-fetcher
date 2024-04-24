@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const univ3Config = require('./uniswap.v3.config');
-const { GetContractCreationBlockNumber } = require('../utils/web3.utils');
+const { GetContractCreationBlockNumber, getCurrentBlock } = require('../utils/web3.utils');
 const { fnName, sleep, roundTo, readLastLine } = require('../utils/utils');
 const { getConfTokenBySymbol, normalize } = require('../utils/token.utils');
 const { RecordMonitoring } = require('../utils/monitoring');
@@ -51,7 +51,7 @@ async function UniswapV3PriceHistoryFetcher(onlyOnce = false) {
             const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
             const multicallProvider = new providers.MulticallProvider(web3Provider);
             const univ3Factory = new Contract(univ3Config.uniswapFactoryV3Address, univ3Config.uniswapFactoryV3Abi, multicallProvider);
-            const currentBlock = await web3Provider.getBlockNumber() - 10;
+            const currentBlock = await getCurrentBlock();
 
             console.log(`${fnName()}: getting pools to fetch`);
             const poolsToFetch = await getAllPoolsToFetch(univ3Factory);

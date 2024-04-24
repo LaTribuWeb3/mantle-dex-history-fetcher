@@ -1,6 +1,5 @@
 const { RecordMonitoring } = require('../utils/monitoring');
 const { fnName, roundTo, sleep, readLastLine } = require('../utils/utils');
-const { ethers } = require('ethers');
 
 const fs = require('fs');
 const path = require('path');
@@ -9,6 +8,7 @@ const { DATA_DIR, PLATFORMS, MEDIAN_OVER_BLOCK } = require('../utils/constants')
 const { getPricesAtBlockForIntervalViaPivots } = require('../data.interface/internal/data.interface.utils');
 const { medianPricesOverBlocks } = require('../utils/volatility');
 const { watchedPairs } = require('../global.config');
+const { getCurrentBlock } = require('../utils/web3.utils');
 dotenv.config();
 
 const runEverySec = 60 * 60;
@@ -49,8 +49,7 @@ async function PrecomputeMedianPrices(onlyOnce = false) {
             }
 
             console.log(`${fnName()}: starting`);
-            const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
-            const currentBlock = await web3Provider.getBlockNumber() - 10;
+            const currentBlock = await getCurrentBlock();
 
             for(const platform of platformsToCompute) {
                 const platformDirectory = path.join(medianDirectory, platform);

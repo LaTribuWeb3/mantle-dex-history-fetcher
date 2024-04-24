@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const sushiv2Config = require('./sushiswap.v2.config');
-const { GetContractCreationBlockNumber, getBlocknumberForTimestamp } = require('../utils/web3.utils');
+const { GetContractCreationBlockNumber, getCurrentBlock } = require('../utils/web3.utils');
 const { sleep, fnName, roundTo, readLastLine } = require('../utils/utils');
 const { RecordMonitoring } = require('../utils/monitoring');
 const { DATA_DIR } = require('../utils/constants');
@@ -48,7 +48,7 @@ async function SushiswapV2HistoryFetcher(onlyOnce = false) {
 
             console.log(`${fnName()}: starting`);
             const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
-            const currentBlock = await web3Provider.getBlockNumber() - 10;
+            const currentBlock = await getCurrentBlock();
             const stalePools = [];
             const poolsData = [];
             for(const pairToFetch of sushiv2Config.pairsToFetch) {
