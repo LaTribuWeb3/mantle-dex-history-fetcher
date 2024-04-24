@@ -17,7 +17,7 @@ let lastCallEtherscan = 0;
 async function GetContractCreationBlockNumber(web3Provider, contractAddress) {
     console.log(`${fnName()}: fetching data for contract ${contractAddress}`);
     const msToWait = 10000 - (Date.now() - lastCallEtherscan);
-    if(msToWait > 0) {
+    if (msToWait > 0) {
         console.log(`${fnName()}: Sleeping ${msToWait} before calling etherscan`);
         await sleep(msToWait);
     }
@@ -45,14 +45,10 @@ async function getBlocknumberForTimestamp(timestamp) {
     return blockNumber;
 }
 
-let currentBlock;
 
 async function getCurrentBlock() {
-    if(currentBlock == undefined) {
-        const web3Provider = new ethers.providers.StaticJsonRpcProvider(process.env.RPC_URL);
-        currentBlock = await web3Provider.getBlockNumber() - 10;
-    }
-    return currentBlock;
+    const web3Provider = new ethers.providers.StaticJsonRpcProvider(process.env.RPC_URL);
+    return await web3Provider.getBlockNumber() - 10;
 }
 
 module.exports = { GetContractCreationBlockNumber, getBlocknumberForTimestamp, getCurrentBlock };
