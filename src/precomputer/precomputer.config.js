@@ -58,6 +58,38 @@ const riskDataConfig = [
         base: 'USDT',
         quote: 'USDC'
     },
+    {
+        base: 'WETH',
+        quote: 'wstETH'
+    },
+    {
+        base: 'WETH',
+        quote: 'sDAI'
+    },
+    {
+        base: 'WETH',
+        quote: 'rETH'
+    },
+    {
+        base: 'WETH',
+        quote: 'WBTC'
+    },
+    {
+        base: 'wstETH',
+        quote: 'WETH'
+    },
+    {
+        base: 'sDAI',
+        quote: 'WETH'
+    },
+    {
+        base: 'rETH',
+        quote: 'WETH'
+    },
+    {
+        base: 'WBTC',
+        quote: 'WETH'
+    },
 ];
 
 const riskDataTestNetConfig = {
