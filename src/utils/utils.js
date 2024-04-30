@@ -189,8 +189,12 @@ function arrayAverage(array) {
     return array.reduce((a, b) => a + b, 0) / array.length;
 }
 
-
-
+/**
+ * getAllLiquidityAndVolatilityFromDashboardData
+ * @param {string} base 
+ * @param {string} quote 
+ * @returns {{volatility: number, liquidityInKind: number}}
+ */
 function getLiquidityAndVolatilityFromDashboardData(base, quote, liquidationBonusBPS) {
     const filePath = path.join(DATA_DIR, 'precomputed', 'dashboard', `${base}-${quote}-all.json`);
     const dashboardData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -202,4 +206,21 @@ function getLiquidityAndVolatilityFromDashboardData(base, quote, liquidationBonu
     return {volatility: volatilityData, liquidityInKind: slippageMap[liquidationBonusBPS].base ? slippageMap[liquidationBonusBPS].base : slippageMap[liquidationBonusBPS]};
 }
 
-module.exports = { retry, sleep, fnName, roundTo, getDay, logFnDuration, logFnDurationWithLabel, readLastLine, arrayAverage, retrySync, getLiquidityAndVolatilityFromDashboardData };
+/**
+ * getAllLiquidityAndVolatilityFromDashboardData
+ * @param {string} base 
+ * @param {string} quote 
+ * @returns {{volatility: number, slippageMap: {[slippageBps: number]: number}}}
+ */
+function getAllLiquidityAndVolatilityFromDashboardData(base, quote) {
+    const filePath = path.join(DATA_DIR, 'precomputed', 'dashboard', `${base}-${quote}-all.json`);
+    const dashboardData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const dataKeys = Object.keys(dashboardData.liquidity);
+    const latestKey = dataKeys[dataKeys.length - 1];
+    const liquidityData = dashboardData.liquidity[latestKey];
+    const volatilityData = liquidityData.volatility;
+    const slippageMap = liquidityData.avgSlippageMap;
+    return {volatility: volatilityData, slippageMap: slippageMap};
+}
+
+module.exports = { retry, sleep, fnName, roundTo, getDay, logFnDuration, logFnDurationWithLabel, readLastLine, arrayAverage, retrySync, getLiquidityAndVolatilityFromDashboardData, getAllLiquidityAndVolatilityFromDashboardData };

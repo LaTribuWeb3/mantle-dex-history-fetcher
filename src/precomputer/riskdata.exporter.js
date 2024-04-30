@@ -6,23 +6,19 @@ const { ethers } = require('ethers');
 
 // Local utility imports
 const { RecordMonitoring } = require('../utils/monitoring');
-const { fnName, roundTo, sleep } = require('../utils/utils');
+const { fnName, roundTo, sleep, getAllLiquidityAndVolatilityFromDashboardData } = require('../utils/utils');
 const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
 const { uploadJsonFile } = require('../utils/githubPusher');
 const { MORPHO_RISK_PARAMETERS_ARRAY } = require('../utils/constants');
 const { signData, generateTypedData } = require('../../scripts/signTypedData');
-const { getRollingVolatility, getLiquidityAverageV2 } = require('../data.interface/data.interface');
 const { getConfTokenBySymbol } = require('../utils/token.utils');
-const { getBlocknumberForTimestamp } = require('../utils/web3.utils');
 const { getStagingConfTokenBySymbol, riskDataTestNetConfig, riskDataConfig } = require('./precomputer.config');
 const { default: axios } = require('axios');
 
 // Constants
 const RUN_EVERY_MINUTES = 6 * 60; // 6 hours in minutes
 const MONITORING_NAME = 'Risk Data Exporter';
-const IS_STAGING = process.env.STAGING_ENV && process.env.STAGING_ENV.toLowerCase() === 'true';
-const RPC_URL = process.env.RPC_URL;
-const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
+const IS_STAGING = false; //process.env.STAGING_ENV && process.env.STAGING_ENV.toLowerCase() === 'true';
 
 async function exportRiskData() {
     // eslint-disable-next-line no-constant-condition
@@ -82,11 +78,9 @@ async function processAndUploadPair(pair) {
     const quote = IS_STAGING ? getStagingConfTokenBySymbol(pair.quote) : getConfTokenBySymbol(pair.quote);
 
     // fetch liquidity across all dexes
-    const averagedLiquidity = await fetchLiquidity(base, quote);
-    // fetch volatility accros all dexes
-    const volatilityData = await getRollingVolatility('all', base.symbol, quote.symbol, web3Provider);
+    const dashboardData = getAllLiquidityAndVolatilityFromDashboardData(base.symbol, quote.symbol);
 
-    const results = await generateAndSignRiskData(averagedLiquidity, volatilityData.latest.current, base, quote, IS_STAGING);
+    const results = await generateAndSignRiskData(dashboardData.slippageMap, dashboardData.volatility, base, quote, IS_STAGING);
     const toUpload = JSON.stringify(results);
     const fileName = IS_STAGING
         ? `${riskDataTestNetConfig[pair.base].substitute}_${riskDataTestNetConfig[pair.quote].substitute}`
@@ -114,61 +108,6 @@ async function handleError(error) {
     });
     console.log('sleeping for 10 minutes');
     await sleep(10 * 60 * 1000);
-}
-
-
-
-/**
- * Calculates the average base slippage for each slippage point across multiple platforms.
- * 
- * @param {{{[blocknumber: number]: {price: number, slippageMap: {[slippageBps: number]: {base: number, quote: number}}}}}} allPlatformsLiquidity - Object with liquidity data from various platforms.
- *                                         Each key represents a block, and its value is an object
- *                                         containing a 'slippageMap' with slippage points and their
- *                                         respective base slippage data.
- * @returns {{[slippageKey: number]: number}} Averages of base slippage for each slippage point. Keys are slippage points
- *                   (parsed as integers), and values are the average base slippage for those points.
- */
-function calculateSlippageBaseAverages(allPlatformsLiquidity) {
-    const totals = {};
-
-    for (const blockData of Object.values(allPlatformsLiquidity)) {
-        for (const [slippageKey, slippageData] of Object.entries(blockData.slippageMap)) {
-            const key = parseInt(slippageKey, 10);
-
-            // Initialize key if not present
-            if (!totals[key]) {
-                totals[key] = { sum: 0, count: 0 };
-            }
-
-            // Sum and count for each slippage data point
-            totals[key].sum += slippageData.base;
-            totals[key].count++;
-        }
-    }
-
-    // Compute and return averages
-    return Object.keys(totals).reduce((averages, key) => {
-        averages[key] = totals[key].count > 0 ? totals[key].sum / totals[key].count : 0;
-        return averages;
-    }, {});
-}
-
-/**
- * 
- * @param {{symbol: string, decimals: number, address: string, dustAmount: number}} base 
- * @param {{symbol: string, decimals: number, address: string, dustAmount: number}} quote 
- * @returns 
- */
-async function fetchLiquidity(base, quote) {
-    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-    const startBlock = await getBlocknumberForTimestamp(Math.round(thirtyDaysAgo / 1000));
-    const currentBlock = (await web3Provider.getBlockNumber()) - 100;
-
-    console.log(`Precomputing for pair ${base.symbol}/${quote.symbol}`);
-
-    const avgLiquidity = await getLiquidityAverageV2('all', base.symbol, quote.symbol, startBlock, currentBlock);
-    
-    return avgLiquidity.slippageMap;
 }
 
 /**
