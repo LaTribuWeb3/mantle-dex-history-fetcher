@@ -18,7 +18,7 @@ const { default: axios } = require('axios');
 // Constants
 const RUN_EVERY_MINUTES = 6 * 60; // 6 hours in minutes
 const MONITORING_NAME = 'Risk Data Exporter';
-const IS_STAGING = false; //process.env.STAGING_ENV && process.env.STAGING_ENV.toLowerCase() === 'true';
+const IS_STAGING = process.env.STAGING_ENV && process.env.STAGING_ENV.toLowerCase() === 'true';
 
 async function exportRiskData() {
     // eslint-disable-next-line no-constant-condition
