@@ -22,10 +22,11 @@ async function signData(typedData) {
  * @param {{symbol: string, decimals: number, address: string, dustAmount: number}} quoteTokenConf 
  * @param {number} liquidity 
  * @param {number} volatility 
+ * @param {number} liquidationBonusBps 
  * @param {boolean} isStaging 
  * @returns typed data
  */
-function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility, isStaging) {
+function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility, liquidationBonusBps, isStaging) {
     // Convert values to 18 decimals and create typed data structure
     const volatility18Decimals = new BigNumber(volatility).times(BN_1e18).toFixed(0);
     const pythiaAddress = process.env.PYTHIA_ADDRESS;
@@ -33,6 +34,7 @@ function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility,
         throw new Error('No pythia address in env config');
     }
     const liquidityAdjustedToDecimalsFactor = new BigNumber(liquidity).times(new BigNumber(10).pow(quoteTokenConf.decimals)).toFixed(0);
+    const liquidationBonus18Decimals = new BigNumber(liquidationBonusBps).div(10000).times(BN_1e18).toFixed(0);
 
     return {
         types: {
@@ -41,6 +43,7 @@ function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility,
                 { name: 'debtAsset', type: 'address' },
                 { name: 'liquidity', type: 'uint256' },
                 { name: 'volatility', type: 'uint256' },
+                { name: 'liquidationBonus', type: 'uint256' },
                 { name: 'lastUpdate', type: 'uint256' },
                 { name: 'chainId', type: 'uint256' },
             ],
@@ -56,7 +59,8 @@ function generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility,
             collateralAsset: baseTokenConf.address,
             debtAsset: quoteTokenConf.address,
             liquidity: String(liquidityAdjustedToDecimalsFactor), // cast just for typing
-            volatility: String(volatility18Decimals), // cast just for typing
+            volatility: String(volatility18Decimals), // cast just for typing,
+            liquidationBonus: String(liquidationBonus18Decimals), // cast just for typing,
             lastUpdate: Math.round(Date.now() / 1000),
             chainId: isStaging ? 5 : 1,
         },

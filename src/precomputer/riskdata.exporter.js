@@ -14,6 +14,7 @@ const { signData, generateTypedData } = require('../../scripts/signTypedData');
 const { getConfTokenBySymbol } = require('../utils/token.utils');
 const { getStagingConfTokenBySymbol, riskDataTestNetConfig, riskDataConfig } = require('./precomputer.config');
 const { default: axios } = require('axios');
+const { getDefaultSlippageMap, getDefaultSlippageMapSimple } = require('../data.interface/internal/data.interface.utils');
 
 // Constants
 const RUN_EVERY_MINUTES = 6 * 60; // 6 hours in minutes
@@ -86,6 +87,20 @@ async function processAndUploadPair(pair) {
         ? `${riskDataTestNetConfig[pair.base].substitute}_${riskDataTestNetConfig[pair.quote].substitute}`
         : `${pair.base}_${pair.quote}`;
     await uploadJsonFile(toUpload, fileName, 'LaTribuWeb3', 'risk-data-repo');
+
+    
+    // redo signing but in quote
+    // meaning that for wstETH/USDC, we will upload the wstETH liquidity but in USDC (multiplying by price of wstETH in USDC)
+    const inQuoteSlippageMap = getDefaultSlippageMapSimple();
+    for(const slippageBps of Object.keys(dashboardData.slippageMap)) {
+        inQuoteSlippageMap[slippageBps] = dashboardData.slippageMap[slippageBps] * dashboardData.price;
+    }
+    const resultsInQuote = await generateAndSignRiskData(inQuoteSlippageMap, dashboardData.volatility, base, quote, IS_STAGING);
+    const toUploadInquote = JSON.stringify(resultsInQuote);
+    const fileNameInQuote = IS_STAGING
+        ? `${riskDataTestNetConfig[pair.base].substitute}_${riskDataTestNetConfig[pair.quote].substitute}`
+        : `${pair.base}_${pair.quote}_in_quote`;
+    await uploadJsonFile(toUploadInquote, fileNameInQuote, 'LaTribuWeb3', 'risk-data-repo');
 }
 
 // Function to sleep for the remaining time of the cycle
@@ -127,7 +142,7 @@ async function generateAndSignRiskData(averagedLiquidity, volatilityValue, baseT
         const volatility = volatilityValue;
 
         // Generate typed data structure for signing
-        const typedData = generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility, isStaging);
+        const typedData = generateTypedData(baseTokenConf, quoteTokenConf, liquidity, volatility, parameter.bonus, isStaging);
         const signature = await signData(typedData);
 
         const splitSign = ethers.utils.splitSignature(signature);

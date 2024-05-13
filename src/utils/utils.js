@@ -220,7 +220,7 @@ function getAllLiquidityAndVolatilityFromDashboardData(base, quote) {
     const liquidityData = dashboardData.liquidity[latestKey];
     const volatilityData = liquidityData.volatility;
     const slippageMap = liquidityData.avgSlippageMap;
-    return {volatility: volatilityData, slippageMap: slippageMap};
+    return {volatility: volatilityData, slippageMap: slippageMap, price: liquidityData.priceMedian };
 }
 
 module.exports = { retry, sleep, fnName, roundTo, getDay, logFnDuration, logFnDurationWithLabel, readLastLine, arrayAverage, retrySync, getLiquidityAndVolatilityFromDashboardData, getAllLiquidityAndVolatilityFromDashboardData };
