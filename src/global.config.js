@@ -6,7 +6,7 @@ const tokens = {
     },
     WETH: {
         decimals: 18,
-        address: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+        address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
         dustAmount: 0.0001
     },
     USDC: {
@@ -196,7 +196,7 @@ const tokens = {
     },
     wstETH: {
         decimals: 18,
-        address: '0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0',
+        address: '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0',
         dustAmount: 0.0001
     },
     HarryPotterObamaSonic10Inu: {
