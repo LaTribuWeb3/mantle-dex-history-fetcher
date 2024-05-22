@@ -536,6 +536,11 @@ const watchedPairs = {
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
+        {
+            quote: 'rETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
     ],
     'USDT': [
         {
@@ -553,6 +558,11 @@ const watchedPairs = {
             pivots: undefined,
             exportToInternalDashboard: true
         },
+        {
+            quote: 'rETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
     ],
     'wstETH': [
         {
@@ -567,6 +577,23 @@ const watchedPairs = {
         },
         {
             quote: 'pufETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'DAI',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'rETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
+    ],
+    'DAI': [
+        {
+            quote: 'rETH',
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
