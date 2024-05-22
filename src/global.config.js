@@ -381,6 +381,11 @@ const watchedPairs = {
             exportToInternalDashboard: true
         },
         {
+            quote: 'WEETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
+        {
             quote: 'MKR',
             pivots: ['WETH'],
             exportToInternalDashboard: false
@@ -506,7 +511,7 @@ const watchedPairs = {
         },
         {
             quote: 'WEETH',
-            pivots: undefined,
+            pivots: ['WETH'],
             exportToInternalDashboard: true
         },
     ],
@@ -558,7 +563,7 @@ const watchedPairs = {
         },
         {
             quote: 'WEETH',
-            pivots: undefined,
+            pivots: ['WETH'],
             exportToInternalDashboard: true
         },
     ],
@@ -585,7 +590,7 @@ const watchedPairs = {
         },
         {
             quote: 'WEETH',
-            pivots: undefined,
+            pivots: ['WETH'],
             exportToInternalDashboard: true
         },
     ],
@@ -629,7 +634,7 @@ const watchedPairs = {
         },
         {
             quote: 'WEETH',
-            pivots: undefined,
+            pivots: ['WETH'],
             exportToInternalDashboard: true
         },
     ],
