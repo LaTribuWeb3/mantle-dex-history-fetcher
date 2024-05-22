@@ -9,6 +9,11 @@ const tokens = {
         address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
         dustAmount: 0.0001
     },
+    WEETH: {
+        decimals: 18,
+        address: '0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee',
+        dustAmount: 0.0001
+    },
     USDC: {
         decimals: 6,
         address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
@@ -264,6 +269,11 @@ const watchedPairs = {
             exportToInternalDashboard: true
         },
         {
+            quote: 'WEETH',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
+        {
             quote: 'wstETH',
             pivots: undefined,
             exportToInternalDashboard: true
@@ -367,6 +377,11 @@ const watchedPairs = {
     'USDC': [
         {
             quote: 'rETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'WEETH',
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
@@ -494,6 +509,11 @@ const watchedPairs = {
             pivots: ['WETH'],
             exportToInternalDashboard: false
         },
+        {
+            quote: 'WEETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
     ],
     'WBTC': [
         {
@@ -541,6 +561,11 @@ const watchedPairs = {
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
+        {
+            quote: 'WEETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
     ],
     'USDT': [
         {
@@ -560,6 +585,11 @@ const watchedPairs = {
         },
         {
             quote: 'rETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'WEETH',
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
@@ -590,10 +620,27 @@ const watchedPairs = {
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
+        {
+            quote: 'WEETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
     ],
     'DAI': [
         {
             quote: 'rETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'WEETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
+    ],
+    'rETH': [
+        {
+            quote: 'WEETH',
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
