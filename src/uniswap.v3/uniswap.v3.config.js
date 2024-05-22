@@ -186,6 +186,10 @@ const pairsToFetch = [
   {
     "token0": "rsETH",
     "token1": "WETH"
+  },
+  {
+    "token0": "WETH",
+    "token1": "WEETH"
   }
 ]
 
