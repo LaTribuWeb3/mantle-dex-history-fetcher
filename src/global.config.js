@@ -644,6 +644,11 @@ const watchedPairs = {
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
+        {
+            quote: 'rsETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        }
     ]
 };
 
