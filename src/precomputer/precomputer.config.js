@@ -75,12 +75,36 @@ const riskDataConfig = [
         quote: 'WBTC'
     },
     {
+        base: 'WETH',
+        quote: 'USDT'
+    },
+    {
+        base: 'WETH',
+        quote: 'USDC'
+    },
+    {
         base: 'wstETH',
         quote: 'WETH'
     },
     {
+        base: 'wstETH',
+        quote: 'USDT'
+    },
+    {
+        base: 'wstETH',
+        quote: 'USDC'
+    },
+    {
         base: 'sDAI',
         quote: 'WETH'
+    },
+    {
+        base: 'sDAI',
+        quote: 'USDT'
+    },
+    {
+        base: 'sDAI',
+        quote: 'USDC'
     },
     {
         base: 'rETH',
@@ -89,6 +113,14 @@ const riskDataConfig = [
     {
         base: 'WBTC',
         quote: 'WETH'
+    },
+    {
+        base: 'WBTC',
+        quote: 'USDT'
+    },
+    {
+        base: 'WBTC',
+        quote: 'USDC'
     },
 ];
 
