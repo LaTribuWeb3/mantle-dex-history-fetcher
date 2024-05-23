@@ -86,6 +86,7 @@ async function processAndUploadPair(pair) {
     const fileName = IS_STAGING
         ? `${riskDataTestNetConfig[pair.base].substitute}_${riskDataTestNetConfig[pair.quote].substitute}`
         : `${pair.base}_${pair.quote}`;
+    await uploadJsonFile(toUpload, fileName, 'LaTribuWeb3', 'risk-data-repo');
     await uploadJsonFile(toUpload, fileName, 'Risk-DAO', 'simulation-results', 'risk-data');
     
     // redo signing but in quote
@@ -100,6 +101,7 @@ async function processAndUploadPair(pair) {
         ? `${riskDataTestNetConfig[pair.base].substitute}_${riskDataTestNetConfig[pair.quote].substitute}`
         : `${pair.base}_${pair.quote}_in_quote`;
         
+    await uploadJsonFile(toUploadInquote, fileNameInQuote, 'LaTribuWeb3', 'risk-data-repo');
     await uploadJsonFile(toUploadInquote, fileNameInQuote, 'Risk-DAO', 'simulation-results', 'risk-data');
 }
 
