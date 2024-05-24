@@ -189,7 +189,7 @@ const pairsToFetch = [
   },
   {
     "token0": "WETH",
-    "token1": "WEETH"
+    "token1": "weETH"
   }
 ]
 
