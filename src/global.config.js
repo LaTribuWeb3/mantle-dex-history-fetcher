@@ -9,7 +9,7 @@ const tokens = {
         address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
         dustAmount: 0.0001
     },
-    WEETH: {
+    weETH: {
         decimals: 18,
         address: '0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee',
         dustAmount: 0.0001
@@ -269,7 +269,7 @@ const watchedPairs = {
             exportToInternalDashboard: true
         },
         {
-            quote: 'WEETH',
+            quote: 'weETH',
             pivots: undefined,
             exportToInternalDashboard: true
         },
@@ -381,7 +381,7 @@ const watchedPairs = {
             exportToInternalDashboard: true
         },
         {
-            quote: 'WEETH',
+            quote: 'weETH',
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
@@ -510,7 +510,7 @@ const watchedPairs = {
             exportToInternalDashboard: false
         },
         {
-            quote: 'WEETH',
+            quote: 'weETH',
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
@@ -562,7 +562,7 @@ const watchedPairs = {
             exportToInternalDashboard: true
         },
         {
-            quote: 'WEETH',
+            quote: 'weETH',
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
@@ -589,7 +589,7 @@ const watchedPairs = {
             exportToInternalDashboard: true
         },
         {
-            quote: 'WEETH',
+            quote: 'weETH',
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
@@ -621,7 +621,7 @@ const watchedPairs = {
             exportToInternalDashboard: true
         },
         {
-            quote: 'WEETH',
+            quote: 'weETH',
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
@@ -633,14 +633,14 @@ const watchedPairs = {
             exportToInternalDashboard: true
         },
         {
-            quote: 'WEETH',
+            quote: 'weETH',
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
     ],
     'rETH': [
         {
-            quote: 'WEETH',
+            quote: 'weETH',
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
