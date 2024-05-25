@@ -508,12 +508,7 @@ const watchedPairs = {
             quote: 'pufETH',
             pivots: ['WETH'],
             exportToInternalDashboard: false
-        },
-        {
-            quote: 'weETH',
-            pivots: ['WETH'],
-            exportToInternalDashboard: true
-        },
+        }
     ],
     'WBTC': [
         {
@@ -657,6 +652,14 @@ const watchedPairs = {
     ]
 };
 
+const tsWatchPairs = [];
+for(const [base, quotes] of Object.entries(watchedPairs)) {
+    tsWatchPairs.push({
+        base: base,
+        quotes: quotes
+    });
+}
+// console.log(JSON.stringify(tsWatchPairs, null, 2));
 
 function GetPairToUse(from, to) {
     let actualFrom = from;
