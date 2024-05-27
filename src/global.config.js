@@ -257,7 +257,7 @@ const tokens = {
 };
 
 const specificPivotsOverride = {
-    'pufETH': ['wstETH', 'WETH', 'WBTC', 'USDT', 'USDC', 'DAI']
+    'pufETH': ['wstETH', 'WETH', 'WBTC', 'USDT', 'USDC']
 };
 
 // goes both ways
@@ -646,6 +646,11 @@ const watchedPairs = {
         },
         {
             quote: 'pufETH',
+            pivots: ['WETH'],
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'ezETH',
             pivots: ['WETH'],
             exportToInternalDashboard: true
         },
