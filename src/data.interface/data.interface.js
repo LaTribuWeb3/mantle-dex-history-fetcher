@@ -218,7 +218,7 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
         }
 
         if(liquidityData && liquidityData.unifiedData) {
-            usedPools.push(...liquidityData.usedPools);
+            directRouteLiquidity.usedPools.forEach(pool => usedPools.push(pool));
 
             for(const b of blocks) {
                 const pointTo = b;

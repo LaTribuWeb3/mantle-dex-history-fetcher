@@ -4,13 +4,13 @@ const pairsToCompute = {
     WETH: ['wstETH', 'rETH', 'USDC', 'DAI', 'WBTC', 'USDT'],
     wstETH: ['WETH', 'rETH', 'USDC', 'DAI', 'WBTC', 'USDT'],
     rsETH: ['WETH', 'wstETH', 'rETH'],
-    pufETH: ['WETH', 'wstETH'],
-    ezETH: ['WETH', 'wstETH'],
+    pufETH: ['WETH', 'wstETH', 'rETH'],
+    ezETH: ['WETH', 'wstETH', 'rETH'],
     USDT: ['WETH', 'wstETH', 'USDC', 'DAI', 'WBTC', 'rETH'],
     USDC: ['USDT', 'WETH', 'wstETH', 'DAI', 'WBTC', 'rETH'],
     DAI: ['USDT', 'USDC', 'WETH', 'wstETH', 'WBTC', 'rETH'],
     WBTC: ['USDT', 'USDC', 'DAI', 'WETH', 'wstETH', 'rETH'],
-    rETH: ['USDT', 'USDC', 'DAI', 'WBTC', 'WETH', 'wstETH'],
+    rETH: ['USDT', 'USDC', 'DAI', 'WBTC', 'WETH', 'wstETH', 'ezETH'],
     weETH: ['WETH', 'wstETH', 'rETH'],
 };
 
