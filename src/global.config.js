@@ -647,7 +647,7 @@ const watchedPairs = {
         {
             quote: 'pufETH',
             pivots: ['WETH'],
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
     ]
 };

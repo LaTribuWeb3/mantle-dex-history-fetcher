@@ -177,7 +177,7 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
     }
 
     if(directRouteLiquidity && directRouteLiquidity.unifiedData) {
-        usedPools.push(...directRouteLiquidity.usedPools);
+        Array.prototype.push.apply(usedPools, directRouteLiquidity.usedPools);
 
         for(const b of blocks) {
             const pointTo = b;
@@ -249,7 +249,6 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
                 if(!pricesPerPoint[b][pair.from]) {
                     throw new Error(`Cannot find ${pair.from}/USDC price`);
                 }
-                
                 pairDataPerPoint[b][pair.from][pair.to] = computeAverageSlippageMap(liquiditiesForPoint).slippageMap;
             }
         }
