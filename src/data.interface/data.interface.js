@@ -9,14 +9,14 @@ const { getPrices } = require('./internal/data.interface.price');
 const lp_solve = require('@3lden/lp_solve');
 const { getSlippageMapForInterval, getLiquidityAccrossDexes, getSumSlippageMapAcrossDexes, computeAverageSlippageMap } = require('./internal/data.interface.liquidity');
 const { logFnDurationWithLabel } = require('../utils/utils');
-const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA, BLOCK_PER_DAY } = require('../utils/constants');
+const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA, BLOCK_PER_DAY, MAX_SLIPPAGE } = require('../utils/constants');
 const { rollingBiggestDailyChange } = require('../utils/volatility');
 const { getUnifiedDataForInterval, getLastMedianPriceForBlock } = require('./internal/data.interface.utils');
 const { writeGLPMSpec, parseGLPMOutput } = require('../utils/glpm');
 const { GetPairToUse, newAssetsForMinVolatility, specificPivotsOverride } = require('../global.config');
 
 
-const ALL_PIVOTS = ['WETH', 'WBTC', 'USDT', 'USDC', 'DAI'];
+const ALL_PIVOTS = ['USDT', 'WETH', 'mETH', 'USDC', 'WBTC'];
 // const ALL_PIVOTS = ['DAI', 'WBTC', 'USDC'];
 
 //    _____  _   _  _______  ______  _____   ______        _____  ______     ______  _    _  _   _   _____  _______  _____  ____   _   _   _____ 
@@ -296,7 +296,7 @@ async function computeLiquidityWithSolver(pivotsToUse, fromSymbol, toSymbol, pai
         if(!directRouteLiquidity) {
             return undefined;
         } else {
-            for (let targetSlippage = step; targetSlippage <= 2000; targetSlippage += step) {
+            for (let targetSlippage = step; targetSlippage <= MAX_SLIPPAGE; targetSlippage += step) {
                 liquidity.slippageMap[targetSlippage] = directRouteLiquidity.slippageMap[targetSlippage].base;
             }
 
@@ -305,7 +305,7 @@ async function computeLiquidityWithSolver(pivotsToUse, fromSymbol, toSymbol, pai
     }
 
     const promises = [];
-    for (let targetSlippage = step; targetSlippage <= 2000; targetSlippage += step) {
+    for (let targetSlippage = step; targetSlippage <= MAX_SLIPPAGE; targetSlippage += step) {
         // call the linear programming solver
         const solverParameters = {
             assets: pivotsToUse.concat([fromSymbol, toSymbol]),
