@@ -18,6 +18,15 @@ const port = process.env.API_PORT || 3000;
 const cache = {};
 const cacheDuration = 30 * 60 * 1000; // 30 min cache duration
 
+app.get('/api/ping', async (req, res, next) => {
+    try {
+        res.json({'msg': `YOU HAVE REACHED THE API ${Date.now()}`});
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+        next();
+    }
+});
+
 app.get('/api/dashboard/kinza-overview', async (req, res, next) => {
     try {
         const ov = getKinzaOverview();

@@ -1,6 +1,8 @@
 
 const BigNumber = require('bignumber.js');
 
+
+const MAX_SLIPPAGE = 2000;
 /**
  * Where all the files are saved
  */
@@ -9,7 +11,7 @@ const DATA_DIR = process.cwd() + '/data';
 /**
  * List of platforms (dexes) that are available for data querying
  */
-const PLATFORMS = ['uniswapv2', 'curve', 'uniswapv3', 'sushiswapv2', 'balancer'];
+const PLATFORMS = ['butter', 'merchantmoe', 'agnifinance'];
 
 /**
  * Base slippages we are searching for the risk oracle frontend
@@ -80,10 +82,10 @@ const MORPHO_RISK_PARAMETERS_ARRAY = [
 const DEFAULT_STEP_BLOCK = 100;
 const MEDIAN_OVER_BLOCK = 300; // amount of blocks to median the price over
 
-const BLOCK_PER_DAY = 7128;
+const BLOCK_PER_DAY = 43200;
 
 const HALF_LIFE_1Y = Math.exp(Math.log(0.5) / (365)); // 0.9962091367899786 used when computing the rolling avg biggest daily change
 const HALF_LIFE_2Y = Math.exp(Math.log(0.5) / (730)); // 0.9981027686515946 used when computing the rolling avg biggest daily change
 const LAMBDA = HALF_LIFE_2Y;
 
-module.exports = { DATA_DIR, PLATFORMS, TARGET_SLIPPAGES, SPANS, BN_1e18, smartLTVSourceMap, DEFAULT_STEP_BLOCK, BLOCK_PER_DAY, LAMBDA, MEDIAN_OVER_BLOCK, HALF_LIFE_1Y, HALF_LIFE_2Y, MORPHO_RISK_PARAMETERS_ARRAY };
+module.exports = { MAX_SLIPPAGE, DATA_DIR, PLATFORMS, TARGET_SLIPPAGES, SPANS, BN_1e18, smartLTVSourceMap, DEFAULT_STEP_BLOCK, BLOCK_PER_DAY, LAMBDA, MEDIAN_OVER_BLOCK, HALF_LIFE_1Y, HALF_LIFE_2Y, MORPHO_RISK_PARAMETERS_ARRAY };

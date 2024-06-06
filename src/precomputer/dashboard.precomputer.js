@@ -6,8 +6,8 @@ const { DATA_DIR, PLATFORMS, BLOCK_PER_DAY } = require('../utils/constants');
 const fs = require('fs');
 const path = require('path');
 const { getLiquidityAverageV2ForDataPoints, getRollingVolatilityAndPrices, getLiquidityAverageV2 } = require('../data.interface/data.interface');
-const { getDefaultSlippageMap, getDefaultSlippageMapSimple } = require('../data.interface/internal/data.interface.utils');
 const { median } = require('simple-statistics');
+const { getDefaultSlippageMap, getDefaultSlippageMapSimple } = require('../data.interface/internal/data.interface.utils');
 const { watchedPairs } = require('../global.config');
 const { WaitUntilDone, SYNC_FILENAMES } = require('../utils/sync');
 const { default: axios } = require('axios');
@@ -15,11 +15,11 @@ const { morphoDashboardSummaryComputer } = require('../clf/morpho/morphoDashboar
 const { kinzaDashboardPrecomputer } = require('./kinza.dashboard.precomputer');
 
 const RUN_EVERY_MINUTES = 12 * 60; // in minutes
-const MONITORING_NAME = 'Dashboard Precomputer';
+const MONITORING_NAME = '[MANTLE] Dashboard Precomputer';
 const RPC_URL = process.env.RPC_URL;
 const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
-const NB_DAYS = 180;
-const NB_DAYS_AVG = 30;
+const NB_DAYS = 10;
+const NB_DAYS_AVG = 1;
 const BLOCKINFO_URL = process.env.BLOCKINFO_URL;
 
 const dirPath = path.join(DATA_DIR, 'precomputed', 'dashboard');
@@ -57,6 +57,7 @@ async function PrecomputeDashboardData() {
             console.log(`Will compute data for ${pairsToCompute.length} pairs`);
 
             for(const pair of pairsToCompute) {
+                // if(pair.base != 'USDT') continue;
                 await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
                 console.log(`${fnName()}: precomputing for pair ${pair.base}/${pair.quote}`);
                 for(const platform of PLATFORMS) {
@@ -73,7 +74,7 @@ async function PrecomputeDashboardData() {
 
             mergeDailyData();
 
-            await morphoDashboardSummaryComputer(RUN_EVERY_MINUTES);
+            // await morphoDashboardSummaryComputer(RUN_EVERY_MINUTES);
             await kinzaDashboardPrecomputer(RUN_EVERY_MINUTES);
 
             const runEndDate = Math.round(Date.now() / 1000);
@@ -179,21 +180,12 @@ async function getDisplayBlocks() {
 async function getBlockTimestamps(displayBlocks) {
     const blockTimeStamps = {};
     console.log(`${fnName()}: getting all block timestamps`);
-    const blockPromises = [];
     for (const blockNumber of displayBlocks) {
-        // const blockTimestampResp = await retry(axios.get, [BLOCKINFO_URL + `/api/getblocktimestamp?blocknumber=${blockNumber}`], 0, 100);
-        // blockTimeStamps[blockNumber] = blockTimestampResp.data.timestamp;
-        blockPromises.push(retry(axios.get, [BLOCKINFO_URL + `/api/getblocktimestamp?blocknumber=${blockNumber}`], 0, 100));
-        await sleep(200);
-        // blockTimeStamps[blockNumber] = Date.now();
-    }
-
-    const blockResults = await Promise.all(blockPromises);
-    for (let i = 0; i < displayBlocks.length; i++) {
-        const blockNumber = displayBlocks[i];
-        const timestamp = blockResults[i].data.timestamp;
+        const block = await web3Provider.getBlock(blockNumber);
+        const timestamp = block.timestamp;
         blockTimeStamps[blockNumber] = timestamp;
     }
+
     return blockTimeStamps;
 }
 
@@ -219,6 +211,7 @@ function getPairsToCompute() {
 
 async function generateDashboardDataForPlatormFull(platform, displayBlocks, pair, dirPath, blockTimeStamps) {
     console.log(`generateDashboardDataFromLiquidityDataForPlatform: starting for ${platform} ${pair.base}/${pair.quote}`);
+    // const volatilityAndPrices = await getRollingVolatilityAndPrices(platform, pair.base, pair.quote, web3Provider);
     const volatilityAndPrices = await getRollingVolatilityAndPrices(platform, pair.base, pair.quote, web3Provider);
 
     let pricesAtBlock = volatilityAndPrices.prices;
@@ -332,6 +325,11 @@ async function generateDashboardDataForPlatormFull(platform, displayBlocks, pair
         fs.writeFileSync(dayFile, JSON.stringify(dayObj, null, 2));
     }
 
+}
+
+
+function fakeRollingVolatilityAndPrices(fromSymbol, toSymbol) {
+    
 }
 
 // for 2024 01 01, returns 2024-01-01

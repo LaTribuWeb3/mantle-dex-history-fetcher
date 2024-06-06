@@ -1,7 +1,7 @@
 
 const path = require('path');
 const fs = require('fs');
-const { DATA_DIR, DEFAULT_STEP_BLOCK, MEDIAN_OVER_BLOCK } = require('../../utils/constants');
+const { DATA_DIR, DEFAULT_STEP_BLOCK, MEDIAN_OVER_BLOCK, MAX_SLIPPAGE } = require('../../utils/constants');
 const { fnName, logFnDurationWithLabel } = require('../../utils/utils');
 const { GetPairToUse } = require('../../global.config');
 
@@ -590,7 +590,7 @@ function getUnifiedDataForIntervalForBalancer(fromSymbol, toSymbol, fromBlock, t
  */
 function getDefaultSlippageMap() {
     const slippageMap = {};
-    for(let i = 50; i <= 2000; i+=50) {
+    for(let i = 50; i <= MAX_SLIPPAGE; i+=50) {
         slippageMap[i] = {
             base: 0,
             quote: 0
