@@ -245,8 +245,6 @@ function GetPairToUse(from, to) {
 
 const newAssetsForMinVolatility = [];
 
-module.exports = { tokens, watchedPairs, GetPairToUse, newAssetsForMinVolatility, specificPivotsOverride };
-
 const specificPivotsOverride = {
     // 'pufETH/*': ['wstETH', 'WETH', 'WBTC', 'USDC', 'USDT', 'DAI'], // for pufETH, need to add wstETH as pivot
     // '*/pufETH': ['WETH', 'wstETH', 'WBTC', 'USDC', 'USDT', 'DAI'], // for pufETH, need to add wstETH as pivot
