@@ -84,7 +84,7 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
     }
 
     if(directRouteLiquidity && directRouteLiquidity.unifiedData) {
-        usedPools.push(...directRouteLiquidity.usedPools);
+        directRouteLiquidity.usedPools.forEach(pool => usedPools.push(pool));
         directRouteLiquidity = computeAverageSlippageMap(directRouteLiquidity.unifiedData);
     } else {
         directRouteLiquidity = undefined;
@@ -113,7 +113,7 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
         }
 
         if(liquidityData && liquidityData.unifiedData) {
-            usedPools.push(...liquidityData.usedPools);
+            liquidityData.usedPools.forEach(pool => usedPools.push(pool));
 
             liquidityData = computeAverageSlippageMap(liquidityData.unifiedData);
 
@@ -177,8 +177,8 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
     }
 
     if(directRouteLiquidity && directRouteLiquidity.unifiedData) {
-        usedPools.push(...directRouteLiquidity.usedPools);
-
+        directRouteLiquidity.usedPools.forEach(pool => usedPools.push(pool));
+        
         for(const b of blocks) {
             const pointTo = b;
             const pointFrom = pointTo - avgOverBlocks;
@@ -218,7 +218,7 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
         }
 
         if(liquidityData && liquidityData.unifiedData) {
-            usedPools.push(...liquidityData.usedPools);
+            liquidityData.usedPools.forEach(pool => usedPools.push(pool));
 
             for(const b of blocks) {
                 const pointTo = b;
@@ -249,7 +249,6 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
                 if(!pricesPerPoint[b][pair.from]) {
                     throw new Error(`Cannot find ${pair.from}/USDC price`);
                 }
-                
                 pairDataPerPoint[b][pair.from][pair.to] = computeAverageSlippageMap(liquiditiesForPoint).slippageMap;
             }
         }
@@ -368,15 +367,28 @@ async function computeLiquidityWithSolver(pivotsToUse, fromSymbol, toSymbol, pai
 function getPivotsToUse(fromSymbol, toSymbol) {
     let basePivot = ALL_PIVOTS;
 
-    let pivotsOverride = specificPivotsOverride[fromSymbol];
-    if (pivotsOverride !== undefined) {
-        basePivot = pivotsOverride;
-    }
+    const pairKey = `${fromSymbol}/${toSymbol}`;
 
-    pivotsOverride = specificPivotsOverride[toSymbol];
-
+    let pivotsOverride = specificPivotsOverride[pairKey];
     if (pivotsOverride !== undefined) {
+        console.log(`For ${fromSymbol}/${toSymbol}: using specific pivot for ${pairKey}`);
         basePivot = pivotsOverride;
+    } else {
+        const pairKey = `${fromSymbol}/*`;
+        pivotsOverride = specificPivotsOverride[pairKey];
+        if (pivotsOverride !== undefined) {
+            console.log(`For ${fromSymbol}/${toSymbol}: using specific pivot for ${pairKey}`);
+            basePivot = pivotsOverride;
+        } else {
+            const pairKey = `*/${toSymbol}`;
+            pivotsOverride = specificPivotsOverride[pairKey];
+            if (pivotsOverride !== undefined) {
+                console.log(`For ${fromSymbol}/${toSymbol}: using specific pivot for ${pairKey}`);
+                basePivot = pivotsOverride;
+            }  else {
+                console.log(`For ${fromSymbol}/${toSymbol}: using default pivots`);
+            }
+        }
     }
 
     const pivotsToUse = [];
