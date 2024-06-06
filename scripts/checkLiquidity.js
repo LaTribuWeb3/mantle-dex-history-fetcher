@@ -6,11 +6,11 @@ const { getPriceAtBlock } = require('../src/data.interface/internal/data.interfa
 const { ethers } = require('ethers');
 
 async function checkLiquidity() {
-    const web3Provider = new ethers.providers.StaticJsonRpcProvider('https://eth.llamarpc.com');
+    const web3Provider = new ethers.providers.StaticJsonRpcProvider('https://rpc.mantle.xyz');
 
     const block = await web3Provider.getBlockNumber();
-    const base = 'rETH';
-    const quote = 'pufETH';
+    const base = 'WBTC';
+    const quote = 'USDC';
     const platform = 'all';
 
     const liquidity = await getLiquidityV2(platform, base, quote, block);

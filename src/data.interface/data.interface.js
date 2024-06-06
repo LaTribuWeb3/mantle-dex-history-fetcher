@@ -16,8 +16,7 @@ const { writeGLPMSpec, parseGLPMOutput } = require('../utils/glpm');
 const { GetPairToUse, newAssetsForMinVolatility, specificPivotsOverride } = require('../global.config');
 
 
-const ALL_PIVOTS = ['USDT', 'WETH', 'mETH', 'USDC', 'WBTC'];
-// const ALL_PIVOTS = ['DAI', 'WBTC', 'USDC'];
+const ALL_PIVOTS = [ 'USDT', 'mETH', 'WETH', 'USDC', 'WBTC'];
 
 //    _____  _   _  _______  ______  _____   ______        _____  ______     ______  _    _  _   _   _____  _______  _____  ____   _   _   _____ 
 //   |_   _|| \ | ||__   __||  ____||  __ \ |  ____|/\    / ____||  ____|   |  ____|| |  | || \ | | / ____||__   __||_   _|/ __ \ | \ | | / ____|
@@ -97,6 +96,8 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
     // get all the routes liquidities
     const pairData = {};
     for(const pair of allPairs) {
+        console.log(`[${pair.from}->${pair.to}] getting liquidity for pair. Currently used pools: ${usedPools.join(', ')}`);
+
         let liquidityData = {};
         if(platform == 'all') { 
             liquidityData = getSumSlippageMapAcrossDexes(pair.from, pair.to, fromBlock, toBlock, DEFAULT_STEP_BLOCK, usedPools);
@@ -113,6 +114,7 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
         }
 
         if(liquidityData && liquidityData.unifiedData) {
+            console.log(`[${pair.from}->${pair.to}] liquidity found, used pools: ${liquidityData.usedPools.join(', ')}`);
             liquidityData.usedPools.forEach(pool => usedPools.push(pool));
 
             liquidityData = computeAverageSlippageMap(liquidityData.unifiedData);
@@ -125,10 +127,22 @@ async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, 
             }
     
             pairData[pair.from][pair.to] = liquidityData.slippageMap;
+        } else {
+            console.log(`[${pair.from}->${pair.to}] no liquidity available for pair`);
         }
     }
 
-    logFnDurationWithLabel(startDataFetch, 'data fetch duration:');
+    // const dup = {};
+    // for(const pool of usedPools) {
+    //     if(!dup[pool]) {
+    //         dup[pool] = 0;
+    //     }
+
+    //     dup[pool]++;
+    // }
+
+    // console.log(dup);
+
     const result = await computeLiquidityWithSolver(pivotsToUse, actualFrom, actualTo, pairData, prices, directRouteLiquidity, step);
     logFnDurationWithLabel(start, `p: ${platform}, [${fromSymbol}/${toSymbol}], blocks: ${(toBlock - fromBlock + 1)}`);
     return result;

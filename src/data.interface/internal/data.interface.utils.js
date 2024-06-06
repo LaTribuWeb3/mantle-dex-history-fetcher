@@ -347,7 +347,7 @@ function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, to
     const fullFilename = path.join(DATA_DIR, 'precomputed', platform, filename);
 
     if(alreadyUsedPools.includes(poolName)) {
-        // console.log(`pool ${poolName} already used, cannot reuse it`);
+        console.log(`pool ${poolName} already used, cannot reuse it`);
         return undefined;
     }
 
@@ -424,10 +424,10 @@ function getUnifiedDataForIntervalByFilename(fullFilename, fromBlock, toBlock, s
     }
 
     if(currentIndexToFill == 0) {
-        console.log(`Could not find data in file ${fullFilename} since block ${fromBlock}`);
+        // console.log(`Could not find data in file ${fullFilename} since block ${fromBlock}`);
         const latestData = extractDataFromUnifiedLine(fileContent[fileContent.length-2]);
         if(latestData.blockNumber < fromBlock) {
-            console.log(`Will use latest data at block ${latestData.blockNumber} to fill unified data`);
+            // console.log(`Will use latest data at block ${latestData.blockNumber} to fill unified data`);
             for(const blockNumber of blocksToFill) {
                 unifiedData[blockNumber] = {
                     price: latestData.price,

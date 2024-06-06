@@ -246,6 +246,7 @@ function GetPairToUse(from, to) {
 const newAssetsForMinVolatility = [];
 
 const specificPivotsOverride = {
+    'WBTC/*': [ 'mETH', 'USDT', 'WETH', 'USDC', 'WBTC'],
     // 'pufETH/*': ['wstETH', 'WETH', 'WBTC', 'USDC', 'USDT', 'DAI'], // for pufETH, need to add wstETH as pivot
     // '*/pufETH': ['WETH', 'wstETH', 'WBTC', 'USDC', 'USDT', 'DAI'], // for pufETH, need to add wstETH as pivot
     // 'DAI/*': ['USDC', 'USDT', 'DAI', 'WETH' , 'WBTC'], // for DAI, starting with stable coin boost liquidity

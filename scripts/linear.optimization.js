@@ -14,10 +14,10 @@ function setLiquidityAndPrice(liquidities, base, quote, block, platform = undefi
     // if (!Object.hasOwn(liquidities[base], quote)) liquidities[base][quote] = {};
     let liquidity = undefined;
     if (platform === undefined) {
-        liquidity = getSumSlippageMapAcrossDexes(base, quote, block, block, DEFAULT_STEP_BLOCK, []);
+        liquidity = getSumSlippageMapAcrossDexes(base, quote, block, block, DEFAULT_STEP_BLOCK, usedPools);
     } 
     else {
-        liquidity = getUnifiedDataForInterval(platform, base, quote, block, block, DEFAULT_STEP_BLOCK, []);
+        liquidity = getUnifiedDataForInterval(platform, base, quote, block, block, DEFAULT_STEP_BLOCK, usedPools);
     } 
 
     if (liquidity && liquidity.unifiedData) {
@@ -51,6 +51,7 @@ function generateSpecForBlock(block, assetsSpecification) {
     for (let intermediaryAsset of intermediaryAssets) {
         setLiquidityAndPrice(liquidities, intermediaryAsset, target, block, platform, usedPools);
     }
+
 
     for (const base of Object.keys(liquidities)) {
         for (const quote of Object.keys(liquidities[base])) {
@@ -241,12 +242,13 @@ module.exports = { generateNormalizedGraphForBlock };
 
 
 async function test() {
-    const platform = 'uniswapv3';
+    const platform = undefined; // undefined for all
     var graph = await generateNormalizedGraphForBlock(
-        19624911,
-        'RPL',
-        ['WETH', 'WBTC', 'DAI','USDC', 'USDT'],
-        'SNX',
+        64766791,
+        'WBTC',
+        ['mETH', 'USDT', 'USDC', 'WETH', 'WBTC'],
+        // [ 'WETH', 'USDT', 'mETH', 'USDC', 'WBTC'],
+        'USDY',
         platform,
         0 // routes under this percentage of the total liquidity will be ignored
     );
