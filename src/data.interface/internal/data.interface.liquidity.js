@@ -380,11 +380,12 @@ function getPivotUnifiedDataAccrossDexes(pivots, fromSymbol, toSymbol, fromBlock
     return pivotData;
 }
 
-function getSumSlippageMapAcrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, usedPools= []) {
+function getSumSlippageMapAcrossDexes(fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools= []) {
     let baseData = undefined;
 
+    const usedPools = [];
     for (const platform of PLATFORMS) {
-        const platformData = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, usedPools);
+        const platformData = getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, toBlock, stepBlock, alreadyUsedPools);
         if (platformData && platformData.unifiedData) {
             if (!baseData) {
                 baseData = getBlankUnifiedData(fromBlock, toBlock, stepBlock);
