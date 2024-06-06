@@ -11,7 +11,7 @@ const DATA_DIR = process.cwd() + '/data';
 /**
  * List of platforms (dexes) that are available for data querying
  */
-const PLATFORMS = ['butter', 'merchantmoe', 'agnifinance'];
+const PLATFORMS = ['butter', 'merchantmoe', 'agnifinance', 'fusionx', 'merchantmoeclassic'];
 
 /**
  * Base slippages we are searching for the risk oracle frontend
