@@ -7,13 +7,13 @@ const { ethers } = require('ethers');
 const fs = require('fs');
 
 async function checkVolatility() {
-    const web3Provider = new ethers.providers.StaticJsonRpcProvider('https://eth.llamarpc.com');
-    const base = 'ezETH';
+    const web3Provider = new ethers.providers.StaticJsonRpcProvider('https://rpc.mantle.xyz');
+    const base = 'WMNT';
     const quote = 'WETH';
     const platform = 'all';
 
     const volatility = await getRollingVolatility(platform, base, quote, web3Provider);
-    console.log(`${platform} ${base} ${quote} latest voaltility: `, volatility.latest);
+    console.log(`${platform} ${base} ${quote} latest volatility: `, volatility.latest);
     fs.writeFileSync('volatility.json', JSON.stringify(volatility, null, 2));
     
 }

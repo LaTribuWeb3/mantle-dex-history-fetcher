@@ -219,10 +219,6 @@ const watchedPairs = {
     ],
 };
 
-const specificPivotsOverride = {
-    'pufETH': ['wstETH', 'WETH', 'WBTC', 'USDT', 'USDC', 'DAI']
-};
-
 const tsWatchPairs = [];
 for(const [base, quotes] of Object.entries(watchedPairs)) {
     tsWatchPairs.push({
