@@ -8,8 +8,8 @@ const fs = require('fs');
 
 async function checkVolatility() {
     const web3Provider = new ethers.providers.StaticJsonRpcProvider('https://rpc.mantle.xyz');
-    const base = 'WMNT';
-    const quote = 'WETH';
+    const base = 'WBTC';
+    const quote = 'USDY';
     const platform = 'all';
 
     const volatility = await getRollingVolatility(platform, base, quote, web3Provider);

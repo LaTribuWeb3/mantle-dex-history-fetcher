@@ -1,13 +1,12 @@
 const protocolDataProviderAddress = '0xE44990a8a732605Eddc0870597d2Cf4A2637F038';
 
 const pairsToCompute = {
-    USDT: ['USDC', 'WMNT', 'mETH', 'WETH', 'USDY', 'WBTC'/*, 'USDe'*/],
+    USDT: ['USDC', 'WMNT', 'mETH', 'WETH', 'USDY'/*, 'USDe'*/],
     USDC: ['USDT', 'WMNT', 'mETH', 'WETH','WBTC',  'USDY' /*'USDe'*/],
     WETH: ['USDC', 'USDT', 'WMNT', 'mETH','WBTC'/*, 'USDe'*/, 'USDY'],
-    WMNT: ['USDC', 'USDC', 'mETH', 'WETH', 'WBTC'/*, 'USDe'*/, 'USDY'],
-    mETH: ['USDC', 'USDT', 'WMNT', 'WETH', 'WBTC'/*, 'USDe'*/, 'USDY'],
-    WBTC: ['USDC', 'USDT', 'WMNT', 'mETH', 'WETH'/*, 'USDe'*/, 'USDY'],
-    // USDe: ['USDC', 'USDT', 'WMNT', 'mETH', 'WETH', 'WBTC', 'USDY'],
+    WMNT: ['USDC', 'USDC', 'mETH', 'WETH'/*, 'USDe'*/, 'USDY'],
+    mETH: ['USDC', 'USDT', 'WMNT', 'WETH'/*, 'USDe'*/, 'USDY'],
+    // USDe: ['USDC', 'USDT', 'WMNT', 'mETH', 'WETH', 'USDY'],
     USDY: ['USDC', 'USDT', 'WMNT', 'mETH', 'WETH', /*'USDe',*/ 'WBTC'],
 };
 
