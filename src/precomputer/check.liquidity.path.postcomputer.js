@@ -156,7 +156,7 @@ async function checkLiquidity() {
         }
     }
 
-    fs.writeFileSync('../data/permutations-updated.json', JSON.stringify(newSpecificPivotsOverride, null, 2));
+    fs.writeFileSync('data/permutations-updated.json', JSON.stringify(newSpecificPivotsOverride, null, 2));
 
 }
 

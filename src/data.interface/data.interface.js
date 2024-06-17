@@ -13,10 +13,12 @@ const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA, BLOCK_PER_DAY, MAX_SLIPPAGE } = r
 const { rollingBiggestDailyChange } = require('../utils/volatility');
 const { getUnifiedDataForInterval, getLastMedianPriceForBlock } = require('./internal/data.interface.utils');
 const { writeGLPMSpec, parseGLPMOutput } = require('../utils/glpm');
-const { GetPairToUse, newAssetsForMinVolatility, specificPivotsOverride } = require('../global.config');
+const { GetPairToUse, newAssetsForMinVolatility } = require('../global.config');
+const fs = require('fs');
+const { sleep } = require('../src/utils/utils');
 
 
-const ALL_PIVOTS = [ 'USDT', 'mETH', 'WETH', 'USDC', 'WBTC'];
+const ALL_PIVOTS = [ 'USDT', 'mETH', 'WETH', 'USDC'];
 
 //    _____  _   _  _______  ______  _____   ______        _____  ______     ______  _    _  _   _   _____  _______  _____  ____   _   _   _____ 
 //   |_   _|| \ | ||__   __||  ____||  __ \ |  ____|/\    / ____||  ____|   |  ____|| |  | || \ | | / ____||__   __||_   _|/ __ \ | \ | | / ____|
@@ -378,10 +380,23 @@ async function computeLiquidityWithSolver(pivotsToUse, fromSymbol, toSymbol, pai
     return liquidity;
 }
 
+async function readPivotsFromFile() {
+    for(let i = 0; i < 10; i++) {
+        try {
+            return JSON.parse(fs.readFileSync('data/permutations.json'));
+        } catch {
+            console.warn('Couldn\'t read data/permutations.json. Retrying in 2 seconds.');
+            await sleep(2000);
+        }
+    }
+}
+
 function getPivotsToUse(fromSymbol, toSymbol) {
     let basePivot = ALL_PIVOTS;
 
     const pairKey = `${fromSymbol}/${toSymbol}`;
+
+    const specificPivotsOverride = readPivotsFromFile();
 
     let pivotsOverride = specificPivotsOverride[pairKey];
     if (pivotsOverride !== undefined) {
