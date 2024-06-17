@@ -85,8 +85,8 @@ async function checkLiquidity() {
     const platform = 'all';
 
     let newSpecificPivotsOverride = {};
-    if (fs.existsSync('../../data/permutations.json')) {
-        newSpecificPivotsOverride = JSON.parse(fs.readFileSync('../../data/permutations.json'));
+    if (fs.existsSync('data/permutations.json')) {
+        newSpecificPivotsOverride = JSON.parse(fs.readFileSync('data/permutations.json'));
     }
 
 
@@ -136,7 +136,7 @@ async function checkLiquidity() {
 
         console.log(`best permutation for ${base}/${quote}: ${bestPermutation} for value ${bestValue}`);
         newSpecificPivotsOverride[`${base}/${quote}`] = structuredClone(bestPermutation);
-        fs.writeFileSync('../../data/permutations.json', JSON.stringify(newSpecificPivotsOverride, null, 2));
+        fs.writeFileSync('data/permutations.json', JSON.stringify(newSpecificPivotsOverride, null, 2));
     }
 
     for (const [pair, pivots] of Object.entries(newSpecificPivotsOverride)) {
@@ -156,7 +156,7 @@ async function checkLiquidity() {
         }
     }
 
-    fs.writeFileSync('../../data/permutations-updated.json', JSON.stringify(newSpecificPivotsOverride, null, 2));
+    fs.writeFileSync('../data/permutations-updated.json', JSON.stringify(newSpecificPivotsOverride, null, 2));
 
 }
 
