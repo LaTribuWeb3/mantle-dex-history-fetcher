@@ -3,7 +3,7 @@ const { fnName, roundTo, sleep } = require('../utils/utils');
 const dotenv = require('dotenv');
 dotenv.config();
 const { UpdateSyncFile, SYNC_FILENAMES, WaitUntilDone } = require('../utils/sync');
-const { CheckLiquidityPathComputer } = require('../precomputer/additional.liquidity.postcomputer.js')
+const { CheckLiquidityPathComputer } = require('../precomputer/check.liquidity.path.postcomputer.js');
 
 const RUN_EVERY_MINUTES = 60;
 
@@ -16,8 +16,7 @@ async function LaunchFetchers() {
     while(true) {
         const start = Date.now();
         try {
-            await WaitUntilDone(SYNC_FILENAMES.FETCHERS_LAUNCHER);
-            UpdateSyncFile(SYNC_FILENAMES.FETCHERS_LAUNCHER, true);
+            // no wait for the lock at the start, we don't need it
             for(const fct of fetchersToStart) {
                 console.log(`Starting ${fct.name}`);
                 await fct(true); 

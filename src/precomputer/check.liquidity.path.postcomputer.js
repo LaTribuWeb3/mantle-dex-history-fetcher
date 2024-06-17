@@ -85,8 +85,8 @@ async function checkLiquidity() {
     const platform = 'all';
 
     let newSpecificPivotsOverride = {};
-    if (fs.existsSync('bestPerms.json')) {
-        newSpecificPivotsOverride = JSON.parse(fs.readFileSync('bestPerms.json'));
+    if (fs.existsSync('../../data/permutations.json')) {
+        newSpecificPivotsOverride = JSON.parse(fs.readFileSync('../../data/permutations.json'));
     }
 
 
