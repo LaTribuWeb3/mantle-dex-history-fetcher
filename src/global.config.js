@@ -87,7 +87,7 @@ const watchedPairs = {
         {
             quote: 'WBTC',
             pivots: undefined,
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'USDe',
@@ -119,7 +119,7 @@ const watchedPairs = {
         {
             quote: 'WBTC',
             pivots: undefined,
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'USDe',
@@ -146,7 +146,7 @@ const watchedPairs = {
         {
             quote: 'WBTC',
             pivots: undefined,
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'USDe',
@@ -168,7 +168,7 @@ const watchedPairs = {
         {
             quote: 'WBTC',
             pivots: undefined,
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'USDe',
@@ -185,7 +185,7 @@ const watchedPairs = {
         {
             quote: 'WBTC',
             pivots: undefined,
-            exportToInternalDashboard: true
+            exportToInternalDashboard: false
         },
         {
             quote: 'USDe',
@@ -198,18 +198,18 @@ const watchedPairs = {
             exportToInternalDashboard: true
         }
     ],
-    'WBTC': [
-        {
-            quote: 'USDe',
-            pivots: undefined,
-            exportToInternalDashboard: false
-        },
-        {
-            quote: 'USDY',
-            pivots: undefined,
-            exportToInternalDashboard: true
-        }
-    ],
+    // 'WBTC': [
+    //     {
+    //         quote: 'USDe',
+    //         pivots: undefined,
+    //         exportToInternalDashboard: false
+    //     },
+    //     {
+    //         quote: 'USDY',
+    //         pivots: undefined,
+    //         exportToInternalDashboard: true
+    //     }
+    // ],
     'USDe': [
         {
             quote: 'USDY',
@@ -245,11 +245,21 @@ function GetPairToUse(from, to) {
 
 const newAssetsForMinVolatility = [];
 
-const specificPivotsOverride = {
-    'WBTC/*': [ 'mETH', 'USDT', 'WETH', 'USDC', 'WBTC'],
-    // 'pufETH/*': ['wstETH', 'WETH', 'WBTC', 'USDC', 'USDT', 'DAI'], // for pufETH, need to add wstETH as pivot
-    // '*/pufETH': ['WETH', 'wstETH', 'WBTC', 'USDC', 'USDT', 'DAI'], // for pufETH, need to add wstETH as pivot
-    // 'DAI/*': ['USDC', 'USDT', 'DAI', 'WETH' , 'WBTC'], // for DAI, starting with stable coin boost liquidity
+const specificPivotsOverride = 
+{
+    'USDT/WMNT':['USDT','WETH','USDC','mETH'],
+    'WMNT/USDT':['USDT','WETH','mETH','USDC'],
+    'USDT/WETH':['USDT','WETH','USDC','mETH'],
+    'WMNT/USDC':['mETH','WETH','USDT','USDC'],
+    'mETH/USDC':['mETH','WETH','USDT','USDC'],
+    'WETH/USDC':['mETH','USDT','WETH','USDC'],
+    'WMNT/WETH':['mETH','USDT','WETH','USDC'],
+    'WMNT/USDY':['WETH','mETH','USDT','USDC'],
+    'USDY/WMNT':['USDC','USDT','mETH','WETH'],
+    'mETH/USDY':['mETH','WETH','USDT','USDC'],
+    'WETH/USDY':['mETH','USDT','WETH','USDC'],
+    'USDY/WETH':['USDT','WETH','USDC','mETH']   
 };
+
 
 module.exports = { tokens, watchedPairs, GetPairToUse, newAssetsForMinVolatility, specificPivotsOverride };

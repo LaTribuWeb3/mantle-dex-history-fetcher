@@ -347,7 +347,7 @@ function getUnifiedDataForInterval(platform, fromSymbol, toSymbol, fromBlock, to
     const fullFilename = path.join(DATA_DIR, 'precomputed', platform, filename);
 
     if(alreadyUsedPools.includes(poolName)) {
-        console.log(`pool ${poolName} already used, cannot reuse it`);
+        // console.log(`pool ${poolName} already used, cannot reuse it`);
         return undefined;
     }
 
