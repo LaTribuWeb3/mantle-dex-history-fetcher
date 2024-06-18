@@ -13,10 +13,12 @@ const { PLATFORMS, DEFAULT_STEP_BLOCK, LAMBDA, BLOCK_PER_DAY, MAX_SLIPPAGE } = r
 const { rollingBiggestDailyChange } = require('../utils/volatility');
 const { getUnifiedDataForInterval, getLastMedianPriceForBlock } = require('./internal/data.interface.utils');
 const { writeGLPMSpec, parseGLPMOutput } = require('../utils/glpm');
-const { GetPairToUse, newAssetsForMinVolatility, specificPivotsOverride } = require('../global.config');
+const { GetPairToUse, newAssetsForMinVolatility } = require('../global.config');
+const fs = require('fs');
+const { sleep } = require('../utils/utils');
 
 
-const ALL_PIVOTS = [ 'USDT', 'mETH', 'WETH', 'USDC', 'WBTC'];
+const ALL_PIVOTS = [ 'USDT', 'mETH', 'WETH', 'USDC'];
 
 //    _____  _   _  _______  ______  _____   ______        _____  ______     ______  _    _  _   _   _____  _______  _____  ____   _   _   _____ 
 //   |_   _|| \ | ||__   __||  ____||  __ \ |  ____|/\    / ____||  ____|   |  ____|| |  | || \ | | / ____||__   __||_   _|/ __ \ | \ | | / ____|
@@ -48,8 +50,8 @@ function getLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJu
     return liquidity;
 }
 
-async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
-    return getLiquidityAverageV2(platform, fromSymbol, toSymbol, atBlock, atBlock);
+async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock, step = 50, specificPivots = []) {
+    return getLiquidityAverageV2(platform, fromSymbol, toSymbol, atBlock, atBlock, step, specificPivots);
 }
 
 /**
@@ -61,12 +63,18 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
  * @param {*} toBlock 
  * @returns {Promise<{slippageMap: {[slippageBps: number]: number}}>}
  */
-async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, toBlock, step = 50) {
+async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, toBlock, step = 50, specificPivots = []) {
     const startDataFetch = Date.now();
     const start = Date.now();
     const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
+
+    // Remove base quote
+    if(specificPivots.length > 0) {
+        specificPivots = specificPivots.filter(e => e != fromSymbol && e != toSymbol); // remove actual from and actual to
+    }
     
-    const pivotsToUse = getPivotsToUse(actualFrom, actualTo);
+    const pivotsToUse = specificPivots.length === 0 ? getPivotsToUse(actualFrom, actualTo) : specificPivots;
+    console.log('Pivot to use : ' + pivotsToUse);
 
     // generate list of routes
     const allPairs = getAllPairs(actualFrom, actualTo, pivotsToUse);
@@ -378,10 +386,23 @@ async function computeLiquidityWithSolver(pivotsToUse, fromSymbol, toSymbol, pai
     return liquidity;
 }
 
+async function readPivotsFromFile() {
+    for(let i = 0; i < 10; i++) {
+        try {
+            return JSON.parse(fs.readFileSync('data/permutations.json'));
+        } catch {
+            console.warn('Couldn\'t read data/permutations.json. Retrying in 2 seconds.');
+            await sleep(2000);
+        }
+    }
+}
+
 function getPivotsToUse(fromSymbol, toSymbol) {
     let basePivot = ALL_PIVOTS;
 
     const pairKey = `${fromSymbol}/${toSymbol}`;
+
+    const specificPivotsOverride = readPivotsFromFile();
 
     let pivotsOverride = specificPivotsOverride[pairKey];
     if (pivotsOverride !== undefined) {
@@ -547,4 +568,4 @@ async function test() {
 
 // test();
 
-module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll, getLiquidityAverageV2, getLiquidityAverageV2ForDataPoints, getRollingVolatilityAndPrices};
+module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll, getLiquidityAverageV2, getLiquidityAverageV2ForDataPoints, getRollingVolatilityAndPrices, ALL_PIVOTS };
