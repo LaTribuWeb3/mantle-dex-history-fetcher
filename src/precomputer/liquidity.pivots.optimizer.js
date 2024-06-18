@@ -6,6 +6,7 @@ const dotenv = require('dotenv');
 const { ethers } = require('ethers');
 const { watchedPairs, specificPivotsOverride } = require('../global.config');
 const { getLiquidityV2 } = require('../data.interface/data.interface');
+const path = require('path');
 
 
 dotenv.config();
@@ -85,10 +86,6 @@ async function checkLiquidity() {
     const platform = 'all';
 
     let newSpecificPivotsOverride = {};
-    if (fs.existsSync('data/permutations.json')) {
-        newSpecificPivotsOverride = JSON.parse(fs.readFileSync('data/permutations.json'));
-    }
-
 
     const pairsToFetch = [];
     for (const base of Object.keys(watchedPairs)) {
@@ -136,7 +133,6 @@ async function checkLiquidity() {
 
         console.log(`best permutation for ${base}/${quote}: ${bestPermutation} for value ${bestValue}`);
         newSpecificPivotsOverride[`${base}/${quote}`] = structuredClone(bestPermutation);
-        fs.writeFileSync('data/permutations.json', JSON.stringify(newSpecificPivotsOverride, null, 2));
     }
 
     for (const [pair, pivots] of Object.entries(newSpecificPivotsOverride)) {
@@ -156,7 +152,7 @@ async function checkLiquidity() {
         }
     }
 
-    fs.writeFileSync('data/permutations-updated.json', JSON.stringify(newSpecificPivotsOverride, null, 2));
+    fs.writeFileSync(path.join(DATA_DIR, 'permutations.json', JSON.stringify(newSpecificPivotsOverride, null, 2));
 
 }
 

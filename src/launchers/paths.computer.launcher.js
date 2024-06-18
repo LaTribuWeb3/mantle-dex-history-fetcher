@@ -3,7 +3,7 @@ const { fnName, roundTo, sleep } = require('../utils/utils');
 const dotenv = require('dotenv');
 dotenv.config();
 const { UpdateSyncFile, SYNC_FILENAMES, WaitUntilDone } = require('../utils/sync');
-const { CheckLiquidityPathComputer } = require('../precomputer/check.liquidity.path.postcomputer.js');
+const { CheckLiquidityPathComputer } = require('../precomputer/liquidity.pivots.optimizer.js');
 
 const RUN_EVERY_MINUTES = 60;
 

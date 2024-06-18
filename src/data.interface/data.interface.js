@@ -15,7 +15,7 @@ const { getUnifiedDataForInterval, getLastMedianPriceForBlock } = require('./int
 const { writeGLPMSpec, parseGLPMOutput } = require('../utils/glpm');
 const { GetPairToUse, newAssetsForMinVolatility } = require('../global.config');
 const fs = require('fs');
-const { sleep } = require('../src/utils/utils');
+const { sleep } = require('../utils/utils');
 
 
 const ALL_PIVOTS = [ 'USDT', 'mETH', 'WETH', 'USDC'];
