@@ -50,8 +50,8 @@ function getLiquidity(platform, fromSymbol, toSymbol, fromBlock, toBlock, withJu
     return liquidity;
 }
 
-async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
-    return getLiquidityAverageV2(platform, fromSymbol, toSymbol, atBlock, atBlock);
+async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock, step = 50, specificPivots = []) {
+    return getLiquidityAverageV2(platform, fromSymbol, toSymbol, atBlock, atBlock, step, specificPivots);
 }
 
 /**
@@ -63,12 +63,18 @@ async function getLiquidityV2(platform, fromSymbol, toSymbol, atBlock) {
  * @param {*} toBlock 
  * @returns {Promise<{slippageMap: {[slippageBps: number]: number}}>}
  */
-async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, toBlock, step = 50) {
+async function getLiquidityAverageV2(platform, fromSymbol, toSymbol, fromBlock, toBlock, step = 50, specificPivots = []) {
     const startDataFetch = Date.now();
     const start = Date.now();
     const {actualFrom, actualTo} = GetPairToUse(fromSymbol, toSymbol);
+
+    // Remove base quote
+    if(specificPivots.length > 0) {
+        specificPivots = specificPivots.filter(e => e != fromSymbol && e != toSymbol); // remove actual from and actual to
+    }
     
-    const pivotsToUse = getPivotsToUse(actualFrom, actualTo);
+    const pivotsToUse = specificPivots.length === 0 ? getPivotsToUse(actualFrom, actualTo) : specificPivots;
+    console.log('Pivot to use : ' + pivotsToUse);
 
     // generate list of routes
     const allPairs = getAllPairs(actualFrom, actualTo, pivotsToUse);
@@ -562,4 +568,4 @@ async function test() {
 
 // test();
 
-module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll, getLiquidityAverageV2, getLiquidityAverageV2ForDataPoints, getRollingVolatilityAndPrices};
+module.exports = { getLiquidity, getLiquidityV2, getRollingVolatility, getLiquidityAll, getLiquidityAverageV2, getLiquidityAverageV2ForDataPoints, getRollingVolatilityAndPrices, ALL_PIVOTS };

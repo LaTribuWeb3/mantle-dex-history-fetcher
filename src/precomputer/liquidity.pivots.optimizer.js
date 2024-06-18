@@ -5,8 +5,9 @@ const fs = require('fs');
 const dotenv = require('dotenv');
 const { ethers } = require('ethers');
 const { watchedPairs, specificPivotsOverride } = require('../global.config');
-const { getLiquidityV2 } = require('../data.interface/data.interface');
+const { ALL_PIVOTS, getLiquidityV2 } = require('../data.interface/data.interface');
 const path = require('path');
+const { DATA_DIR } = require('../utils/constants');
 
 
 dotenv.config();
@@ -77,8 +78,8 @@ function getPermutations(array) {
 }
 
 async function checkLiquidity() {
-    const web3Provider = new ethers.providers.StaticJsonRpcProvider('https://rpc.mantle.xyz');
-    const baseTokens = ['USDT', 'mETH', 'WETH', 'USDC'];
+    const web3Provider = new ethers.providers.StaticJsonRpcProvider(process.env.RPC_URL);
+    const baseTokens = ALL_PIVOTS;
 
     const allPermutations = getPermutations(baseTokens);
 
@@ -117,7 +118,7 @@ async function checkLiquidity() {
         let bestValue = 0;
         for (const pivotPermutation of allPermutations) {
             specificPivotsOverride[`${base}/${quote}`] = pivotPermutation;
-            const liquidity = await getLiquidityV2(platform, base, quote, block);
+            const liquidity = await getLiquidityV2(platform, base, quote, block, 50, pivotPermutation); 
             let valueFor5Pct = 0;
             if (liquidity) {
                 valueFor5Pct = liquidity.slippageMap[500];
@@ -152,7 +153,7 @@ async function checkLiquidity() {
         }
     }
 
-    fs.writeFileSync(path.join(DATA_DIR, 'permutations.json', JSON.stringify(newSpecificPivotsOverride, null, 2));
+    fs.writeFileSync(path.join(DATA_DIR, 'permutations.json'), JSON.stringify(newSpecificPivotsOverride, null, 2));
 
 }
 
