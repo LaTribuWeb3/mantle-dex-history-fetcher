@@ -92,7 +92,7 @@ const watchedPairs = {
         {
             quote: 'USDe',
             pivots: undefined,
-            exportToInternalDashboard: false
+            exportToInternalDashboard: true
         },
         {
             quote: 'USDY',
@@ -124,7 +124,7 @@ const watchedPairs = {
         {
             quote: 'USDe',
             pivots: undefined,
-            exportToInternalDashboard: false
+            exportToInternalDashboard: true
         },
         {
             quote: 'USDY',
@@ -151,7 +151,7 @@ const watchedPairs = {
         {
             quote: 'USDe',
             pivots: undefined,
-            exportToInternalDashboard: false
+            exportToInternalDashboard: true
         },
         {
             quote: 'USDY',
@@ -173,7 +173,7 @@ const watchedPairs = {
         {
             quote: 'USDe',
             pivots: undefined,
-            exportToInternalDashboard: false
+            exportToInternalDashboard: true
         },
         {
             quote: 'USDY',
@@ -190,7 +190,7 @@ const watchedPairs = {
         {
             quote: 'USDe',
             pivots: undefined,
-            exportToInternalDashboard: false
+            exportToInternalDashboard: true
         },
         {
             quote: 'USDY',
@@ -214,7 +214,7 @@ const watchedPairs = {
         {
             quote: 'USDY',
             pivots: undefined,
-            exportToInternalDashboard: false
+            exportToInternalDashboard: true
         }
     ],
 };
@@ -258,7 +258,14 @@ const specificPivotsOverride =
     'USDY/WMNT':['USDC','USDT','mETH','WETH'],
     'mETH/USDY':['mETH','WETH','USDT','USDC'],
     'WETH/USDY':['mETH','USDT','WETH','USDC'],
-    'USDY/WETH':['USDT','WETH','USDC','mETH']   
+    'USDY/WETH':['USDT','WETH','USDC','mETH'],
+    'USDC/USDe':['mETH','USDT','WETH','USDC'],
+    'WMNT/USDe':['mETH','WETH','USDC','USDT'],
+    'USDe/WMNT':['USDT','WETH','USDC','mETH'],
+    'mETH/USDe':['mETH','WETH','USDC','USDT'],
+    'WETH/USDe':['mETH','WETH','USDC','USDT'],
+    'USDe/WETH':['USDT','WETH','USDC','mETH'],
+    'USDY/USDe':['mETH','WETH','USDC','USDT']
 };
 
 

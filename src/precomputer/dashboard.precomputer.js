@@ -18,9 +18,8 @@ const RUN_EVERY_MINUTES = 12 * 60; // in minutes
 const MONITORING_NAME = '[MANTLE] Dashboard Precomputer';
 const RPC_URL = process.env.RPC_URL;
 const web3Provider = new ethers.providers.StaticJsonRpcProvider(RPC_URL);
-const NB_DAYS = 10;
-const NB_DAYS_AVG = 1;
-const BLOCKINFO_URL = process.env.BLOCKINFO_URL;
+const NB_DAYS = 180;
+const NB_DAYS_AVG = 30;
 
 const dirPath = path.join(DATA_DIR, 'precomputed', 'dashboard');
 const dailyDirPath = path.join(DATA_DIR, 'precomputed', 'daily-dashboard-data');
