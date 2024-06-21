@@ -212,7 +212,13 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
                 pricesPerPoint[b][actualFrom] = getLastMedianPriceForBlock('all', actualFrom, 'USDC', pointTo);
             }
             
-            directRouteLiquidityPerPoint[b] = computeAverageSlippageMap(liquiditiesForPoint);
+            const avgSlippageMapForPoint = computeAverageSlippageMap(liquiditiesForPoint);
+            // only save liquidity if slippage not is not full all zeroes.
+            // this can happen when we fetch a liquidity before the pool is even created
+            if(!isSlippageMapAllZeroes(avgSlippageMapForPoint.slippageMap)) {
+                directRouteLiquidityPerPoint[b] = avgSlippageMapForPoint;
+            }
+            
             // console.log(`${p}: ${directRouteLiquidityPerPoint[p].slippageMap[500].base}`);
         }
     } else {
@@ -249,21 +255,29 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
                     liquiditiesForPoint[block] = liq;
                 }
                 
-                if(!pairDataPerPoint[b][pair.from]) {
-                    pairDataPerPoint[b][pair.from] = {};
-                }
-                if(!pairDataPerPoint[b][pair.from][pair.to]) {
-                    pairDataPerPoint[b][pair.from][pair.to] = {};
-                }
             
                 if(!pricesPerPoint[b][pair.from]) {
                     pricesPerPoint[b][pair.from] = getLastMedianPriceForBlock('all', pair.from, 'USDC', pointTo);
                 }
-                
+            
                 if(!pricesPerPoint[b][pair.from]) {
                     throw new Error(`Cannot find ${pair.from}/USDC price`);
                 }
-                pairDataPerPoint[b][pair.from][pair.to] = computeAverageSlippageMap(liquiditiesForPoint).slippageMap;
+            
+                const avgSlippageMapForPoint = computeAverageSlippageMap(liquiditiesForPoint).slippageMap;
+                // only save liquidity if slippage not is not full all zeroes.
+                // this can happen when we fetch a liquidity before the pool is even created
+                if(!isSlippageMapAllZeroes(avgSlippageMapForPoint)) {
+                    if(!pairDataPerPoint[b][pair.from]) {
+                        pairDataPerPoint[b][pair.from] = {};
+                    }
+                    if(!pairDataPerPoint[b][pair.from][pair.to]) {
+                        pairDataPerPoint[b][pair.from][pair.to] = {};
+                    }
+                    pairDataPerPoint[b][pair.from][pair.to]  = avgSlippageMapForPoint;
+                }
+                
+                
             }
         }
     }
@@ -283,6 +297,18 @@ async function getLiquidityAverageV2ForDataPoints(platform, fromSymbol, toSymbol
 
     logFnDurationWithLabel(start, `p: ${platform}, [${fromSymbol}/${toSymbol}], blocks: ${(blocks.at(-1) - blocks[0] + 1)}`);
     return liquidities;
+}
+
+function isSlippageMapAllZeroes(slippageMap) {
+    let allZeroes = true;
+    for(const slippageBps of Object.keys(slippageMap)) {
+        if(slippageMap[slippageBps].base != 0) {
+            allZeroes = false;
+            break;
+        }
+    }
+
+    return allZeroes;
 }
 
 
