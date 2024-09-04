@@ -240,7 +240,7 @@ const watchedPairs = {
             exportToInternalDashboard: true
         },
         {
-            quote: 'MNT',
+            quote: 'WMNT',
             pivots: undefined,
             exportToInternalDashboard: true
         }
