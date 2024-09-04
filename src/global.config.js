@@ -58,6 +58,12 @@ const tokens = {
         'decimals': 8,
         'address': '0xCAbAE6f6Ea1ecaB08Ad02fE02ce9A44F09aebfA2',
         'dustAmount': 0.01
+    },
+    'FBTC': {
+        'symbol': 'FBTC',
+        'decimals': 8,
+        'address': '0xC96dE26018A54D51c097160568752c4E3BD6C364',
+        'dustAmount': 0.0001
     }
 };
 
@@ -217,6 +223,28 @@ const watchedPairs = {
             exportToInternalDashboard: true
         }
     ],
+    'FBTC': [
+        {
+            quote: 'USDC',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'USDT',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'ETH',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        },
+        {
+            quote: 'MNT',
+            pivots: undefined,
+            exportToInternalDashboard: true
+        }
+    ]
 };
 
 const tsWatchPairs = [];
