@@ -45,6 +45,12 @@ const pairsToCompute = {
     'WBTC': [
         'USDC',
         'WETH'
+    ],
+    'FBTC': [
+        'USDC',
+        'USDT',
+        'WETH',
+        'WMNT'
     ]
 };
 

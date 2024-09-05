@@ -226,7 +226,7 @@ const watchedPairs = {
     'FBTC': [
         {
             quote: 'USDC',
-            pivots: undefined,
+            pivots: 'USDT',
             exportToInternalDashboard: true
         },
         {
@@ -235,7 +235,7 @@ const watchedPairs = {
             exportToInternalDashboard: true
         },
         {
-            quote: 'ETH',
+            quote: 'WETH',
             pivots: undefined,
             exportToInternalDashboard: true
         },
@@ -273,28 +273,25 @@ function GetPairToUse(from, to) {
 
 const newAssetsForMinVolatility = [];
 
-const specificPivotsOverride = 
-{
-    'USDT/WMNT':['USDT','WETH','USDC','mETH'],
-    'WMNT/USDT':['USDT','WETH','mETH','USDC'],
-    'USDT/WETH':['USDT','WETH','USDC','mETH'],
-    'WMNT/USDC':['mETH','WETH','USDT','USDC'],
-    'mETH/USDC':['mETH','WETH','USDT','USDC'],
-    'WETH/USDC':['mETH','USDT','WETH','USDC'],
-    'WMNT/WETH':['mETH','USDT','WETH','USDC'],
-    'WMNT/USDY':['WETH','mETH','USDT','USDC'],
-    'USDY/WMNT':['USDC','USDT','mETH','WETH'],
-    'mETH/USDY':['mETH','WETH','USDT','USDC'],
-    'WETH/USDY':['mETH','USDT','WETH','USDC'],
-    'USDY/WETH':['USDT','WETH','USDC','mETH'],
-    'USDC/USDe':['mETH','USDT','WETH','USDC'],
-    'WMNT/USDe':['mETH','WETH','USDC','USDT'],
-    'USDe/WMNT':['USDT','WETH','USDC','mETH'],
-    'mETH/USDe':['mETH','WETH','USDC','USDT'],
-    'WETH/USDe':['mETH','WETH','USDC','USDT'],
-    'USDe/WETH':['USDT','WETH','USDC','mETH'],
-    'USDY/USDe':['mETH','WETH','USDC','USDT']
+const specificPivotsOverride = {
+    'USDT/WETH': ['USDT', 'WETH', 'USDC', 'mETH'],
+    'WMNT/USDC': ['mETH', 'WETH', 'USDT', 'USDC'],
+    'mETH/USDC': ['mETH', 'WETH', 'USDT', 'USDC'],
+    'WETH/USDC': ['mETH', 'USDT', 'WETH', 'USDC'],
+    'WMNT/WETH': ['mETH', 'USDT', 'WETH', 'USDC'],
+    'WMNT/USDe': ['mETH', 'USDT', 'WETH', 'USDC'],
+    'WMNT/USDY': ['mETH', 'WETH', 'USDT', 'USDC'],
+    'USDY/WMNT': ['USDT', 'WETH', 'mETH', 'USDC'],
+    'mETH/USDY': ['mETH', 'WETH', 'USDT', 'USDC'],
+    'WETH/USDe': ['mETH', 'USDT', 'WETH', 'USDC'],
+    'USDe/WETH': ['USDT', 'WETH', 'USDC', 'mETH'],
+    'WETH/USDY': ['mETH', 'USDT', 'WETH', 'USDC'],
+    'USDY/WETH': ['USDT', 'WETH', 'USDC', 'mETH'],
+    'FBTC/USDC': ['mETH', 'WETH', 'USDT', 'USDC'],
+    'USDC/FBTC': ['USDT', 'WETH', 'mETH', 'USDC'],
+    'USDT/FBTC': ['USDT', 'WETH', 'USDC', 'mETH'],
+    'FBTC/WMNT': ['mETH', 'USDT', 'WETH', 'USDC'],
+    'WMNT/FBTC': ['USDT', 'WETH', 'mETH', 'USDC']
 };
-
 
 module.exports = { tokens, watchedPairs, GetPairToUse, newAssetsForMinVolatility, specificPivotsOverride };
